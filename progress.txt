@@ -43,10 +43,10 @@ TASK 4: BACKBONE
 
 TASK 5: ADAPTER
   [x] 5.1 Create src/adapter.py (BottleneckAdapter)
-      [ ] TEST: identity at init, shape preserved, ~17K params
+      [x] TEST: identity at init ✓, shape (4,512) ✓, params 16,912 ✓
 
 TASK 6: MODEL
-  [ ] 6.1 Create src/model.py (BPEFTModel with evidential/softmax modes)
+  [x] 6.1 Create src/model.py (BPEFTModel with evidential/softmax modes)
       [ ] TEST: forward pass gives (B, 5), evidential output >= 0
 
 TASK 7: LOSSES
