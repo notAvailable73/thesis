@@ -31,14 +31,14 @@ TASK 2: UTILITIES
   [x] 2.1 Create src/utils.py (set_seed, get_device, count_trainable_params)
 
 TASK 3: DATA
-  [ ] 3.1 Create src/data.py
-      [ ] FUNCTION A: get_cifar100_test — loads CIFAR-100 test set
-      [ ] FUNCTION B: sample_episode — samples one 5-way 5-shot episode
-      [ ] FUNCTION C: get_svhn_ood — loads 500 SVHN images
-      [ ] TEST: python -m src.data prints correct shapes
+  [x] 3.1 Create src/data.py
+      [x] FUNCTION A: get_cifar100_test — loads CIFAR-100 test set
+      [x] FUNCTION B: sample_episode — samples one 5-way 5-shot episode
+      [x] FUNCTION C: get_svhn_ood — loads 500 SVHN images
+      [x] TEST: support_x (25,3,224,224), query_x (75,3,224,224), svhn_x (500,3,224,224) ✓
 
 TASK 4: BACKBONE
-  [ ] 4.1 Create src/backbone.py (build_frozen_resnet18)
+  [x] 4.1 Create src/backbone.py (build_frozen_resnet18)
       [ ] TEST: dummy tensor passes through and returns (B, 512)
 
 TASK 5: ADAPTER
