@@ -94,7 +94,7 @@ TASK 10: EVALUATION
       [ ] 3 PNG plots saved and look reasonable
 
 TASK 11: SLIDES CONTENT
-  [ ] 11.1 Create results/slides_outline.md with 12-slide structure
+  [x] 11.1 Create results/slides_outline.md with 12-slide structure
 
 FINAL POLISH
   [ ] Rehearse the presentation (at least once out loud)
