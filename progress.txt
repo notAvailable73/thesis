@@ -1,0 +1,162 @@
+================================================================================
+PROGRESS.TXT
+Track progress here. Mark [x] when a task is DONE and its TEST passes.
+Leave [ ] if not started. Leave [~] if in progress.
+================================================================================
+
+
+HOW TO USE
+----------
+- Open plan.txt first to understand the goal.
+- Open instruction.txt to find the detailed build steps.
+- As you finish each task, update the checkbox here.
+- At the end of each coding session, update "CURRENT STATUS" at the bottom.
+
+
+================================================================================
+DAY 1 TASKS
+================================================================================
+
+TASK 0: PROJECT SETUP
+  [x] 0.1 Create folder structure (src, notebooks, results, checkpoints, data)
+  [x] 0.2 Create requirements.txt
+  [x] 0.3 Create README.md
+  [x] .gitignore created
+  [x] notebooks/demo.ipynb created (Colab-ready, clone/pull + per-task cells)
+
+TASK 1: CONFIG
+  [ ] 1.1 Create src/config.py with CFG dataclass
+
+TASK 2: UTILITIES
+  [ ] 2.1 Create src/utils.py (set_seed, get_device, count_trainable_params)
+
+TASK 3: DATA
+  [ ] 3.1 Create src/data.py
+      [ ] FUNCTION A: get_cifar100_test — loads CIFAR-100 test set
+      [ ] FUNCTION B: sample_episode — samples one 5-way 5-shot episode
+      [ ] FUNCTION C: get_svhn_ood — loads 500 SVHN images
+      [ ] TEST: python -m src.data prints correct shapes
+
+TASK 4: BACKBONE
+  [ ] 4.1 Create src/backbone.py (build_frozen_resnet18)
+      [ ] TEST: dummy tensor passes through and returns (B, 512)
+
+TASK 5: ADAPTER
+  [ ] 5.1 Create src/adapter.py (BottleneckAdapter)
+      [ ] TEST: identity at init, shape preserved, ~17K params
+
+TASK 6: MODEL
+  [ ] 6.1 Create src/model.py (BPEFTModel with evidential/softmax modes)
+      [ ] TEST: forward pass gives (B, 5), evidential output >= 0
+
+TASK 7: LOSSES
+  [ ] 7.1 Create src/losses.py
+      [ ] FUNCTION A: kl_divergence_dirichlet
+      [ ] FUNCTION B: evidential_mse_loss (with KL regularization)
+      [ ] FUNCTION C: softmax_ce_loss (baseline)
+      [ ] TEST: both losses return finite scalars on dummy inputs
+
+TASK 9 (PART 1): TRAINING — EVIDENTIAL MODEL
+  [ ] 9.1 Create src/train.py with CLI --mode flag
+  [ ] Run: python -m src.train --mode evidential
+      [ ] Loss decreases over 200 steps
+      [ ] Final train accuracy on support set > 0.8
+      [ ] Checkpoint saved to checkpoints/model_evidential.pt
+
+
+================================================================================
+DAY 2 TASKS
+================================================================================
+
+TASK 9 (PART 2): TRAINING — SOFTMAX BASELINE
+  [ ] Run: python -m src.train --mode softmax
+      [ ] Loss decreases
+      [ ] Checkpoint saved to checkpoints/model_softmax.pt
+
+TASK 8: METRICS
+  [ ] 8.1 Create src/metrics.py
+      [ ] FUNCTION A: accuracy
+      [ ] FUNCTION B: expected_calibration_error
+      [ ] FUNCTION C: brier_score
+      [ ] FUNCTION D: ood_auroc
+      [ ] TEST: metrics return reasonable numbers on synthetic data
+
+TASK 10: EVALUATION
+  [ ] 10.1 Create src/evaluate.py
+      [ ] Load both checkpoints
+      [ ] Compute accuracy, ECE, Brier, OOD AUROC for both modes
+      [ ] Save results/metrics.json
+      [ ] Generate results/reliability_plot.png
+      [ ] Generate results/ood_histogram.png
+      [ ] Generate results/training_curve.png
+  [ ] Run: python -m src.evaluate
+      [ ] metrics.json has 8 numbers (4 metrics x 2 modes)
+      [ ] 3 PNG plots saved and look reasonable
+
+TASK 11: SLIDES CONTENT
+  [ ] 11.1 Create results/slides_outline.md with 12-slide structure
+
+FINAL POLISH
+  [ ] Rehearse the presentation (at least once out loud)
+  [ ] Check that all plots are readable at slide size
+  [ ] Prepare a one-line answer for: "Why not LoRA yet?"
+  [ ] Prepare a one-line answer for: "What is vacuity?"
+  [ ] Commit code to git
+
+
+================================================================================
+TARGET NUMBERS (approximate — for sanity check)
+================================================================================
+
+Evidential model:
+  [ ] Accuracy: 75 to 85 %
+  [ ] ECE: < 0.08 (lower is better)
+  [ ] Brier: < 0.15
+  [ ] OOD AUROC: > 0.80
+
+Softmax model:
+  [ ] Accuracy: 75 to 85 % (similar to evidential)
+  [ ] ECE: 0.10 to 0.20 (higher than evidential)
+  [ ] Brier: 0.15 to 0.25
+  [ ] OOD AUROC: 0.65 to 0.75 (lower than evidential)
+
+The STORY is: accuracy similar, but Evidential is better calibrated and
+better at OOD detection. This is what earns pass in the pre-defence.
+
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+Last updated: 2026-04-21
+
+What is done:
+  - TASK 0: Full project setup, venv, requirements installed (torch 2.11+cu130), README, .gitignore, demo.ipynb
+
+What is in progress:
+  (none)
+
+What is next:
+  - TASK 1: src/config.py
+  - TASK 2: src/utils.py
+
+Blockers / questions:
+  (note any issues or things that need Mainul's decision)
+
+
+================================================================================
+NOTES / DECISIONS LOG
+================================================================================
+
+(Add any decisions, problem fixes, or deviations from the plan here.
+ Example:
+   - 2026-04-20: Switched from SVHN to Fashion-MNIST for OOD because SVHN
+                 download was blocked. Updated CFG.ood_dataset.
+   - 2026-04-20: Reduced num_steps from 200 to 100 because support accuracy
+                 was already 100% at step 80.
+)
+
+
+================================================================================
+END OF PROGRESS.TXT
+================================================================================

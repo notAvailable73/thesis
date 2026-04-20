@@ -1,0 +1,202 @@
+================================================================================
+PLAN.TXT
+Project: B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) - Pre-Defence Demo
+Owner: Mainul
+Deadline: 2 days (Pre-Defence Presentation)
+Goal: Show ONE working pipeline proving the thesis idea
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. WHAT WE ARE BUILDING (SCOPE)
+--------------------------------------------------------------------------------
+
+We are building a MINIMUM VIABLE version of the thesis:
+
+  Frozen ResNet18 (ImageNet pretrained)
+        |
+        |  (features: 512-dim)
+        v
+  Bottleneck Adapter (trainable, ~16K params)
+        |
+        v
+  Linear Head + ReLU  -->  Evidence e_k for each class
+        |
+        v
+  Dirichlet alpha_k = e_k + 1
+        |
+        v
+  Evidential Loss (MSE version + KL regularization)
+
+We train this on a 5-way 5-shot task sampled from CIFAR-FS.
+We evaluate on:
+  - Accuracy (on 15-query images per class)
+  - ECE (Expected Calibration Error)
+  - Brier Score
+  - OOD AUROC (in-distribution: CIFAR-FS, out-of-distribution: SVHN)
+
+We compare against a BASELINE: same model but with Softmax + Cross Entropy.
+
+
+--------------------------------------------------------------------------------
+2. WHAT WE ARE NOT BUILDING (OUT OF SCOPE FOR 2 DAYS)
+--------------------------------------------------------------------------------
+
+DO NOT implement these now. They are for after the pre-defence:
+  - LoRA
+  - BitFit
+  - MobileNetV3-Small, ConvNeXt-Nano
+  - CUB-200, ISIC, MiniImageNet datasets
+  - Near-OOD (TinyImageNet), CIFAR-10-C corruptions
+  - Edge device benchmarks (Jetson, CPU latency)
+  - Parallel vs Serial adapter comparison
+  - Full episodic meta-training
+
+For the pre-defence, one dataset + one backbone + one adapter type is enough.
+In slides we say: "Full ablation is ongoing — this is the baseline pipeline."
+
+
+--------------------------------------------------------------------------------
+3. RESEARCH QUESTIONS ADDRESSED BY THIS DEMO
+--------------------------------------------------------------------------------
+
+From the original proposal, this demo directly addresses:
+  - RQ2 (PARTIALLY): "Can Evidential Dirichlet Networks provide superior
+                     calibration compared to Softmax when fine-tuning with
+                     <500 trainable parameters?"
+                     --> YES, we show this with a direct Softmax vs Evidential
+                         comparison on CIFAR-FS.
+  - RQ3 (PARTIALLY): "Does Bayesian loss improve OOD detection in low-data
+                     regimes?"
+                     --> YES, we show this using vacuity (u = K/S) as OOD score
+                         on CIFAR-FS (in-dist) vs SVHN (OOD).
+
+RQ1 and RQ4 are future work (mentioned in slides).
+
+
+--------------------------------------------------------------------------------
+4. PROJECT FOLDER STRUCTURE
+--------------------------------------------------------------------------------
+
+bpeft_demo/
+├── plan.txt                  (this file - the plan)
+├── instruction.txt           (step-by-step build instructions for Claude Code)
+├── progress.txt              (checklist - mark tasks done)
+├── README.md                 (short project summary)
+├── requirements.txt          (Python packages)
+├── data/                     (datasets - downloaded here)
+│   ├── cifar-100-python/     (auto-downloaded)
+│   └── svhn/                 (auto-downloaded)
+├── src/
+│   ├── __init__.py
+│   ├── config.py             (all hyperparameters in one place)
+│   ├── data.py               (CIFAR-FS + SVHN loaders, episode sampler)
+│   ├── backbone.py           (frozen ResNet18)
+│   ├── adapter.py            (Bottleneck Adapter module)
+│   ├── model.py              (full model = backbone + adapter + head)
+│   ├── losses.py             (Evidential MSE loss, KL divergence, baseline CE)
+│   ├── metrics.py            (accuracy, ECE, Brier, OOD AUROC)
+│   ├── train.py              (training loop)
+│   ├── evaluate.py           (evaluation + OOD detection)
+│   └── utils.py              (seed, device, logging helpers)
+├── notebooks/
+│   └── demo.ipynb            (optional: Colab-style all-in-one notebook)
+├── results/
+│   ├── metrics.json          (final numbers)
+│   ├── reliability_plot.png  (calibration curve)
+│   ├── ood_histogram.png     (vacuity distribution)
+│   └── training_curve.png    (loss + accuracy over steps)
+└── checkpoints/
+    └── best_model.pt         (saved model weights)
+
+
+--------------------------------------------------------------------------------
+5. TWO-DAY TIMELINE (HIGH LEVEL)
+--------------------------------------------------------------------------------
+
+DAY 1 (Today):
+  Morning (4h):
+    - Project setup (folder, git, requirements, config)
+    - Data loader (CIFAR-FS episode sampler + SVHN loader)
+    - Frozen ResNet18 backbone
+  Afternoon (4h):
+    - Bottleneck Adapter module
+    - Evidential loss (MSE version + KL reg)
+    - Baseline Cross-Entropy loss
+    - Full model integration
+  Evening (2h):
+    - Training loop
+    - First successful training run (evidential model)
+    - Save checkpoint
+
+DAY 2 (Tomorrow):
+  Morning (4h):
+    - Metrics module (accuracy, ECE, Brier, OOD AUROC)
+    - Train baseline (Softmax) model for comparison
+    - Evaluate both models on query set + SVHN OOD
+  Afternoon (4h):
+    - Generate 3 plots (reliability, OOD histogram, training curve)
+    - Write results/metrics.json
+    - Create slide deck (10-12 slides)
+  Evening (2h):
+    - Rehearse presentation
+    - Handle edge cases / bugs
+    - Commit final code
+
+
+--------------------------------------------------------------------------------
+6. KEY DESIGN DECISIONS (why we chose these)
+--------------------------------------------------------------------------------
+
+Decision 1: Use ResNet18 + plain 224x224 images, not small-image variant.
+  WHY: torchvision ResNet18 pretrained weights expect 224x224. CIFAR is 32x32,
+       so we UPSAMPLE to 224 via torchvision transforms. Simpler than
+       retraining a small-image backbone.
+
+Decision 2: Use evidential MSE loss, not evidential cross-entropy.
+  WHY: The Sensoy 2018 paper shows MSE version is most stable and gives best
+       calibration. Reference: dougbrion/pytorch-classification-uncertainty.
+
+Decision 3: Insert adapter ONLY after avgpool (between pool and classifier).
+  WHY: Inserting inside residual blocks is tricky and error-prone in 2 days.
+       A single adapter on 512-dim features is clean and enough to prove the
+       concept.
+
+Decision 4: Use ONE episode (not full episodic training loop).
+  WHY: Full episodic meta-training takes hours and risks failure. One 5-way
+       5-shot episode trained for 200 steps is enough to show the idea works.
+       Multiple episodes can be added later; for pre-defence, one is enough.
+
+Decision 5: SVHN for OOD (not TinyImageNet).
+  WHY: SVHN is small (~60MB), auto-downloads via torchvision, and is
+       "far-OOD" which gives the cleanest demo results. Near-OOD is harder
+       and not needed for pre-defence.
+
+Decision 6: Borrow evidential loss code from dougbrion/pytorch-classification-uncertainty.
+  WHY: Cleanest and most-tested PyTorch implementation of Sensoy 2018.
+       We will cite it in the slides.
+
+
+--------------------------------------------------------------------------------
+7. DEFINITION OF "DONE" FOR PRE-DEFENCE
+--------------------------------------------------------------------------------
+
+The demo is DONE when we have:
+  [x] A single Python command that trains evidential model end-to-end
+  [x] A single Python command that trains baseline (softmax) model
+  [x] A single Python command that evaluates both models
+  [x] results/metrics.json with Accuracy, ECE, Brier, OOD AUROC for both models
+  [x] 3 plots saved as PNG
+  [x] A slide deck summarizing the result
+
+Target numbers (approximate, for slides):
+  Evidential: Accuracy 75-85%, ECE ~0.05, OOD AUROC ~0.85
+  Softmax:    Accuracy 75-85%, ECE ~0.15, OOD AUROC ~0.70
+
+The accuracy should be similar; the gap should be in ECE and AUROC.
+That gap IS the thesis story.
+
+
+================================================================================
+END OF PLAN.TXT
+================================================================================

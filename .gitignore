@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Pip temp/cache
+.pip-tmp/
+.pip-cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Datasets (large files — download at runtime)
+data/
+
+# Model checkpoints (large binaries)
+checkpoints/
+
+# Keep results (plots, metrics JSON, slide outline)
+!results/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,681 @@
+================================================================================
+INSTRUCTION.TXT
+Step-by-Step Build Instructions for Claude Code
+Read plan.txt FIRST before starting.
+Update progress.txt AFTER each task.
+================================================================================
+
+
+HOW TO USE THIS FILE
+--------------------
+- Execute tasks IN ORDER. Do not skip ahead.
+- Each task has: WHAT, WHERE, HOW, TEST.
+- After finishing a task, mark it "[DONE]" in progress.txt and run the TEST.
+- If a TEST fails, fix it before moving to the next task.
+- Target environment: Python 3.10+, PyTorch 2.x, single GPU (Colab T4 is fine).
+- All file paths are relative to the project root (bpeft_demo/).
+
+
+================================================================================
+TASK 0: PROJECT SETUP
+================================================================================
+
+--- TASK 0.1: Create folder structure ---
+WHAT: Create all folders listed in plan.txt section 4.
+WHERE: Project root.
+HOW:
+  mkdir -p src notebooks results checkpoints data
+  touch src/__init__.py
+TEST: Running `ls` should show: src, notebooks, results, checkpoints, data,
+      plan.txt, instruction.txt, progress.txt.
+
+
+--- TASK 0.2: Create requirements.txt ---
+WHAT: Pin Python packages.
+WHERE: requirements.txt (project root)
+HOW: Write this content:
+
+    torch>=2.0.0
+    torchvision>=0.15.0
+    numpy>=1.24.0
+    matplotlib>=3.7.0
+    scikit-learn>=1.3.0
+    tqdm>=4.65.0
+
+TEST: `pip install -r requirements.txt` runs without errors.
+
+
+--- TASK 0.3: Create README.md ---
+WHAT: Short description.
+WHERE: README.md (project root)
+HOW: Write 10-15 lines describing: what the project does, how to install,
+     how to run training, how to run evaluation. Example:
+
+    # B-PEFT Demo
+    Bayesian Parameter-Efficient Fine-Tuning for Few-Shot Vision.
+    Pre-defence demo.
+
+    ## Install
+    pip install -r requirements.txt
+
+    ## Train evidential model
+    python -m src.train --mode evidential
+
+    ## Train baseline (softmax) model
+    python -m src.train --mode softmax
+
+    ## Evaluate both
+    python -m src.evaluate
+
+TEST: File exists and is readable.
+
+
+================================================================================
+TASK 1: CONFIG MODULE
+================================================================================
+
+--- TASK 1.1: Create src/config.py ---
+WHAT: Put ALL hyperparameters in one place. No magic numbers in other files.
+WHERE: src/config.py
+HOW: Use a simple dataclass. Required fields:
+
+    from dataclasses import dataclass, field
+    from typing import List
+
+    @dataclass
+    class Config:
+        # Reproducibility
+        seed: int = 42
+
+        # Dataset
+        data_root: str = "data"
+        image_size: int = 224             # Resnet18 expects 224
+        num_classes: int = 5              # N-way
+        shots: int = 5                    # K-shot (support)
+        query_per_class: int = 15         # query set size per class
+        # Class IDs (0-99) to sample from for CIFAR-100 test split.
+        # These are 20 held-out classes from the standard CIFAR-FS split.
+        test_class_ids: List[int] = field(default_factory=lambda: [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+            10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+        ])
+
+        # Model
+        backbone: str = "resnet18"
+        feature_dim: int = 512
+        adapter_rank: int = 16
+
+        # Training
+        batch_size: int = 25              # 5 classes * 5 shots
+        lr: float = 1e-3
+        num_steps: int = 200
+        weight_decay: float = 0.0
+        kl_anneal_steps: int = 200        # linear anneal KL weight 0 -> 1
+
+        # OOD
+        ood_dataset: str = "svhn"
+        ood_num_samples: int = 500
+
+        # Outputs
+        checkpoint_dir: str = "checkpoints"
+        results_dir: str = "results"
+
+    CFG = Config()
+
+TEST: `python -c "from src.config import CFG; print(CFG.seed)"` prints 42.
+
+
+================================================================================
+TASK 2: UTILITIES
+================================================================================
+
+--- TASK 2.1: Create src/utils.py ---
+WHAT: Helpers for seeding, device selection, logging.
+WHERE: src/utils.py
+HOW: Implement these functions:
+
+    def set_seed(seed: int) -> None:
+        """Seed random, numpy, torch (cpu+cuda) for reproducibility."""
+        # Must seed: random, numpy.random, torch, torch.cuda.manual_seed_all
+        # Must set: torch.backends.cudnn.deterministic = True
+        ...
+
+    def get_device() -> torch.device:
+        """Return cuda if available, else cpu."""
+        ...
+
+    def count_trainable_params(model) -> int:
+        """Count only parameters with requires_grad=True."""
+        ...
+
+TEST: `python -c "from src.utils import set_seed, get_device; set_seed(42); print(get_device())"` works.
+
+
+================================================================================
+TASK 3: DATA MODULE
+================================================================================
+
+--- TASK 3.1: Create src/data.py ---
+WHAT: Load CIFAR-100, sample a 5-way 5-shot episode, load SVHN for OOD.
+WHERE: src/data.py
+HOW: Implement these three functions.
+
+FUNCTION A: get_cifar100_test(data_root, image_size)
+  - Use torchvision.datasets.CIFAR100(root=data_root, train=False, download=True).
+  - Apply transform: Resize(image_size) -> ToTensor -> Normalize.
+  - Normalize with ImageNet stats: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225].
+    REASON: Backbone is ImageNet-pretrained.
+  - Return the dataset.
+
+FUNCTION B: sample_episode(dataset, class_ids, num_classes, shots, query_per_class, seed)
+  - Randomly pick `num_classes` class IDs from `class_ids`.
+  - For each picked class, find ALL sample indices whose label matches.
+  - Shuffle those indices (with seed).
+  - Take first `shots` for support, next `query_per_class` for query.
+  - Relabel classes to 0..num_classes-1 (NEW labels for the episode).
+  - Return four tensors:
+      support_x: (num_classes * shots, C, H, W)
+      support_y: (num_classes * shots,)  values in [0, num_classes-1]
+      query_x:   (num_classes * query_per_class, C, H, W)
+      query_y:   (num_classes * query_per_class,)
+
+FUNCTION C: get_svhn_ood(data_root, image_size, num_samples, seed)
+  - Use torchvision.datasets.SVHN(root=data_root/svhn, split='test', download=True).
+  - Same transform as CIFAR-100 (Resize + ImageNet normalize).
+  - Randomly sample `num_samples` images. Return tensor (N, C, H, W).
+
+TEST: Write a small test at the bottom of data.py inside
+      `if __name__ == "__main__":` that:
+        1. Loads CIFAR-100 test set.
+        2. Samples one episode with CFG values.
+        3. Prints shapes: expect support_x = (25, 3, 224, 224), query_x = (75, 3, 224, 224).
+        4. Loads SVHN and prints its shape: expect (500, 3, 224, 224).
+      Run: `python -m src.data`
+
+
+================================================================================
+TASK 4: BACKBONE
+================================================================================
+
+--- TASK 4.1: Create src/backbone.py ---
+WHAT: Load pretrained ResNet18, chop off the FC layer, freeze all weights.
+WHERE: src/backbone.py
+HOW:
+
+    import torch.nn as nn
+    from torchvision.models import resnet18, ResNet18_Weights
+
+    def build_frozen_resnet18() -> nn.Module:
+        """
+        Returns a ResNet18 with:
+          - ImageNet pretrained weights (ResNet18_Weights.IMAGENET1K_V1)
+          - Final fc layer replaced with nn.Identity()
+          - All parameters frozen (requires_grad=False)
+          - eval mode (so BatchNorm uses running stats, not batch stats)
+        Output shape: (batch, 512)
+        """
+        model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        model.fc = nn.Identity()
+        for p in model.parameters():
+            p.requires_grad = False
+        model.eval()
+        return model
+
+IMPORTANT: Backbone must stay in eval() mode even during training (for BatchNorm).
+The adapter/head can be trained; backbone is just a feature extractor.
+
+TEST: Add `if __name__ == "__main__":` block that:
+  - Builds the backbone
+  - Passes a dummy tensor torch.randn(2, 3, 224, 224)
+  - Asserts output shape == (2, 512)
+  - Prints "OK"
+Run: `python -m src.backbone`
+
+
+================================================================================
+TASK 5: ADAPTER
+================================================================================
+
+--- TASK 5.1: Create src/adapter.py ---
+WHAT: Bottleneck adapter module.
+WHERE: src/adapter.py
+HOW:
+
+    import torch
+    import torch.nn as nn
+
+    class BottleneckAdapter(nn.Module):
+        """
+        Bottleneck adapter: Down-project to rank r, ReLU, Up-project back to dim.
+        Residual connection is added by the caller (or here - see below).
+        Parameter count: dim*r + r + r*dim + dim = 2*dim*r + dim + r
+        For dim=512, r=16: ~16,912 trainable parameters.
+        """
+        def __init__(self, dim: int, rank: int):
+            super().__init__()
+            self.down = nn.Linear(dim, rank)
+            self.act = nn.ReLU(inplace=True)
+            self.up = nn.Linear(rank, dim)
+            # Initialize up-projection to near-zero so adapter starts as identity
+            nn.init.zeros_(self.up.weight)
+            nn.init.zeros_(self.up.bias)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return x + self.up(self.act(self.down(x)))
+
+IMPORTANT: The up-projection is initialized to zero. This makes the adapter
+           start as an identity function (output = input), so at step 0 the
+           model behaves exactly like frozen-ResNet18 + head. This is a
+           standard trick from the Adapter paper (Houlsby et al. 2019).
+
+TEST: Add `if __name__ == "__main__":` block:
+  - Create BottleneckAdapter(512, 16)
+  - Pass dummy tensor torch.randn(4, 512)
+  - Assert output shape == (4, 512)
+  - Assert at init, output == input (within 1e-6 tolerance)
+  - Print param count (should be ~16912)
+
+
+================================================================================
+TASK 6: MODEL
+================================================================================
+
+--- TASK 6.1: Create src/model.py ---
+WHAT: Combine backbone + adapter + head into one nn.Module.
+WHERE: src/model.py
+HOW:
+
+    import torch
+    import torch.nn as nn
+    from .backbone import build_frozen_resnet18
+    from .adapter import BottleneckAdapter
+
+    class BPEFTModel(nn.Module):
+        """
+        Full model:
+          x -> [frozen ResNet18] -> features (B, 512)
+            -> [Bottleneck Adapter] -> adapted features (B, 512)
+            -> [Linear head] -> logits (B, num_classes)
+
+        For EVIDENTIAL mode: apply ReLU to logits to get non-negative evidence.
+        For SOFTMAX mode: return raw logits (softmax is inside the loss fn).
+        """
+        def __init__(self, num_classes: int, feature_dim: int = 512,
+                     adapter_rank: int = 16, mode: str = "evidential"):
+            super().__init__()
+            assert mode in ("evidential", "softmax")
+            self.mode = mode
+            self.backbone = build_frozen_resnet18()
+            self.adapter = BottleneckAdapter(feature_dim, adapter_rank)
+            self.head = nn.Linear(feature_dim, num_classes)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            with torch.no_grad():
+                feats = self.backbone(x)   # (B, 512), frozen
+            feats = self.adapter(feats)    # (B, 512), trainable
+            logits = self.head(feats)      # (B, num_classes)
+            if self.mode == "evidential":
+                # Evidence must be non-negative
+                return torch.relu(logits)
+            return logits
+
+TEST: Add `if __name__ == "__main__":` block:
+  - Build model in evidential mode
+  - Pass torch.randn(8, 3, 224, 224)
+  - Assert output shape == (8, 5) and all values >= 0
+  - Print trainable param count (should be < 20K — just adapter + head)
+
+
+================================================================================
+TASK 7: LOSSES
+================================================================================
+
+--- TASK 7.1: Create src/losses.py ---
+WHAT: Evidential MSE loss + KL divergence regularization. Baseline CE.
+WHERE: src/losses.py
+HOW: Implement three functions. Reference: the Sensoy 2018 paper and
+     dougbrion/pytorch-classification-uncertainty repo. Cite this in a
+     docstring comment at the top of the file.
+
+FUNCTION A: kl_divergence_dirichlet(alpha, num_classes)
+  """
+  KL divergence between Dir(alpha_tilde) and uniform Dir(1,...,1).
+  alpha_tilde is a "smoothed" alpha where the true-class parameter is
+  clamped to 1 (so it is not penalized). In practice this is computed
+  on the full alpha by the caller (see evidential_mse_loss).
+
+  Formula (Sensoy 2018, Eq 13):
+    KL[Dir(alpha) || Dir(1)] = log(Gamma(sum_k alpha_k)) - sum_k log(Gamma(alpha_k))
+                             + log(Gamma(K))
+                             + sum_k (alpha_k - 1) * (digamma(alpha_k) - digamma(sum_k alpha_k))
+  Use torch.lgamma and torch.digamma.
+  Return shape: (batch,)
+  """
+
+FUNCTION B: evidential_mse_loss(evidence, target_onehot, num_classes, kl_weight)
+  """
+  Evidential MSE loss from Sensoy 2018, Eq 5.
+    alpha = evidence + 1
+    S = sum(alpha, dim=-1, keepdim=True)
+    p = alpha / S
+    err_term = (target - p) ** 2
+    var_term = p * (1 - p) / (S + 1)
+    loss_per_sample = sum(err_term + var_term, dim=-1)
+
+  Plus KL regularization on "wrong-class" evidence:
+    alpha_tilde = target_onehot + (1 - target_onehot) * alpha   # zero out true-class
+    kl = kl_divergence_dirichlet(alpha_tilde, num_classes)
+    total = loss_per_sample + kl_weight * kl
+  Return mean over batch.
+  """
+
+FUNCTION C: softmax_ce_loss(logits, target)
+  """
+  Standard cross entropy loss, for the baseline.
+  """
+
+IMPORTANT DETAIL: For the evidential model, the model outputs evidence (>= 0)
+  directly. Do NOT add +1 inside the model; add +1 inside the loss function
+  (alpha = evidence + 1). This is the convention in the Sensoy paper.
+
+TEST: Add `if __name__ == "__main__":` block:
+  - Create dummy evidence (torch.rand(4, 5) * 2)
+  - Create dummy one-hot target (torch.eye(5)[[0,1,2,3,4]])
+  - Compute evidential_mse_loss, assert it is a scalar finite tensor
+  - Compute softmax_ce_loss on dummy logits, assert scalar finite tensor
+  - Print both loss values
+
+
+================================================================================
+TASK 8: METRICS
+================================================================================
+
+--- TASK 8.1: Create src/metrics.py ---
+WHAT: Accuracy, ECE, Brier, OOD AUROC.
+WHERE: src/metrics.py
+HOW: Implement four functions.
+
+FUNCTION A: accuracy(probs, targets)
+  """
+  probs: (N, K) tensor, targets: (N,) long tensor.
+  Return scalar top-1 accuracy in [0, 1].
+  """
+
+FUNCTION B: expected_calibration_error(probs, targets, num_bins=10)
+  """
+  Standard ECE:
+    1. For each sample, get predicted class = argmax(probs) and confidence = max(probs).
+    2. Bin samples by confidence into num_bins equal-width bins in [0, 1].
+    3. For each non-empty bin, compute |avg_confidence - avg_accuracy|.
+    4. Weight by bin size and sum.
+  Return scalar.
+  """
+
+FUNCTION C: brier_score(probs, targets, num_classes)
+  """
+  Mean squared error between probs and one-hot targets.
+    BS = mean over samples of sum_k (probs_k - onehot_k) ** 2
+  Return scalar.
+  """
+
+FUNCTION D: ood_auroc(id_scores, ood_scores)
+  """
+  id_scores: higher means MORE confident (e.g., max softmax prob, or 1-vacuity).
+  ood_scores: same.
+  Labels: id=1, ood=0.
+  Use sklearn.metrics.roc_auc_score.
+  Return scalar in [0, 1].
+  """
+
+IMPORTANT: For evidential model, the "confidence" to feed into ECE/AUROC is
+           p_k = alpha_k / S (the expected class probability), not evidence.
+           And the OOD score is (1 - vacuity) = 1 - K/S.
+           For softmax model, confidence is just softmax(logits).
+
+TEST: Add `if __name__ == "__main__":` block:
+  - Feed synthetic well-calibrated probs and random targets
+  - Print accuracy, ECE, Brier
+  - Feed synthetic id_scores (high) and ood_scores (low), check AUROC > 0.9
+
+
+================================================================================
+TASK 9: TRAINING
+================================================================================
+
+--- TASK 9.1: Create src/train.py ---
+WHAT: Training loop. Supports --mode evidential | softmax.
+WHERE: src/train.py
+HOW: Structure:
+
+    def train(mode: str = "evidential") -> dict:
+        # 1. Set seed, get device.
+        # 2. Load CIFAR-100 test set and sample ONE episode.
+        #    - Save episode indices so evaluate.py can reuse the SAME query set.
+        #    - Save as pickle/json in checkpoints/episode_{mode}.pt
+        # 3. Build model (BPEFTModel with mode).
+        # 4. Set up optimizer: Adam over model.parameters() (backbone params
+        #    already have requires_grad=False, so they are skipped naturally).
+        # 5. Training loop for CFG.num_steps iterations:
+        #      a. Forward on support set (support_x, support_y).
+        #      b. Compute loss:
+        #         - evidential: evidential_mse_loss with annealed KL weight.
+        #         - softmax: cross_entropy.
+        #         KL anneal: kl_weight = min(1.0, step / CFG.kl_anneal_steps).
+        #      c. Backward + optimizer step.
+        #      d. Every 20 steps: log loss + train accuracy on support set.
+        #      e. Store history for the training curve plot.
+        # 6. Save checkpoint to checkpoints/model_{mode}.pt with keys:
+        #        state_dict, mode, train_history, episode.
+        # 7. Return history dict.
+
+    if __name__ == "__main__":
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--mode", choices=["evidential", "softmax"], required=True)
+        args = parser.parse_args()
+        train(args.mode)
+
+IMPORTANT: The SAME random seed must produce the SAME episode for both modes,
+           so that results are directly comparable. Use CFG.seed everywhere.
+
+TEST: Run `python -m src.train --mode evidential`
+      Expect:
+        - Loss decreases over 200 steps.
+        - Final train accuracy on support set > 0.8 (it is only 25 samples).
+        - Checkpoint saved.
+      Then run `python -m src.train --mode softmax`. Same expectations.
+
+
+================================================================================
+TASK 10: EVALUATION
+================================================================================
+
+--- TASK 10.1: Create src/evaluate.py ---
+WHAT: Load both checkpoints, run metrics, generate plots and JSON.
+WHERE: src/evaluate.py
+HOW: Structure:
+
+    def evaluate():
+        # For each mode in ["evidential", "softmax"]:
+        #   1. Load checkpoint from checkpoints/model_{mode}.pt.
+        #   2. Rebuild model in that mode, load state_dict.
+        #   3. model.eval()
+        #   4. Run forward on query_x (the SAME query set saved from training).
+        #   5. Compute probs:
+        #        - evidential: alpha = evidence + 1; S = alpha.sum(-1, keepdim=True);
+        #                      probs = alpha / S; vacuity = K / S.squeeze(-1)
+        #        - softmax: probs = softmax(logits, dim=-1); vacuity = 1 - probs.max(-1)
+        #   6. Compute: accuracy, ECE, brier on query set.
+        #   7. Run forward on SVHN OOD set.
+        #      - id_scores = 1 - vacuity  (so higher = more in-distribution)
+        #      - ood_scores = 1 - vacuity_on_svhn
+        #      - Compute ood_auroc.
+        #   8. Store all numbers in a dict.
+
+        # Save results/metrics.json with structure:
+        #   {
+        #     "evidential": {"accuracy": ..., "ece": ..., "brier": ..., "ood_auroc": ...},
+        #     "softmax":    {"accuracy": ..., "ece": ..., "brier": ..., "ood_auroc": ...},
+        #     "trainable_params": {"evidential": N, "softmax": N}
+        #   }
+
+        # Generate 3 plots:
+        #   plot_reliability_diagram(probs_evidential, probs_softmax, targets)
+        #     -> results/reliability_plot.png
+        #   plot_ood_histogram(id_vacuity, ood_vacuity, mode='evidential')
+        #     -> results/ood_histogram.png
+        #   plot_training_curves(evidential_history, softmax_history)
+        #     -> results/training_curve.png
+
+IMPLEMENTATION HINTS FOR PLOTS:
+  Reliability diagram:
+    - X-axis: bin midpoint (confidence), 10 bins.
+    - Y-axis: bin accuracy.
+    - Plot y=x diagonal as "perfect calibration".
+    - Plot two curves (evidential and softmax) with different colors.
+    - Show ECE in legend.
+
+  OOD histogram:
+    - Two overlapping histograms of vacuity (or 1-max_prob for softmax).
+    - One color for in-distribution (CIFAR-FS), one for OOD (SVHN).
+    - Make separate subplots for evidential and softmax side by side.
+
+  Training curve:
+    - Two subplots: loss (left), train acc (right).
+    - Two lines per subplot: evidential and softmax.
+
+TEST: Run `python -m src.evaluate` after both models are trained.
+      Expect results/metrics.json to exist and contain all four numbers for
+      both modes. Expect 3 PNG files in results/.
+
+
+================================================================================
+TASK 11: SLIDE DECK CONTENT (text only, not the actual slides)
+================================================================================
+
+--- TASK 11.1: Create results/slides_outline.md ---
+WHAT: A markdown outline of slide content. Mainul will turn this into slides.
+WHERE: results/slides_outline.md
+HOW: Use this 12-slide structure:
+
+  Slide 1: Title
+    - "Bayesian Parameter-Efficient Fine-Tuning for Reliable Few-Shot Vision"
+    - Mainul's name, IUT, date
+
+  Slide 2: The Problem
+    - 3 bullets: parameter inefficiency, reliability gap, CNN vs ViT gap.
+
+  Slide 3: Research Questions
+    - Show all 4 RQs. Mark RQ2 and RQ3 as "addressed in this demo".
+
+  Slide 4: Method Diagram
+    - Visual: input -> frozen ResNet18 -> Bottleneck Adapter -> Evidential head.
+    - Callout: "only ~17K trainable parameters (~0.15% of total)".
+
+  Slide 5: Evidential Layer (simple math)
+    - evidence -> alpha = evidence + 1 -> S = sum(alpha)
+    - prob_k = alpha_k / S
+    - uncertainty u = K / S
+    - "High evidence = low uncertainty"
+
+  Slide 6: Experimental Setup
+    - CIFAR-FS: 5-way 5-shot, 15 query per class, 20 held-out test classes.
+    - OOD: SVHN, 500 samples.
+    - Baseline: same model, Softmax + CE.
+
+  Slide 7: Results Table
+    - Two rows (Softmax, Evidential), four columns (Acc, ECE, Brier, AUROC).
+    - Highlight ECE and AUROC improvements in bold.
+
+  Slide 8: Reliability Diagram
+    - Insert results/reliability_plot.png.
+    - One line under: "Evidential is closer to the diagonal — better calibration."
+
+  Slide 9: OOD Detection Histogram
+    - Insert results/ood_histogram.png.
+    - One line under: "Evidential separates in-dist from OOD more clearly."
+
+  Slide 10: What is Next
+    - LoRA, BitFit (more PEFT methods).
+    - MobileNetV3-Small, ConvNeXt-Nano (more backbones).
+    - CUB-200, ISIC (harder datasets).
+    - Jetson Nano benchmarks (edge deployment).
+
+  Slide 11: Thesis Timeline
+    - Month 1: LoRA + BitFit comparison.
+    - Month 2: More backbones + datasets.
+    - Month 3: Edge benchmarks + paper writing.
+
+  Slide 12: Thank you / Questions
+
+TEST: File exists and follows this structure.
+
+
+================================================================================
+SHORTCUT / BACKUP: ALL-IN-ONE NOTEBOOK
+================================================================================
+
+If running into import or environment issues on a fresh machine, create
+notebooks/demo.ipynb that does everything in one file. It can import from
+src/ or inline the same logic. Only create this if the modular code has
+issues — otherwise the modular code is preferred for the final submission.
+
+
+================================================================================
+DEBUGGING TIPS
+================================================================================
+
+Common problems and quick fixes:
+
+1. CIFAR-100 download fails
+   -> Check internet connectivity. The file is ~170MB.
+   -> As a fallback, manually download from:
+      https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz
+
+2. SVHN download fails
+   -> Fallback: use Fashion-MNIST or any other dataset as OOD.
+      (Update CFG.ood_dataset accordingly.)
+
+3. Evidential loss goes NaN
+   -> Check evidence is always >= 0 (ReLU applied in model).
+   -> Check alpha = evidence + 1 (never 0, so lgamma is safe).
+   -> Clamp evidence: torch.clamp(evidence, min=0, max=1e6).
+
+4. Training accuracy stuck at 20% (random guess)
+   -> Double-check adapter is not zeroing everything (initialization).
+   -> Double-check head has requires_grad=True.
+   -> Double-check optimizer is passed trainable params only (or all params
+      with backbone frozen via requires_grad=False — either works).
+
+5. ECE looks wrong
+   -> Make sure probs sum to 1 per row (they should after softmax or
+      alpha/S normalization).
+
+6. OOD AUROC near 0.5 (random)
+   -> Check that id_scores and ood_scores are on the correct scale.
+   -> Remember: higher score should mean "more in-distribution".
+
+7. "CUDA out of memory"
+   -> Reduce batch size in config.
+   -> 25 samples of 224x224 + ResNet18 fits easily on T4 (4GB is plenty).
+   -> If still an issue, use batch inference in chunks for query set.
+
+
+================================================================================
+FINAL CHECKLIST BEFORE PRE-DEFENCE
+================================================================================
+
+  [ ] Both models trained successfully.
+  [ ] results/metrics.json has all 8 numbers (4 metrics x 2 modes).
+  [ ] Reliability plot saved.
+  [ ] OOD histogram saved.
+  [ ] Training curve saved.
+  [ ] Slide outline written.
+  [ ] One dry-run of the presentation done.
+  [ ] Code committed to git (local or github).
+  [ ] Demo notebook works end-to-end on a fresh Colab (backup plan).
+
+
+================================================================================
+END OF INSTRUCTION.TXT
+================================================================================
