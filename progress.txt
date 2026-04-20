@@ -25,10 +25,10 @@ TASK 0: PROJECT SETUP
   [x] notebooks/demo.ipynb created (Colab-ready, clone/pull + per-task cells)
 
 TASK 1: CONFIG
-  [ ] 1.1 Create src/config.py with CFG dataclass
+  [x] 1.1 Create src/config.py with CFG dataclass
 
 TASK 2: UTILITIES
-  [ ] 2.1 Create src/utils.py (set_seed, get_device, count_trainable_params)
+  [x] 2.1 Create src/utils.py (set_seed, get_device, count_trainable_params)
 
 TASK 3: DATA
   [ ] 3.1 Create src/data.py
@@ -132,13 +132,14 @@ Last updated: 2026-04-21
 
 What is done:
   - TASK 0: Full project setup, venv, requirements installed (torch 2.11+cu130), README, .gitignore, demo.ipynb
+  - TASK 1: src/config.py (CFG dataclass, seed=42 test passes)
+  - TASK 2: src/utils.py (set_seed, get_device, count_trainable_params — test passes)
 
 What is in progress:
   (none)
 
 What is next:
-  - TASK 1: src/config.py
-  - TASK 2: src/utils.py
+  - TASK 3: src/data.py
 
 Blockers / questions:
   (note any issues or things that need Mainul's decision)
