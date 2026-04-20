@@ -54,7 +54,7 @@ def train(mode: str = "evidential") -> dict:
         optimizer.zero_grad()
         output = model(support_x)
 
-        kl_weight = min(1.0, step / CFG.kl_anneal_steps)
+        kl_weight = CFG.kl_weight_max * min(1.0, step / CFG.kl_anneal_steps)
 
         if mode == "evidential":
             loss = evidential_mse_loss(output, target_onehot, CFG.num_classes, kl_weight)

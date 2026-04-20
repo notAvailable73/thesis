@@ -25,10 +25,11 @@ class Config:
 
     # Training
     batch_size: int = 25
-    lr: float = 1e-3
-    num_steps: int = 200
+    lr: float = 5e-3
+    num_steps: int = 300
     weight_decay: float = 0.0
-    kl_anneal_steps: int = 200
+    kl_anneal_steps: int = 300
+    kl_weight_max: float = 0.1  # cap KL to avoid overwhelming MSE on small support set
 
     # OOD
     ood_dataset: str = "svhn"
