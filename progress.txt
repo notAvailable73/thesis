@@ -39,10 +39,10 @@ TASK 3: DATA
 
 TASK 4: BACKBONE
   [x] 4.1 Create src/backbone.py (build_frozen_resnet18)
-      [ ] TEST: dummy tensor passes through and returns (B, 512)
+      [x] TEST: output (2, 512), all frozen=True ✓
 
 TASK 5: ADAPTER
-  [ ] 5.1 Create src/adapter.py (BottleneckAdapter)
+  [x] 5.1 Create src/adapter.py (BottleneckAdapter)
       [ ] TEST: identity at init, shape preserved, ~17K params
 
 TASK 6: MODEL
