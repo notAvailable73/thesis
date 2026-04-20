@@ -47,13 +47,13 @@ TASK 5: ADAPTER
 
 TASK 6: MODEL
   [x] 6.1 Create src/model.py (BPEFTModel with evidential/softmax modes)
-      [ ] TEST: forward pass gives (B, 5), evidential output >= 0
+      [x] TEST: shape (8,5) ✓, all >= 0 ✓, trainable params 19,477 ✓
 
 TASK 7: LOSSES
-  [ ] 7.1 Create src/losses.py
-      [ ] FUNCTION A: kl_divergence_dirichlet
-      [ ] FUNCTION B: evidential_mse_loss (with KL regularization)
-      [ ] FUNCTION C: softmax_ce_loss (baseline)
+  [x] 7.1 Create src/losses.py
+      [x] FUNCTION A: kl_divergence_dirichlet
+      [x] FUNCTION B: evidential_mse_loss (with KL regularization)
+      [x] FUNCTION C: softmax_ce_loss (baseline)
       [ ] TEST: both losses return finite scalars on dummy inputs
 
 TASK 9 (PART 1): TRAINING — EVIDENTIAL MODEL
