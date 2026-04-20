@@ -29,7 +29,7 @@ class Config:
     num_steps: int = 300
     weight_decay: float = 0.0
     kl_anneal_steps: int = 300
-    kl_weight_max: float = 0.1  # cap KL to avoid overwhelming MSE on small support set
+    kl_weight_max: float = 0.0  # 0 = MSE only; KL overwhelms MSE on tiny support sets
 
     # OOD
     ood_dataset: str = "svhn"
