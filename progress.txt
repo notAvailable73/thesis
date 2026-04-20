@@ -74,21 +74,21 @@ TASK 9 (PART 2): TRAINING — SOFTMAX BASELINE
       [ ] Checkpoint saved to checkpoints/model_softmax.pt
 
 TASK 8: METRICS
-  [ ] 8.1 Create src/metrics.py
-      [ ] FUNCTION A: accuracy
-      [ ] FUNCTION B: expected_calibration_error
-      [ ] FUNCTION C: brier_score
-      [ ] FUNCTION D: ood_auroc
+  [x] 8.1 Create src/metrics.py
+      [x] FUNCTION A: accuracy
+      [x] FUNCTION B: expected_calibration_error
+      [x] FUNCTION C: brier_score
+      [x] FUNCTION D: ood_auroc
       [ ] TEST: metrics return reasonable numbers on synthetic data
 
 TASK 10: EVALUATION
-  [ ] 10.1 Create src/evaluate.py
-      [ ] Load both checkpoints
-      [ ] Compute accuracy, ECE, Brier, OOD AUROC for both modes
-      [ ] Save results/metrics.json
-      [ ] Generate results/reliability_plot.png
-      [ ] Generate results/ood_histogram.png
-      [ ] Generate results/training_curve.png
+  [x] 10.1 Create src/evaluate.py
+      [x] Load both checkpoints
+      [x] Compute accuracy, ECE, Brier, OOD AUROC for both modes
+      [x] Save results/metrics.json
+      [x] Generate results/reliability_plot.png
+      [x] Generate results/ood_histogram.png
+      [x] Generate results/training_curve.png
   [ ] Run: python -m src.evaluate
       [ ] metrics.json has 8 numbers (4 metrics x 2 modes)
       [ ] 3 PNG plots saved and look reasonable
