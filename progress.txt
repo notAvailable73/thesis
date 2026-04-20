@@ -54,10 +54,10 @@ TASK 7: LOSSES
       [x] FUNCTION A: kl_divergence_dirichlet
       [x] FUNCTION B: evidential_mse_loss (with KL regularization)
       [x] FUNCTION C: softmax_ce_loss (baseline)
-      [ ] TEST: both losses return finite scalars on dummy inputs
+      [x] TEST: evidential=1.71 finite ✓, CE=2.16 finite ✓
 
 TASK 9 (PART 1): TRAINING — EVIDENTIAL MODEL
-  [ ] 9.1 Create src/train.py with CLI --mode flag
+  [x] 9.1 Create src/train.py with CLI --mode flag
   [ ] Run: python -m src.train --mode evidential
       [ ] Loss decreases over 200 steps
       [ ] Final train accuracy on support set > 0.8
