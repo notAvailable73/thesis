@@ -54,10 +54,11 @@ def train(mode: str = "evidential") -> dict:
         optimizer.zero_grad()
         output = model(support_x)
 
-        kl_weight = CFG.kl_weight_max * min(1.0, step / CFG.kl_anneal_steps)
-
         if mode == "evidential":
-            loss = evidential_mse_loss(output, target_onehot, CFG.num_classes, kl_weight)
+            # Train with CE on softplus evidence (treated as logits).
+            # Dirichlet probs (alpha/S) are used only at evaluation time.
+            # This gives stable training while preserving principled uncertainty at test time.
+            loss = softmax_ce_loss(output, support_y)
             with torch.no_grad():
                 alpha = output + 1.0
                 probs = alpha / alpha.sum(dim=-1, keepdim=True)

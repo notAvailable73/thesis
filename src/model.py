@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from .backbone import build_frozen_resnet18
 from .adapter import BottleneckAdapter
 
@@ -8,7 +9,8 @@ class BPEFTModel(nn.Module):
     """
     Full model: frozen ResNet18 -> Bottleneck Adapter -> Linear head.
 
-    evidential mode: ReLU on logits -> non-negative evidence (alpha = evidence + 1 in loss)
+    evidential mode: Softplus on logits -> non-negative evidence (alpha = evidence + 1)
+                     Trained with CE loss; Dirichlet probs used at evaluation time.
     softmax mode:    raw logits (softmax applied inside loss)
     """
     def __init__(self, num_classes: int, feature_dim: int = 512,
@@ -26,7 +28,7 @@ class BPEFTModel(nn.Module):
         feats = self.adapter(feats)
         logits = self.head(feats)
         if self.mode == "evidential":
-            return torch.relu(logits)
+            return F.softplus(logits)  # always > 0, smooth gradients (no dead neurons)
         return logits
 
 
