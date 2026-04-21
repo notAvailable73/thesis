@@ -10,11 +10,12 @@ from .model import BPEFTModel
 from .losses import evidential_mse_loss, softmax_ce_loss
 
 
-def train(mode: str = "evidential") -> dict:
+def train(mode: str = "evidential", adapter: str = None) -> dict:
+    adapter = adapter or CFG.adapter_type
     set_seed(CFG.seed)
     device = get_device()
     print(f"\n{'='*50}")
-    print(f"Training mode: {mode.upper()}  |  device: {device}")
+    print(f"Training  adapter={adapter}  mode={mode.upper()}  device={device}")
     print(f"{'='*50}")
 
     # ── Data ──────────────────────────────────────────
@@ -31,7 +32,9 @@ def train(mode: str = "evidential") -> dict:
         num_classes=CFG.num_classes,
         feature_dim=CFG.feature_dim,
         adapter_rank=CFG.adapter_rank,
-        mode=mode
+        mode=mode,
+        adapter_type=adapter,
+        lora_alpha=CFG.lora_alpha,
     ).to(device)
     print(f"Trainable params: {count_trainable_params(model):,}")
 
@@ -57,7 +60,6 @@ def train(mode: str = "evidential") -> dict:
         if mode == "evidential":
             # Train with CE on softplus evidence (treated as logits).
             # Dirichlet probs (alpha/S) are used only at evaluation time.
-            # This gives stable training while preserving principled uncertainty at test time.
             loss = softmax_ce_loss(output, support_y)
             with torch.no_grad():
                 alpha = output + 1.0
@@ -79,10 +81,11 @@ def train(mode: str = "evidential") -> dict:
 
     # ── Save checkpoint ────────────────────────────────
     os.makedirs(CFG.checkpoint_dir, exist_ok=True)
-    ckpt_path = os.path.join(CFG.checkpoint_dir, f"model_{mode}.pt")
+    ckpt_path = os.path.join(CFG.checkpoint_dir, f"model_{adapter}_{mode}.pt")
     torch.save({
         "state_dict": model.state_dict(),
         "mode": mode,
+        "adapter_type": adapter,
         "train_history": history,
         "episode": {
             "support_x": support_x.cpu(),
@@ -105,5 +108,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["evidential", "softmax"], required=True)
+    parser.add_argument("--adapter", choices=["bottleneck", "lora"], default=None,
+                        help="Adapter type (default: from CFG.adapter_type)")
     args = parser.parse_args()
-    train(args.mode)
+    train(args.mode, args.adapter)

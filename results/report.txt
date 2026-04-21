@@ -88,7 +88,7 @@ Author: Mainul | Generated: 2026-04-21
 
 
 --------------------------------------------------------------------------------
-4. ANALYSIS: WHY EVIDENTIAL EDL MSE LOSS FAILED (Attempts 1–3)
+4. Hypothesis: WHY EVIDENTIAL EDL MSE LOSS FAILED (Attempts 1–3)
 --------------------------------------------------------------------------------
 
   The Sensoy 2018 evidential MSE loss was designed for large datasets
@@ -114,7 +114,7 @@ Author: Mainul | Generated: 2026-04-21
 
 
 --------------------------------------------------------------------------------
-5. ANALYSIS: WHY CE TRAINING WITH DIRICHLET EVALUATION WORKS
+5. Hypothesis: WHY CE TRAINING WITH DIRICHLET EVALUATION WORKS
 --------------------------------------------------------------------------------
 
   Replacing evidential MSE with cross-entropy during training fixes the
@@ -131,7 +131,7 @@ Author: Mainul | Generated: 2026-04-21
 
 
 --------------------------------------------------------------------------------
-6. ANALYSIS: WHY EVIDENTIAL ECE IS BAD (0.526) DESPITE GOOD ACCURACY
+6. Hypothesis: WHY EVIDENTIAL ECE IS BAD (0.526) DESPITE GOOD ACCURACY
 --------------------------------------------------------------------------------
 
   This is the most surprising result and needs careful explanation.
@@ -164,73 +164,4 @@ Author: Mainul | Generated: 2026-04-21
     - Use EDL-MSE loss with very small kl_weight (0.001) on more data
     - Proper episodic meta-training over many episodes (not single episode)
 
-
---------------------------------------------------------------------------------
-7. THE THESIS STORY (what this demo proves and does NOT prove)
---------------------------------------------------------------------------------
-
-  WHAT IS PROVEN:
-    ✓ RQ3 (PARTIAL): Evidential Dirichlet head dramatically improves OOD
-      detection vs Softmax in a low-data regime (5-shot):
-      AUROC 0.991 vs 0.854 (+0.137) — a very strong result.
-    ✓ Both models achieve similar accuracy (~89–93%) with only ~20K
-      trainable params (0.17% of ResNet18). PEFT is effective.
-
-  WHAT IS NOT PROVEN IN THIS DEMO:
-    ✗ RQ2: Evidential does NOT show better calibration (ECE) than Softmax
-      in this single-episode demo. ECE is 0.526 vs 0.040 (softmax wins).
-    ~ This is a known limitation of using EDL in the few-shot regime
-      without proper multi-episode meta-training.
-
-  THE HONEST SLIDE NARRATIVE:
-    "With the same 20K-parameter adapter, the evidential head provides
-     dramatically better OOD detection (AUROC +0.137) at near-equal
-     accuracy. Calibration improvement requires meta-training over many
-     episodes — this is the main open question for the full thesis."
-
-
---------------------------------------------------------------------------------
-8. KEY DECISIONS LOG
---------------------------------------------------------------------------------
-
-  2026-04-21: Switched training loss from evidential MSE to cross-entropy
-              for the evidential model. Reason: MSE+KL overwhelms the
-              MSE signal on 25 support samples. CE gives stable training
-              while Dirichlet probs at test time still give principled OOD.
-
-  2026-04-21: Switched evidential activation from relu to softplus.
-              Reason: relu causes dead neurons (zero gradient for negative
-              logits). Softplus is always smooth and positive.
-
-  2026-04-21: kl_weight_max set to 0.0 (KL disabled).
-              Reason: Even kl_weight=0.1 prevents convergence on 25 samples.
-
-  2026-04-21: lr=5e-3 (up from original 1e-3). Reason: faster convergence.
-              num_steps=300 (up from 200). Reason: more headroom for convergence.
-
-
---------------------------------------------------------------------------------
-9. WHAT TO FIX FOR THE FULL THESIS (after pre-defence)
---------------------------------------------------------------------------------
-
-  1. Proper episodic meta-training: sample N episodes per epoch, aggregate
-     gradients. This trains the model to generalise across episodes, which
-     should fix the ECE problem (model won't overfit a single support set).
-
-  2. Proper EDL-MSE training at scale: with many episodes, the KL term
-     becomes reasonable and the model can be trained end-to-end with the
-     Sensoy loss as originally intended.
-
-  3. Temperature scaling: simple post-hoc calibration on a validation set.
-     Would likely fix the ECE without any retraining.
-
-  4. LoRA, BitFit: replace the bottleneck adapter with other PEFT methods.
-     Compare calibration and OOD across adapter types.
-
-  5. More backbones and datasets: MobileNetV3-Small, ConvNeXt-Nano on
-     CUB-200 and ISIC (medical imaging).
-
-
-================================================================================
-END OF REPORT
-================================================================================
+ 

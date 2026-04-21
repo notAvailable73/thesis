@@ -22,6 +22,8 @@ class Config:
     backbone: str = "resnet18"
     feature_dim: int = 512
     adapter_rank: int = 16
+    adapter_type: str = "bottleneck"  # "bottleneck" | "lora"
+    lora_alpha: float = 16.0          # LoRA scaling alpha (scaling = alpha/rank)
 
     # Training
     batch_size: int = 25
