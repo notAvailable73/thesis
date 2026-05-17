@@ -1,0 +1,70 @@
+# Defaults for all B-PEFT experiments. Per-experiment YAMLs override only the
+# keys they need via `extends: base.yaml`.
+
+seed: 42
+
+backbone:
+  name: resnet18
+  feature_dim: 512
+
+adapter:
+  type: bottleneck       # bottleneck | lora
+  rank: 16
+  alpha: null            # only used by lora; null -> defaults to rank
+
+head:
+  type: softmax          # softmax | evidential
+  activation: softplus   # only used by evidential: softplus | exp_clamp | relu
+
+loss:
+  # type is auto-selected to match `head.type` (softmax -> cross_entropy,
+  # evidential -> evidential). The kl_* keys are only consumed in evidential mode.
+  kl_weight_max: 0.1
+  kl_anneal_steps: 200
+
+dataset:
+  name: cifar_fs
+  data_root: data
+  image_size: 224
+  split: test
+  # Step 2 keeps the Step 1 simplification: CIFAR-100 test, classes 0..19.
+  class_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+              10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+  n_way: 5
+  k_shot: 5
+  q_query: 15
+
+train:
+  lr: 5.0e-3
+  weight_decay: 0.0
+  num_steps: 200
+  log_every: 20
+
+eval:
+  # Step 3: every evaluation reads the fixed 600-seed list from this file so
+  # results are paired across configs/people. `num_episodes` is kept for
+  # backwards-compat with Step 1/2 quick checks but is ignored when the
+  # episodes file is present and not disabled via --num-episodes.
+  num_episodes: 20
+  episodes_file: configs/test_episodes.yaml
+  ece_bins: 15
+
+ood:
+  name: svhn
+  num_samples: 500
+  data_root: data
+  seed: 42
+
+# Step 3 (action 3.1 + 3.5). `disabled: true` makes the WandbRun wrapper a
+# no-op (used by tests + offline debugging). `mode: online` requires
+# WANDB_API_KEY in env; `mode: offline` writes to ./wandb/ without uploading.
+wandb:
+  project: bpeft-thesis
+  mode: online
+  disabled: false
+  group: null
+  tags: []
+
+output:
+  checkpoint_dir: checkpoints
+  results_dir: results

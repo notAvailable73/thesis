@@ -1,0 +1,391 @@
+================================================================================
+POST-DEFENCE IMPLEMENTATION STEPS â B-PEFT THESIS
+================================================================================
+Author target: Mainul
+Created:       2026-05-12
+Read order:    handover.md â plan.txt â progress.txt â THIS FILE
+Scope:         Everything from "pre-defence demo done" to "thesis submitted".
+================================================================================
+
+
+--------------------------------------------------------------------------------
+WHERE YOU ACTUALLY ARE (REALITY CHECK, NOT FICTION)
+--------------------------------------------------------------------------------
+
+Pre-defence is DONE. You already have:
+  - src/ with: config, utils, data, backbone, adapter (Bottleneck),
+    lora, model, losses (evidential + CE), metrics, train, evaluate
+  - notebooks/demo.ipynb (runs end-to-end in Colab)
+  - results/metrics.json with REAL numbers (1 episode, CIFAR-100 test):
+
+        Evidential:  acc=0.893  ECE=0.526  Brier=0.541  AUROC=0.991
+        Softmax:     acc=0.933  ECE=0.040  Brier=0.095  AUROC=0.854
+        Trainable params: 19,477 (both)
+
+  - reliability_plot.png, ood_histogram.png, training_curve.png
+  - report.txt, slides_outline.md
+
+CRITICAL OBSERVATION â READ THIS BEFORE ANYTHING ELSE:
+  The evidential ECE (0.526) is WORSE than softmax ECE (0.040).
+  This is the OPPOSITE of the thesis claim.
+  AUROC favours evidential (good), accuracy is fine, but calibration
+  is broken. Step 1 below exists because of this single number.
+
+  Likely causes (in order of likelihood):
+    1. ECE is being computed on Dirichlet mean prob p = alpha/S for
+       evidential but on softmax(logits) for the baseline â the
+       evidential p collapses to near-uniform when total evidence S
+       is small, inflating ECE. Check metrics.py + evaluate.py.
+    2. KL weight too high â pushes alpha toward uniform â confident
+       wrong predictions get punished, but correct predictions also
+       lose sharpness.
+    3. Single episode = noisy estimate; 1 episode * 75 query images
+       cannot give a stable ECE.
+    4. Evidence activation: Softplus on raw logits can saturate.
+
+
+--------------------------------------------------------------------------------
+HOW TO USE THIS DOCUMENT
+--------------------------------------------------------------------------------
+
+- Steps are numbered. Do them in order.
+- Each step has: GOAL, ACTIONS, EXIT CRITERIA.
+- "EXIT CRITERIA" means: do not move to the next step until these are met.
+- Estimated total wall-time: 10â12 weeks of part-time work.
+- Compute: Google Colab T4 (free or Pro). Save everything to Drive.
+
+
+================================================================================
+STEP 1 â FIX THE CALIBRATION STORY (Week 1, ~3 days)
+================================================================================
+GOAL: Get evidential ECE below softmax ECE on a single CIFAR-FS episode,
+      so the thesis claim is actually true on at least one configuration.
+
+ACTIONS:
+  1.1  Open src/metrics.py and confirm ECE is computed identically for
+       both modes. For evidential mode the probabilities MUST be
+       p = alpha / S where alpha = evidence + 1 and S = sum(alpha).
+       For softmax mode, p = softmax(logits). Same number of bins (15).
+  1.2  In src/evaluate.py, log per-sample max-prob histograms for both
+       modes side by side. Save as a debug PNG. Inspect: if evidential
+       max-prob is clustered around 0.2â0.4 while softmax is at 0.9+,
+       that is the bug â evidential is too uncertain.
+  1.3  Reduce kl_weight in the evidential loss (try 0.1 instead of 1.0,
+       and also try a linear anneal from 0 to 0.1 over the 200 steps).
+       Re-run training.
+  1.4  Try evidence activation = exp(clamp(logits, max=10)) instead of
+       Softplus. Sometimes Softplus on small logits gives tiny evidence.
+  1.5  Increase test query size: average over 20 sampled episodes with
+       fixed seeds [0..19] rather than 1. This alone often halves ECE.
+  1.6  Re-run evaluate, regenerate plots, update results/metrics.json.
+
+EXIT CRITERIA:
+  [ ] Evidential ECE < Softmax ECE on the averaged-20-episode eval
+  [ ] Accuracy gap < 5 percentage points (both still learn)
+  [ ] AUROC(evidential) > AUROC(softmax) still holds
+  [ ] One updated reliability_plot.png that visibly shows evidential
+      closer to the diagonal
+
+
+================================================================================
+STEP 2 â MIGRATE TO A CLEAN, CONFIG-DRIVEN REPO (Week 1â2, ~5 days)
+================================================================================
+GOAL: One repo, one config system, one entry point. No more demo
+      shortcuts hardcoded in src/config.py.
+
+ACTIONS:
+  2.1  Inside the current repo, create the proper layout:
+         src/backbones/        (resnet18.py â move from backbone.py)
+         src/adapters/         (bottleneck.py, lora.py)
+         src/heads/            (linear_head.py â classifier)
+         src/losses/           (evidential.py, cross_entropy.py)
+         src/datasets/         (cifar_fs.py, mini_imagenet.py,
+                                svhn_ood.py, episode_sampler.py)
+         src/models/           (bpeft_model.py)
+         src/trainers/         (fewshot_trainer.py)
+         src/evaluators/       (accuracy.py, calibration.py, ood.py)
+         src/utils/            (seed.py, config.py, params.py, logging.py)
+         scripts/              (train.py, evaluate.py, run_grid.sh)
+         configs/              (base.yaml + per-experiment yamls)
+         tests/                (one test file per module)
+  2.2  Move existing files, fix imports, keep code unchanged where it
+       already works.
+  2.3  Replace the CFG dataclass with a YAML loader. base.yaml holds
+       defaults. Each experiment file just overrides a few keys. Example:
+
+            # configs/exp_lora_evidential_cifarfs.yaml
+            extends: base.yaml
+            adapter: { type: lora, rank: 4 }
+            head:    { type: evidential }
+            dataset: { name: cifar_fs, n_way: 5, k_shot: 5 }
+            train:   { episodes: 200, kl_anneal_epochs: 10 }
+            seed:    42
+
+  2.4  scripts/train.py â accepts --config <path>, instantiates
+       everything from the YAML, no model-specific imports at top.
+  2.5  scripts/evaluate.py â accepts --checkpoint and --config, runs
+       the full metric suite over 600 test episodes with fixed seeds.
+  2.6  Re-run Step 1's experiment using ONLY scripts/train.py. The
+       numbers should match. If they don't, the refactor introduced a
+       bug â fix it before moving on.
+
+EXIT CRITERIA:
+  [ ] `python scripts/train.py --config configs/exp_step1.yaml` runs
+  [ ] Output matches Step 1's metrics within Â±1% accuracy, Â±0.01 ECE
+  [ ] No file in src/ is unused; no placeholder files anywhere
+  [ ] `pytest tests/` passes (write minimal smoke tests for each module)
+
+
+================================================================================
+STEP 3 â WANDB + REPRODUCIBILITY (Week 2, ~2 days)
+================================================================================
+GOAL: Every run is logged. Every result has a wandb URL. Seeds are fixed.
+
+ACTIONS:
+  3.1  Add wandb.init() in fewshot_trainer.py. Project name:
+       "bpeft-thesis". Run name format:
+       "{backbone}_{adapter}_{head}_{dataset}_{kshot}shot_seed{seed}"
+  3.2  Log per-step: loss, support_accuracy, lr, kl_weight (if evidential)
+  3.3  Log per-episode/epoch: query_accuracy, ECE, Brier
+  3.4  Log final artifacts: reliability diagram, OOD histogram,
+       confusion matrix, metrics.json
+  3.5  Add a wandb.disabled flag in base.yaml for offline debugging.
+  3.6  Add src/utils/seed.py call at the start of every script. Fix
+       three seeds: python, numpy, torch (+ cuda). Set
+       torch.backends.cudnn.deterministic = True for headline runs.
+  3.7  Create configs/test_episodes.yaml that lists the exact 600 test
+       episode seeds. Commit it. Every evaluation uses this same file.
+
+EXIT CRITERIA:
+  [ ] A wandb dashboard with at least 2 runs (evidential + softmax)
+  [ ] Running the same config twice gives byte-identical metrics.json
+  [ ] Same 600 test episodes used regardless of who runs evaluate
+
+
+================================================================================
+STEP 4 â PROPER CIFAR-FS + EPISODIC TRAINING (Week 2â3, ~5 days)
+================================================================================
+GOAL: Replace the CIFAR-100-test shortcut with the real 64/16/20 split,
+      and replace single-episode training with full episodic training.
+
+ACTIONS:
+  4.1  src/datasets/cifar_fs.py
+       - Use the Bertinetto 2019 split (64 train / 16 val / 20 test)
+       - Auto-download CIFAR-100, then re-index classes to the split
+       - Verify: no class appears in two sets
+       - Save the split as a JSON file for reproducibility
+  4.2  src/datasets/episode_sampler.py
+       - Function: sample_episode(split, n_way, k_shot, q_query, seed)
+       - PyTorch IterableDataset wrapper for streaming training episodes
+  4.3  Episodic training loop:
+       - Per epoch: 100 train episodes
+       - Per run: 20â50 epochs
+       - Validate every epoch on 100 val-split episodes
+       - Early stop if val accuracy plateaus 5 epochs
+  4.4  Final eval: 600 test episodes from the test split.
+       Report mean Â± 95% CI.
+  4.5  Re-run evidential + softmax on the proper split. These numbers
+       (not the demo numbers) become the Phase A baseline.
+
+EXIT CRITERIA:
+  [ ] CIFAR-FS split JSON exists and is committed
+  [ ] Single command runs full episodic training in ~30 min on T4
+  [ ] Reported numbers come with confidence intervals
+  [ ] Updated metrics.json with these as the new "Phase A real numbers"
+
+
+================================================================================
+STEP 5 â BUILD THE MINIMUM VIABLE THESIS GRID (Weeks 3â5)
+================================================================================
+GOAL: The 4-cell core table that earns the degree.
+
+The grid:
+                 |  Softmax  |  Evidential
+   --------------+-----------+-------------
+   Bottleneck    |     â     |      â
+   LoRA          |     â     |      â
+
+  On:   CIFAR-FS  and  MiniImageNet
+  Shot: 1-shot    and  5-shot
+  OOD:  SVHN
+  Seeds: 3 per cell
+
+  Total runs: 4 cells * 2 datasets * 2 shots * 3 seeds = 48 runs.
+
+ACTIONS:
+  5.1  Implement src/datasets/mini_imagenet.py
+       - Ravi & Larochelle 64/16/20 split
+       - Auto-download or document the manual download path
+       - Resize 84â224 for ResNet18
+  5.2  Sanity-check: 1 episode each of 4 cells on CIFAR-FS, then on
+       MiniImageNet. All four should produce numbers, no crashes.
+  5.3  Write scripts/run_mvt_grid.sh â loops the 48 configs. Each
+       config saves checkpoint + metrics + wandb run.
+  5.4  Run on Colab. Budget: ~30 min/run * 48 = 24 GPU-hours. Spread
+       across ~1 week of Colab Pro or 2 weeks of free tier.
+  5.5  Aggregate into results/mvt_results.json with structure:
+         {dataset}.{kshot}.{adapter}.{head}.{metric} = mean Â± std
+  5.6  Generate three master tables:
+       - Accuracy table (4*2*2)
+       - Calibration table (ECE + Brier)
+       - OOD AUROC table (SVHN)
+  5.7  Generate 8 reliability diagrams and 4 OOD histograms.
+
+EXIT CRITERIA:
+  [ ] mvt_results.json complete (no missing cells)
+  [ ] Three publication-quality tables saved as LaTeX + PNG
+  [ ] All 12 plots saved at 300 dpi
+  [ ] Wandb dashboard groups runs by (dataset, kshot)
+  [ ] RQ1 (partial), RQ2 (yes), RQ3 (yes) are answered with numbers
+
+
+================================================================================
+STEP 6 â EXPAND BREADTH (Weeks 6â9, drop items if time runs out)
+================================================================================
+GOAL: Make the thesis "good" instead of "minimum". Drop in this priority
+      order if you run out of time: ISIC > CUB > ConvNeXt > MobileNetV3 >
+      BitFit > parallel adapter.
+
+Week 6 â RQ1 done properly (adapter PLACEMENT, not just type)
+  6.1  Add bottleneck adapter INSIDE residual blocks of ResNet18:
+       - Serial placement: after each block's conv2
+       - Parallel placement: alongside the block, summed at output
+  6.2  Add src/adapters/bitfit.py â unfreezes only bias terms in the
+       backbone. Almost-zero parameters.
+  6.3  Re-run the 4-cell grid plus the two new methods on CIFAR-FS.
+
+Week 7 â More backbones
+  6.4  src/backbones/mobilenetv3.py â torchvision MobileNetV3-Small,
+       feature dim 576, frozen.
+  6.5  src/backbones/convnext_nano.py â from timm, frozen. If
+       unavailable, swap to EfficientNet-B0 and document the choice.
+  6.6  Run BEST (adapter, head) combo from Step 5 on these backbones,
+       both datasets.
+
+Week 8 â More OOD + harder datasets
+  6.7  Add TinyImageNet OOD (near-OOD case â critical for RQ3).
+  6.8  Add Gaussian noise OOD (sanity check).
+  6.9  Re-run OOD eval for best 4 configs on all OOD sets.
+  6.10 (Optional) CUB-200-2011 for fine-grained few-shot.
+  6.11 (Optional) ISIC for medical-domain angle.
+
+Week 9 â Ablation studies (each is one small table)
+  6.12 Bottleneck rank â {2, 4, 8, 16, 32, 64}
+  6.13 LoRA rank â {1, 2, 4, 8, 16}
+  6.14 KL anneal epochs â {5, 10, 20, 50}
+  6.15 Evidence activation: Softplus vs exp(clamp) vs ReLU
+  6.16 KL weight = 0 (no Bayesian prior) â expect calibration to degrade
+  6.17 Adapter init: zero-up-proj vs random
+
+EXIT CRITERIA:
+  [ ] At least 4 PEFT methods evaluated on >= 1 dataset
+  [ ] At least 2 backbones evaluated on the best combo
+  [ ] At least 2 OOD datasets reported (SVHN + TinyImageNet)
+  [ ] At least 3 ablation tables completed
+
+
+================================================================================
+STEP 7 â EDGE EFFICIENCY (Week 10, answers RQ4)
+================================================================================
+GOAL: Pareto frontier of latency vs uncertainty quality.
+
+ACTIONS:
+  7.1  For every (backbone, adapter, head) combo, measure:
+       - Total parameters
+       - Trainable parameters and %
+       - Disk size (MB)
+       - FLOPs (torchprofile or fvcore)
+       - Inference latency on T4 GPU (mean Â± std, 100 runs)
+       - Inference latency on Colab CPU (proxy for edge)
+       - Peak memory during inference
+  7.2  Scatter plot: latency (X) vs AUROC (Y). Highlight Pareto-optimal
+       points with a separate marker. One plot per dataset.
+  7.3  Add a parameter-efficiency plot: trainable params (X, log scale)
+       vs accuracy (Y). Same Pareto highlighting.
+  7.4  Document the limitation explicitly: no Jetson Nano access; CPU
+       is used as an edge proxy.
+
+EXIT CRITERIA:
+  [ ] Efficiency table for all configs
+  [ ] Two Pareto plots saved
+  [ ] RQ4 explicitly answered
+
+
+================================================================================
+STEP 8 â THESIS WRITING (Weeks 11â14)
+================================================================================
+GOAL: Submit the document.
+
+Week 11 â Figures and tables polish
+  8.1  Architecture diagram (TikZ or draw.io): frozen backbone +
+       adapter insertion points + evidential head + Dirichlet â
+       p, uncertainty.
+  8.2  Convert every numerical result to LaTeX table (booktabs style).
+  8.3  Re-render every plot at 300 dpi with consistent fonts.
+
+Week 12 â Chapters 1â3
+  8.4  Ch1 Introduction (2â3 pages): motivation, contributions, RQs.
+  8.5  Ch2 Literature Review (5â8 pages): the 4 reference papers
+       (Bayesian PEFT for VLMs, Conv-Adapter, Sensoy 2018, BayesLoRA)
+       plus standard PEFT (Adapter, LoRA, BitFit), EDL, few-shot.
+  8.6  Ch3 Methodology (8â12 pages): architecture, EDN math
+       (Dirichlet, alpha = evidence + 1, KL prior), episodic training.
+
+Week 13 â Chapters 4â6
+  8.7  Ch4 Experimental Setup (3â5 pages): datasets, splits, seeds,
+       hardware, hyperparameters.
+  8.8  Ch5 Results (10â15 pages): MVT grid, calibration, OOD,
+       ablations, efficiency.
+  8.9  Ch6 Discussion (3â5 pages): one subsection per RQ, explicit
+       answer with table/figure reference, threats to validity.
+
+Week 14 â Finalization
+  8.10 Ch7 Conclusion + Future Work (2â3 pages).
+  8.11 Abstract (250 words).
+  8.12 BibTeX file, alphabetized.
+  8.13 Proofread end-to-end.
+  8.14 Supervisor review â revise â submit.
+
+
+================================================================================
+GLOBAL CHECKLIST (TICK AS YOU GO)
+================================================================================
+
+  [ ] Step 1: Calibration fix â evidential ECE < softmax ECE
+  [ ] Step 2: Clean repo with config-driven scripts
+  [ ] Step 3: wandb + reproducibility
+  [ ] Step 4: Real CIFAR-FS split + episodic training
+  [ ] Step 5: MVT grid (48 runs)
+  [ ] Step 6: Breadth (more PEFT, backbones, OOD, ablations)
+  [ ] Step 7: Edge efficiency + Pareto plot
+  [ ] Step 8: Thesis document submitted
+
+
+================================================================================
+RISK NOTES (KEEP RE-READING)
+================================================================================
+
+R1  If Step 1 fails (evidential never beats softmax on calibration even
+    after debugging), pivot the thesis story to "honest comparison":
+    accuracy parity + OOD wins + calibration trade-off. This is still
+    a defensible contribution. Do NOT cherry-pick numbers.
+
+R2  Colab session limits will kill long runs. Save checkpoints to
+    Drive after every epoch. Resume from checkpoint, never restart.
+
+R3  Two repos is a trap. After Step 2 is done, archive the old
+    bpeft_demo state with a git tag (v0-demo-archive) and never touch
+    it again.
+
+R4  Each experiment in Step 5 must use the SAME 600 test episodes
+    across all 4 cells. Otherwise the comparison is invalid. The
+    fixed-episode YAML from Step 3 enforces this.
+
+R5  When time is tight in Step 6, drop items from the bottom of the
+    priority list, not from the top. RQ1/RQ2/RQ3/RQ4 coverage matters
+    more than dataset count.
+
+
+================================================================================
+END OF POST-DEFENCE IMPLEMENTATION PLAN
+================================================================================

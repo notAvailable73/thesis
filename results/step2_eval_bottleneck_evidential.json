@@ -1,0 +1,16 @@
+{
+  "config_path": "/Users/admin/Desktop/Projects/Thesis/thesis/configs/exp_step1.yaml",
+  "head_type": "evidential",
+  "adapter_type": "bottleneck",
+  "num_episodes": 20,
+  "n_params": 19477,
+  "accuracy_mean": 0.8613333284854889,
+  "accuracy_std": 0.06086779172059057,
+  "ece_per_episode_mean": 0.1712886627217134,
+  "ece_per_episode_std": 0.03930383625124689,
+  "ece_pooled": 0.1429078667362531,
+  "brier_mean": 0.2428310513496399,
+  "brier_std": 0.057635187347029805,
+  "ood_auroc_mean": 0.9600920000000001,
+  "ood_auroc_std": 0.01690763083475757
+}

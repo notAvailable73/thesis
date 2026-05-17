@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import sys; print\\(sys.executable, sys.version\\)\")",
+      "Bash(pip3 list *)",
+      "Read(//opt/homebrew/Caskroom/**)",
+      "Read(//Users/admin/**)",
+      "Bash(~/miniconda3/bin/python -c \"import torch, torchvision, sklearn; print\\('torch', torch.__version__\\); print\\('tv', torchvision.__version__\\); print\\('sklearn', sklearn.__version__\\)\")"
+    ]
+  }
+}

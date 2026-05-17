@@ -1,0 +1,9 @@
+# Step 1 softmax baseline. Same bottleneck adapter, same data.
+extends: base.yaml
+
+head:
+  type: softmax
+
+adapter:
+  type: bottleneck
+  rank: 16

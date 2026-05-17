@@ -1,0 +1,16 @@
+{
+  "config_path": "/Users/admin/Desktop/Projects/Thesis/thesis/configs/exp_step1_softmax.yaml",
+  "head_type": "softmax",
+  "adapter_type": "bottleneck",
+  "num_episodes": 20,
+  "n_params": 19477,
+  "accuracy_mean": 0.8373333364725113,
+  "accuracy_std": 0.05555378256363787,
+  "ece_per_episode_mean": 0.12129772384961449,
+  "ece_per_episode_std": 0.04154122813564549,
+  "ece_pooled": 0.09703988446791967,
+  "brier_mean": 0.2613710254430771,
+  "brier_std": 0.09012173820759453,
+  "ood_auroc_mean": 0.8528439999999999,
+  "ood_auroc_std": 0.05423660643267915
+}

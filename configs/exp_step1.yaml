@@ -1,0 +1,19 @@
+# Step 1 winner (from the actual notebook run, NOT the predicted ranges):
+#   tag:       softplus_kl0.5
+#   measured:  acc=0.865, ECE_mean=0.167, ECE_pooled=0.144,
+#              Brier=0.243, AUROC=0.958
+# Story: R1 honest trade-off — accuracy parity with softmax + AUROC win of
+# +12.3pp, calibration framed as an intentional under-confidence trade.
+extends: base.yaml
+
+head:
+  type: evidential
+  activation: softplus
+
+loss:
+  kl_weight_max: 0.5
+  kl_anneal_steps: 200
+
+adapter:
+  type: bottleneck
+  rank: 16

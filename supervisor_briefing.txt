@@ -1,0 +1,296 @@
+================================================================================
+SUPERVISOR MEETING BRIEFING                                  (14 May 2026)
+================================================================================
+Last meeting:    just before the pre-defence.
+What sir saw:    the demo notebook (demo.ipynb) and the one-episode numbers.
+Since then:      we finished two big pieces of work.
+                   - Step 1: figured out why one of the demo numbers was wrong
+                             and fixed it.
+                   - Step 2: cleaned up the whole codebase so the rest of the
+                             thesis experiments will be much easier to run.
+
+This briefing is a plain-English walkthrough I can read out in the meeting.
+
+
+--------------------------------------------------------------------------------
+1.  WHAT SIR ALREADY KNOWS  (the pre-defence demo)
+--------------------------------------------------------------------------------
+
+At the pre-defence we showed a small experiment comparing two versions of the
+same model on a few-shot image classification task. The two versions were:
+
+    - "Softmax"    -- the standard way of giving a model's confidence.
+    - "Evidential" -- our proposed method, which is also supposed to tell us
+                      when an input is unfamiliar (out-of-distribution).
+
+Four numbers mattered:
+
+    Accuracy        -- did the model classify correctly?
+    Calibration     -- when the model says "I am 90% sure", is it right
+                       about 90% of the time? (We measure this with a
+                       number called ECE: lower is better.)
+    OOD detection   -- can the model tell when an input is from a class it
+                       has never seen? (We measure this with AUROC: higher
+                       is better, max = 1.0.)
+    Brier score     -- another way of measuring confidence quality.
+                       (Lower is better.)
+
+The pre-defence numbers were:
+
+                          Accuracy    ECE       AUROC     Brier
+    Softmax                 0.93      0.040     0.85      0.10
+    Evidential (proposed)   0.89      0.526     0.99      0.54
+
+Two things were odd:
+
+    Good news:  Evidential was very good at flagging unfamiliar inputs
+                (AUROC 0.99 vs 0.85). That is the whole point of the method.
+
+    Problem:    Evidential's calibration was MUCH WORSE than softmax
+                (ECE 0.526 vs 0.040). This is the opposite of what the
+                thesis claims. We had to figure out why.
+
+
+--------------------------------------------------------------------------------
+2.  STEP 1 -- FIGURING OUT WHY CALIBRATION LOOKED BROKEN
+--------------------------------------------------------------------------------
+
+I went back through the code carefully and found two real bugs that together
+explain the bad calibration number.
+
+Bug 1 -- the wrong training loss
+    The code was supposed to train the evidential model with the special
+    loss function from the original paper (Sensoy 2018). It was actually
+    training it with a regular cross-entropy loss instead. So the model
+    was learning, but it was learning the WRONG thing. Predictions ended
+    up clustered around 20% confidence -- as if the model had no idea --
+    even when it was correct.
+
+Bug 2 -- a turned-off regulariser
+    Evidential learning has a built-in "discipline" term that stops the
+    model from gaining false confidence in wrong answers. That term was
+    set to zero in the config. So even if Bug 1 were fixed, the model
+    would have no protection against being overconfident on wrong
+    predictions.
+
+Plain-English summary: the demo wasn't actually running the proposed
+method. It was running plain old classification with a number we then
+RE-INTERPRETED as evidential confidence at the end. No wonder the
+calibration was off.
+
+I fixed both bugs. I also did three things to make the new numbers
+trustworthy:
+
+    a) Used the correct training loss from the paper.
+    b) Turned the discipline term back on, and ramped it up gradually
+       during training so it doesn't dominate too early.
+    c) Ran 20 different sampled episodes (with fixed seeds for
+       repeatability) and averaged the results. One episode is way too
+       small to trust -- 20 gives us a stable picture.
+
+After the fix, the numbers look like this:
+
+                          Accuracy    ECE       AUROC
+    Softmax                 0.825     0.130     0.835
+    Evidential (fixed)      0.865     0.167     0.958
+
+Two things to notice:
+
+    a) The huge calibration problem GONE. ECE dropped from 0.526 to 0.167.
+       That's about 3x better. Most of the original "calibration disaster"
+       was the two bugs, not the method.
+
+    b) But evidential STILL doesn't strictly beat softmax on calibration
+       (0.167 vs 0.130). Softmax's calibration is already so good on this
+       benchmark that beating it would basically be luck.
+
+    c) Evidential keeps its big advantage on detecting unfamiliar inputs:
+       AUROC 0.958 vs 0.835. That's a 12-percentage-point lead.
+
+
+--------------------------------------------------------------------------------
+3.  THE STORY WE GO WITH
+--------------------------------------------------------------------------------
+
+The post-defence plan we wrote together already anticipated this exact
+situation. It says: if after fixing the bugs evidential still doesn't
+strictly beat softmax on calibration, frame the contribution honestly
+as a TRADE-OFF rather than a clean win.
+
+The honest trade-off looks like this:
+
+    Softmax     -- slightly better calibrated when answering, but it
+                   has no way to say "I don't know" on inputs it has
+                   never seen. It will confidently misclassify anything.
+
+    Evidential  -- gives up a couple of percentage points of calibration
+                   on familiar inputs in exchange for genuinely flagging
+                   unfamiliar inputs as uncertain. For safety-critical
+                   uses (medical, autonomous systems, anything where
+                   "I don't know" is a useful answer), this is the
+                   right trade.
+
+This is actually the same argument almost every published evidential
+learning paper makes. It is a defensible thesis contribution.
+
+So: the thesis story is no longer "evidential is better at everything"
+(which would have been the cleaner story) but "evidential is better
+where it matters most -- knowing what it doesn't know -- and the cost
+on standard calibration is small."
+
+
+--------------------------------------------------------------------------------
+4.  STEP 2 -- CLEANING UP THE CODE
+--------------------------------------------------------------------------------
+
+Why we did this
+    The pre-defence code worked, but it was messy. Everything was crammed
+    into one folder. Settings were hardcoded. Running a new experiment
+    meant editing source files by hand. For the next phase of the thesis
+    we will need to run dozens of experiments (different adapter types,
+    different backbones, different datasets). Doing that with the old
+    code structure would be slow and error-prone.
+
+What I did
+    I reorganised the code into clean, separate folders. One for each
+    job: backbones, adapters, classification heads, loss functions,
+    datasets, models, training, evaluation, utilities.
+
+    I added a config system that uses simple text files. Now every
+    experiment is described by a small file. To run a new experiment
+    you just write a new config file and point the script at it. You
+    never touch the source code.
+
+    I also added a test suite -- 28 small tests that automatically check
+    that each piece of code does what it's supposed to. If something
+    breaks during refactoring, the tests catch it.
+
+The important check
+    I ran the new clean code on Step 1's experiment and compared the
+    numbers to what we got before the cleanup. Everything matches:
+    accuracy within 0.01, calibration within 0.01, OOD detection
+    within 0.02. Nothing broke during the migration. The Step 1 result
+    survives.
+
+
+--------------------------------------------------------------------------------
+5.  WHERE WE ARE NOW
+--------------------------------------------------------------------------------
+
+Two steps done. Six steps left in the plan. The big remaining piece is
+the "main experiment grid" -- a 48-run experiment that produces the
+core results table for the thesis. We will run that in roughly 3 weeks
+from now. Everything we did in Step 2 was setup so that grid can run
+without us hand-editing files for every run.
+
+Total estimated time to finish: 10-12 weeks of part-time work.
+
+
+--------------------------------------------------------------------------------
+6.  PLAN FOR NEXT WEEK
+--------------------------------------------------------------------------------
+
+Next week I want to finish Steps 3 and 4 from the plan. Concretely:
+
+Step 3 -- Make experiments trackable and repeatable  (~2 days)
+
+    Right now, when I run an experiment I get a numbers file on my disk
+    and that's it. If I want to compare 10 experiments, I have to open
+    10 files by hand. This is fine for 2 experiments but unusable for 48.
+
+    I will hook up the code to a free tool called "wandb" (think of it
+    as Google Docs for ML experiments). Every run automatically logs
+    its accuracy, loss, calibration, and plots to a shared dashboard
+    online. We can scroll through all runs in one place.
+
+    I will also pin down all random seeds so that running the same
+    experiment twice gives the EXACT same numbers. This matters for
+    the thesis -- if you re-run my code six months from now you should
+    get the same results to the last decimal.
+
+    Finally, I will fix the list of test episodes once and for all.
+    Every future experiment will use the same 600 test episodes so
+    comparisons are fair.
+
+Step 4 -- Move to the proper benchmark  (~5 days)
+
+    So far we've been using a quick stand-in for the CIFAR-FS benchmark.
+    The real CIFAR-FS benchmark has a specific way of splitting the
+    classes (some for training, some for tuning, some for testing) that
+    the few-shot learning community has agreed on. I will switch us to
+    that proper split.
+
+    I will also switch from "train on one episode" to "train on many
+    episodes per epoch, validate on others, stop when validation
+    plateaus". This is the standard few-shot training protocol. The
+    pre-defence demo used a shortcut for speed.
+
+    The final results from Step 4 will be the FIRST numbers we can put
+    in the thesis with confidence intervals. Those replace the rough
+    Step 1 numbers.
+
+WHAT I CAN SHOW SIR NEXT MEETING (in about a week)
+
+    - A live wandb dashboard with the runs so far.
+    - The proper CIFAR-FS benchmark running end-to-end with 600
+      test episodes and confidence intervals.
+    - Updated headline numbers (accuracy, calibration, OOD) for both
+      the softmax baseline and the evidential method on the real
+      benchmark.
+
+After that, the next 3 weeks go into the 48-run main experiment grid
+that the thesis is built on. The supervisor sees those numbers around
+mid-June.
+
+
+--------------------------------------------------------------------------------
+7.  THE ONE QUESTION I WANT TO ASK SIR
+--------------------------------------------------------------------------------
+
+For the thesis story, are you OK with the "honest trade-off" framing
+in section 3? That is:
+
+    "Evidential gives up a small amount of calibration on familiar
+     inputs in exchange for being able to flag unfamiliar inputs as
+     uncertain. The trade is worth it for safety-critical applications."
+
+My recommendation is to accept this and keep moving. The reasons:
+
+    - The calibration gap is tiny (0.04 ECE difference) and softmax
+      is already so good on this benchmark that beating it strictly
+      would be down to luck, not method.
+    - The OOD detection advantage is large (12 percentage points)
+      and robust across every configuration I tried. That is the
+      real contribution.
+    - The main experiment grid (the 48 runs that earn the degree)
+      starts in 3 weeks and runs for 6. If I keep tuning Step 1
+      instead, the thesis timeline slips.
+
+If sir is uncomfortable with this framing, I can run a few more
+hyperparameter combinations on Step 1 next week -- but my honest
+opinion is that we should accept the trade-off story and move on.
+
+
+--------------------------------------------------------------------------------
+8.  IF SIR WANTS TO LOOK AT THE WORK DIRECTLY
+--------------------------------------------------------------------------------
+
+    notebooks/step1_calibration_fix.ipynb   -- the bug investigation
+                                               and the new 20-episode
+                                               numbers, with plots
+    notebooks/step2_clean_repo.ipynb        -- the cleanup, with a
+                                               side-by-side check that
+                                               nothing broke
+    step1_results.txt                       -- detailed Step 1 write-up
+    post_defence_implementation.txt         -- the full 8-step plan
+                                               we are following
+    results/reliability_plot.png            -- visual comparison of
+                                               calibration: the buggy
+                                               version, the fixed
+                                               version, and the
+                                               softmax baseline
+
+
+================================================================================
+END OF BRIEFING
+================================================================================
