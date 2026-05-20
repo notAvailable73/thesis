@@ -1,0 +1,43 @@
+# Phase 2 (Step 4) — softmax baseline on real CIFAR-FS Bertinetto split,
+# episodic meta-training with prototype head. Same architecture as the
+# evidential sibling; only the head.interpretation flips.
+extends: base.yaml
+
+trainer:
+  type: episodic
+  num_epochs: 30
+  episodes_per_epoch: 100
+  val_episodes_per_epoch: 100
+  early_stop_patience: 5
+  collapse_threshold: 0.25
+  train_seed_offset: 20000
+
+dataset:
+  class_ids: null
+  split: test
+  n_way: 5
+  k_shot: 5
+  q_query: 15
+
+head:
+  type: prototype
+  metric: l2
+  interpretation: softmax
+
+# Softmax interpretation does not use KL annealing; keys are kept here
+# at default values so cfg.loss.kl_weight_max parses without error.
+loss:
+  kl_weight_max: 0.0
+  kl_anneal_steps: 1
+
+adapter:
+  type: bottleneck
+  rank: 16
+
+train:
+  lr: 5.0e-3
+  weight_decay: 0.0
+
+wandb:
+  project: bpeft-thesis
+  tags: [phase2, step4, softmax, prototype, cifar_fs_bertinetto]

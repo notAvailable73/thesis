@@ -1,10 +1,20 @@
-from .cifar_fs import get_cifar_fs
+from .cifar_fs import (
+    get_cifar_fs,
+    load_cifar_fs_split,
+    CIFAR100_CLASS_NAMES,
+)
 from .svhn_ood import get_svhn_ood
-from .episode_sampler import sample_episode
+from .episode_sampler import sample_episode, EpisodicIterableDataset
 
 
 def build_dataset(spec: dict):
-    """spec: {name: cifar_fs | svhn_ood, ...}."""
+    """spec: {name: cifar_fs, split: train|val|test, ...} | {name: svhn_ood, ...}.
+
+    Step 4 (Phase 2) extends `cifar_fs` to read the Bertinetto 64/16/20
+    split from data/cifar_fs_split.json. If `class_ids` is in the spec
+    (legacy Step 1-3 path), it overrides the split file and filters to
+    those literal CIFAR-100 class IDs.
+    """
     name = spec["name"]
     if name == "cifar_fs":
         return get_cifar_fs(
@@ -16,4 +26,12 @@ def build_dataset(spec: dict):
     raise ValueError(f"Unknown dataset: {name}")
 
 
-__all__ = ["build_dataset", "get_cifar_fs", "get_svhn_ood", "sample_episode"]
+__all__ = [
+    "build_dataset",
+    "get_cifar_fs",
+    "load_cifar_fs_split",
+    "CIFAR100_CLASS_NAMES",
+    "get_svhn_ood",
+    "sample_episode",
+    "EpisodicIterableDataset",
+]

@@ -13,12 +13,29 @@ adapter:
   alpha: null            # only used by lora; null -> defaults to rank
 
 head:
-  type: softmax          # softmax | evidential
-  activation: softplus   # only used by evidential: softplus | exp_clamp | relu
+  # Step 1-3 used trained heads (LinearHead / EvidentialHead). Step 4
+  # (Phase 2) introduces a parameter-free PrototypeHead. The default
+  # below keeps the Step 1-3 path live so legacy configs (exp_step1.yaml)
+  # still work unchanged.
+  #
+  # type: softmax | evidential | prototype
+  #   - softmax    -> trained LinearHead, raw logits, softmax CE loss
+  #   - evidential -> trained EvidentialHead, non-negative evidence
+  #   - prototype  -> parameter-free PrototypeHead; interpretation is
+  #                   set by head.interpretation (softmax | evidential)
+  type: softmax
+  activation: softplus   # evidential heads only: softplus|exp_clamp|relu
+  # PrototypeHead-only knobs:
+  metric: l2             # l2 | cosine
+  cosine_scale: 10.0
+  interpretation: evidential   # only consulted when type == prototype
 
 loss:
-  # type is auto-selected to match `head.type` (softmax -> cross_entropy,
-  # evidential -> evidential). The kl_* keys are only consumed in evidential mode.
+  # type is auto-selected to match `head.type` for single-episode runs:
+  #   softmax    -> cross_entropy
+  #   evidential -> evidential
+  #   prototype  -> auto-selected from head.interpretation
+  # The kl_* keys are only consumed in evidential interpretation.
   kl_weight_max: 0.1
   kl_anneal_steps: 200
 
@@ -27,26 +44,48 @@ dataset:
   data_root: data
   image_size: 224
   split: test
-  # Step 2 keeps the Step 1 simplification: CIFAR-100 test, classes 0..19.
+  # Step 2 / Step 3 kept the Step 1 simplification: CIFAR-100 test,
+  # classes 0..19. Step 4 (Phase 2) onwards passes split: train | val |
+  # test WITHOUT class_ids, which routes through the Bertinetto split
+  # in data/cifar_fs_split.json. The class_ids key is kept here only so
+  # legacy configs (exp_step1.yaml) keep behaving identically.
   class_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
               10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
   n_way: 5
   k_shot: 5
   q_query: 15
 
+# Step 4 (Phase 2): selects the training protocol.
+#   trainer.type: single_episode | episodic
+#     - single_episode -> Step 1-3 path: one episode, 200 inner steps,
+#                         per-episode fine-tune at eval time.
+#     - episodic       -> Phase 2 path: episodic meta-training, prototype
+#                         head, per-epoch validation, early stop.
+trainer:
+  type: single_episode
+  # Episodic-only knobs (ignored under single_episode):
+  num_epochs: 30
+  episodes_per_epoch: 100
+  val_episodes_per_epoch: 100
+  early_stop_patience: 5
+  collapse_threshold: 0.25  # R-EPISODIC-COLLAPSE guard
+  train_seed_offset: 20000  # base seed for training-stream episode RNG
+
 train:
   lr: 5.0e-3
   weight_decay: 0.0
+  # `num_steps` is used by trainer.type = single_episode.
   num_steps: 200
   log_every: 20
 
 eval:
-  # Step 3: every evaluation reads the fixed 600-seed list from this file so
-  # results are paired across configs/people. `num_episodes` is kept for
-  # backwards-compat with Step 1/2 quick checks but is ignored when the
-  # episodes file is present and not disabled via --num-episodes.
+  # Step 3: every evaluation reads the fixed 600-seed list from this file
+  # so results are paired across configs/people. `num_episodes` is kept
+  # for backwards-compat with Step 1/2 quick checks but is ignored when
+  # the episodes file is present and not disabled via --num-episodes.
   num_episodes: 20
   episodes_file: configs/test_episodes.yaml
+  val_episodes_file: configs/val_episodes.yaml
   ece_bins: 15
 
 ood:

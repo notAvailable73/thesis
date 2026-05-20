@@ -1,0 +1,21 @@
+{
+  "accuracy_ci95": 0.005827926365017621,
+  "accuracy_mean": 0.8230000013113021,
+  "accuracy_std": 0.07283390741227712,
+  "adapter_type": "bottleneck",
+  "brier_mean": 0.28636417134975395,
+  "brier_std": 0.12006427418638072,
+  "config_path": "configs/exp_step1_softmax.yaml",
+  "ece_per_episode_mean": 0.13593935516079267,
+  "ece_per_episode_std": 0.05775410507698902,
+  "ece_pooled": 0.11022964767548774,
+  "episodes_file": "configs/test_episodes.yaml",
+  "head_type": "softmax",
+  "n_params": 19477,
+  "num_episodes": 600,
+  "ood_auroc_mean": 0.8500944444444445,
+  "ood_auroc_std": 0.05459094543788804,
+  "seed": 42,
+  "seeds_first10": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  "seeds_last10": [590, 591, 592, 593, 594, 595, 596, 597, 598, 599]
+}

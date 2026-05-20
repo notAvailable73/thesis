@@ -1,19 +1,29 @@
 """Evaluate a trained B-PEFT checkpoint over a fixed list of test episodes.
 
-Usage:
-    python scripts/evaluate.py --config configs/exp_step1.yaml
-    python scripts/evaluate.py --config configs/exp_step1.yaml --num-episodes 50
+Two modes, dispatched on cfg.trainer.type:
 
-Step 3 changes (post-defence plan, action 3.1 + 3.3 + 3.4 + 3.7):
-  - episode seeds come from configs/test_episodes.yaml (committed list of
-    600 seeds). --num-episodes K truncates to the first K of that list, so
-    quick checks and full runs use the *same* seed prefix.
-  - per-episode acc / ECE / Brier / OOD-AUROC are logged to W&B.
-  - final reliability diagram, OOD histogram, confusion matrix are saved to
-    cfg.output.results_dir and logged as W&B images.
-  - the summary JSON is sorted (sort_keys=True) so a re-run on a fixed seed
-    yields a byte-identical metrics.json (Step 3 exit criterion).
+  trainer.type: single_episode    (Step 1-3 legacy)
+      Per-episode fine-tune protocol: build a fresh model each episode,
+      train on the support set for 200 inner steps, evaluate on the
+      query set. The 600 test seeds come from configs/test_episodes.yaml.
+
+  trainer.type: episodic          (Step 4 / Phase 2)
+      Episodic test protocol: load the meta-trained adapter checkpoint
+      (frozen), prototype-classify each episode's query set, score OOD
+      samples against THIS episode's prototypes. Same 600 seeds, no
+      inner fitting.
+
+Both modes:
+  - read the canonical seed list from configs/test_episodes.yaml,
+  - support --num-episodes K to truncate to the first K seeds,
+  - dump a metrics JSON with sort_keys=True for byte-identical reruns,
+  - log to W&B (online | offline | disabled).
+
+Usage:
+    python scripts/evaluate.py --config configs/exp_step1.yaml          # legacy
+    python scripts/evaluate.py --config configs/exp_phase2_evidential.yaml
 """
+from __future__ import annotations
 import argparse
 import json
 import sys
@@ -29,16 +39,37 @@ from src.utils import (
     set_seed, get_device, count_trainable_params, load_config, get_logger,
     WandbRun, make_run_name, reliability_diagram, ood_histogram, confusion_matrix,
 )
-from src.datasets import build_dataset, sample_episode, get_svhn_ood
+from src.datasets import (
+    build_dataset, sample_episode, get_svhn_ood, get_cifar_fs,
+    EpisodicIterableDataset,
+)
 from src.models import build_model
 from src.losses import build_loss
 from src.trainers import train_one_episode
 from src.evaluators import (
-    accuracy, expected_calibration_error, brier_score, ood_auroc,
+    accuracy, f1_macro, expected_calibration_error, brier_score,
+    ood_auroc, fpr_at_95_tpr,
     evidence_to_probs_and_vacuity, logits_to_probs_and_uncertainty,
+    evaluate_episodic,
 )
 
 
+def _head_descriptor(cfg) -> str:
+    """Same as scripts/train.py:_head_descriptor — kept in sync.
+
+    Step 1-3: head.type is sufficient (softmax / evidential).
+    Step 4+:  prototype configs need head.interpretation appended,
+              otherwise the two Phase 2 configs would collide on disk.
+    """
+    head_type = cfg.head.type
+    if head_type == "prototype":
+        return f"prototype-{cfg.head.get('interpretation', 'evidential')}"
+    return head_type
+
+
+# =====================================================================
+# Shared helpers
+# =====================================================================
 def _extract_features(backbone, x, device, batch_size=64):
     """Run the frozen backbone once over `x` and return (N, D) features on CPU."""
     backbone.eval()
@@ -50,7 +81,9 @@ def _extract_features(backbone, x, device, batch_size=64):
     return torch.cat(chunks, dim=0)
 
 
-def _predict_from_features(model, feats, head_type, device, batch_size=256, num_classes=5):
+def _predict_from_features(model, feats, head_type, device,
+                           batch_size=256, num_classes=5):
+    """Step 1-3 single-episode path: model with LinearHead / EvidentialHead."""
     model.eval()
     out_chunks = []
     with torch.no_grad():
@@ -64,7 +97,6 @@ def _predict_from_features(model, feats, head_type, device, batch_size=256, num_
 
 
 def _load_test_seeds(repo_root: Path, cfg) -> list[int]:
-    """Step 3 action 3.7: load the 600 canonical seeds from disk."""
     eps_path = repo_root / cfg.eval.episodes_file
     with open(eps_path) as f:
         spec = yaml.safe_load(f)
@@ -74,13 +106,15 @@ def _load_test_seeds(repo_root: Path, cfg) -> list[int]:
     return seeds
 
 
-def _build_wandb_run(cfg, args, head_type) -> WandbRun:
+def _build_wandb_run(cfg, args, head_type, extra_tags=None) -> WandbRun:
     wcfg = cfg.get("wandb", None) if isinstance(cfg, dict) else None
     project = (wcfg or {}).get("project", "bpeft-thesis") if wcfg else "bpeft-thesis"
     base_mode = (wcfg or {}).get("mode", "online") if wcfg else "online"
     disabled = bool((wcfg or {}).get("disabled", False)) if wcfg else False
     group = (wcfg or {}).get("group", None) if wcfg else None
     tags = list((wcfg or {}).get("tags", []) or []) if wcfg else []
+    if extra_tags:
+        tags = tags + list(extra_tags)
 
     mode = args.wandb_mode or base_mode
     if args.wandb_mode == "disabled":
@@ -94,51 +128,27 @@ def _build_wandb_run(cfg, args, head_type) -> WandbRun:
             "head": dict(cfg.head),
             "adapter": dict(cfg.adapter),
             "loss": dict(cfg.loss),
+            "trainer": dict(cfg.trainer),
             "eval": dict(cfg.eval),
             "ood": dict(cfg.ood),
         },
         mode=mode, disabled=disabled, group=group,
-        tags=tags + [f"head:{head_type}", f"adapter:{cfg.adapter.type}", "step3-eval"],
+        tags=tags + [f"head:{head_type}", f"adapter:{cfg.adapter.type}"],
         job_type="evaluate",
     )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--checkpoint", default=None,
-                        help="If omitted, derived from config (adapter+head+seed).")
-    parser.add_argument("--num-episodes", type=int, default=None,
-                        help="Truncate the canonical seed list to the first K seeds.")
-    parser.add_argument("--wandb-mode", choices=["online", "offline", "disabled"],
-                        default=None, help="Override cfg.wandb.mode")
-    parser.add_argument("--results-suffix", default="step3",
-                        help="Prefix for output JSON / PNG files in results_dir.")
-    args = parser.parse_args()
-
-    cfg = load_config(args.config)
-    logger = get_logger("bpeft.evaluate")
-    repo_root = Path(__file__).resolve().parents[1]
-
-    # --- Episode seed list (Step 3, action 3.7) ---------------------------
-    seeds = _load_test_seeds(repo_root, cfg)
-    if args.num_episodes is not None:
-        seeds = seeds[: int(args.num_episodes)]
+# =====================================================================
+# Step 1-3 legacy path (per-episode fine-tune)
+# =====================================================================
+def _evaluate_finetune(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
+    """Existing Step 3 per-episode fine-tune evaluator. Verbatim from the
+    pre-Step-4 version of this script."""
     n_eval = len(seeds)
-    logger.info(f"config={args.config}  num_episodes={n_eval}  "
-                f"(from {cfg.eval.episodes_file})")
-
     set_seed(int(cfg.seed))
-    device = get_device()
     head_type = cfg.head.type
     K = int(cfg.dataset.n_way)
 
-    # --- W&B run (Step 3) -------------------------------------------------
-    wb = _build_wandb_run(cfg, args, head_type)
-    if not wb.disabled:
-        logger.info(f"wandb run: {wb.run_name}  url={wb.url}")
-
-    # --- Load shared data once --------------------------------------------
     dataset = build_dataset(dict(cfg.dataset))
     svhn_x = get_svhn_ood(
         data_root=cfg.ood.data_root,
@@ -146,23 +156,17 @@ def main() -> None:
         num_samples=int(cfg.ood.num_samples),
         seed=int(cfg.ood.seed),
     )
-
-    # Build a single backbone instance to extract features. The trained
-    # adapter+head live in a per-episode model; the backbone is frozen and
-    # identical across episodes so feature extraction is amortised here.
     shared_model = build_model(cfg).to(device)
     svhn_feats = _extract_features(shared_model.backbone, svhn_x, device)
     logger.info(f"cached SVHN features: {tuple(svhn_feats.shape)}")
 
-    # --- Per-episode loop --------------------------------------------------
     per_ep_acc, per_ep_ece, per_ep_brier, per_ep_auroc = [], [], [], []
     pooled_probs, pooled_targets = [], []
-    last_id_scores: np.ndarray | None = None
-    last_ood_scores: np.ndarray | None = None
+    last_id_scores = None
+    last_ood_scores = None
 
     for i, ep_seed in enumerate(seeds):
         set_seed(int(cfg.seed) + int(ep_seed))
-        # Fresh model per episode -> trained on this episode's support set.
         model = build_model(cfg).to(device)
         loss_spec = dict(cfg.loss)
         loss_spec["type"] = "evidential" if head_type == "evidential" else "cross_entropy"
@@ -170,14 +174,13 @@ def main() -> None:
 
         support_x, support_y, query_x, query_y = sample_episode(
             dataset=dataset,
-            class_ids=list(cfg.dataset.class_ids),
+            class_ids=list(cfg.dataset.class_ids) if cfg.dataset.get("class_ids") else None,
             n_way=K, k_shot=int(cfg.dataset.k_shot),
             q_query=int(cfg.dataset.q_query),
             seed=int(ep_seed),
         )
-        # Cache features once per episode; adapter+head train on (B, D) tensors.
         support_feats = _extract_features(model.backbone, support_x, device).to(device)
-        query_feats = _extract_features(model.backbone, query_x, device)
+        query_feats   = _extract_features(model.backbone, query_x, device)
         support_y_d = support_y.to(device)
 
         train_one_episode(
@@ -186,19 +189,16 @@ def main() -> None:
             loss_fn=loss_fn, num_classes=K, head_type=head_type,
             lr=float(cfg.train.lr), weight_decay=float(cfg.train.weight_decay),
             num_steps=int(cfg.train.num_steps),
-            log_every=10**9, logger=None,
-            wandb_run=None,  # don't pollute the eval run with per-step training logs
+            log_every=10**9, logger=None, wandb_run=None,
         )
 
-        # ID metrics
         probs, vac = _predict_from_features(model, query_feats, head_type, device, num_classes=K)
         acc = accuracy(probs, query_y)
         ece = expected_calibration_error(probs, query_y, num_bins=int(cfg.eval.ece_bins))
         bri = brier_score(probs, query_y, K)
 
-        # OOD AUROC: ID score = 1 - vacuity
         _, ood_vac = _predict_from_features(model, svhn_feats, head_type, device, num_classes=K)
-        id_scores = (1.0 - vac).numpy()
+        id_scores  = (1.0 - vac).numpy()
         ood_scores = (1.0 - ood_vac).numpy()
         auroc = ood_auroc(id_scores, ood_scores)
         last_id_scores, last_ood_scores = id_scores, ood_scores
@@ -210,7 +210,6 @@ def main() -> None:
             f"ep {i:3d} (seed={ep_seed:3d})  acc={acc:.3f}  ECE={ece:.3f}  "
             f"Brier={bri:.3f}  AUROC={auroc:.3f}"
         )
-        # Step 3 action 3.3: per-episode W&B log
         wb.log({
             "eval/episode": i,
             "eval/episode_seed": int(ep_seed),
@@ -218,7 +217,6 @@ def main() -> None:
             "eval/ECE": float(ece),
             "eval/Brier": float(bri),
             "eval/OOD_AUROC": float(auroc),
-            # rolling means make the W&B dashboard sortable mid-run
             "eval/accuracy_running_mean": float(np.mean(per_ep_acc)),
             "eval/ECE_running_mean": float(np.mean(per_ep_ece)),
             "eval/AUROC_running_mean": float(np.mean(per_ep_auroc)),
@@ -230,7 +228,6 @@ def main() -> None:
         pooled_probs, pooled_targets, num_bins=int(cfg.eval.ece_bins),
     )
 
-    # --- Summary (sort_keys -> byte-identical on repeated runs) -----------
     summary = {
         "accuracy_mean": float(np.mean(per_ep_acc)),
         "accuracy_std":  float(np.std(per_ep_acc)),
@@ -251,13 +248,184 @@ def main() -> None:
         "seed": int(cfg.seed),
         "seeds_first10": [int(s) for s in seeds[:10]],
         "seeds_last10":  [int(s) for s in seeds[-10:]],
+        "trainer_type": "single_episode",
+    }
+    return {
+        "summary": summary,
+        "pooled_probs": pooled_probs,
+        "pooled_targets": pooled_targets,
+        "last_id_scores": last_id_scores,
+        "last_ood_scores": last_ood_scores,
     }
 
-    # --- Final artifacts (Step 3 action 3.4) -------------------------------
+
+# =====================================================================
+# Step 4 / Phase 2 path (prototype head, frozen meta-trained adapter)
+# =====================================================================
+def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
+    """Phase 2 evaluation: load the meta-trained adapter, freeze it, run
+    prototype-head over the 600 test episodes."""
+    n_eval = len(seeds)
+    head_type = cfg.head.type
+    interp = cfg.head.get("interpretation", "evidential")
+    K = int(cfg.dataset.n_way)
+
+    # --- Test split (Bertinetto 20 test classes) ----------------------
+    test_split = get_cifar_fs(
+        data_root=cfg.dataset.data_root,
+        image_size=int(cfg.dataset.image_size),
+        split="test",
+    )
+
+    # Build EpisodicIterableDataset with seed_offset = seeds[0] so the
+    # 600 episodes match configs/test_episodes.yaml's seeds exactly.
+    # (test_episodes.yaml uses seeds [0..599], so seed_offset=0.)
+    seed_offset = int(seeds[0])
+    # Sanity check: seeds must be a contiguous range starting from
+    # seed_offset, since EpisodicIterableDataset increments by 1.
+    expected = list(range(seed_offset, seed_offset + n_eval))
+    if seeds != expected:
+        raise ValueError(
+            "configs/test_episodes.yaml seeds are not a contiguous "
+            "range starting from seeds[0]; episodic evaluator requires "
+            "contiguous seeds. Got non-contiguous seeds."
+        )
+
+    test_iter = EpisodicIterableDataset(
+        test_split, n_way=K, k_shot=int(cfg.dataset.k_shot),
+        q_query=int(cfg.dataset.q_query),
+        num_episodes=n_eval, seed_offset=seed_offset,
+    )
+
+    # --- Load checkpoint ----------------------------------------------
+    model = build_model(cfg).to(device)
+    ckpt_path = args.checkpoint
+    if ckpt_path is None:
+        ckpt_dir = Path(cfg.output.checkpoint_dir)
+        tag = f"{cfg.adapter.type}_{_head_descriptor(cfg)}_seed{cfg.seed}"
+        ckpt_path = ckpt_dir / f"model_phase2_{tag}.pt"
+    ckpt = torch.load(ckpt_path, map_location=device)
+    model.load_state_dict(ckpt["state_dict"])
+    best_val_epoch = int(ckpt.get("best_val_epoch", -1))
+    logger.info(
+        f"loaded checkpoint: {ckpt_path}  "
+        f"best_val_epoch={best_val_epoch}  "
+        f"best_val_acc={ckpt.get('best_val_acc', float('nan')):.3f}"
+    )
+
+    # --- OOD features (SVHN, frozen-backbone forward) -----------------
+    svhn_x = get_svhn_ood(
+        data_root=cfg.ood.data_root,
+        image_size=int(cfg.dataset.image_size),
+        num_samples=int(cfg.ood.num_samples),
+        seed=int(cfg.ood.seed),
+    )
+    svhn_feats = _extract_features(model.backbone, svhn_x, device)
+    logger.info(f"cached SVHN features: {tuple(svhn_feats.shape)}")
+
+    # --- Run the episodic evaluator -----------------------------------
+    result = evaluate_episodic(
+        model=model,
+        test_iterable=test_iter,
+        ood_features=svhn_feats,
+        num_classes=K,
+        interpretation=interp,
+        ece_bins=int(cfg.eval.ece_bins),
+        device=device,
+        logger=logger,
+        wandb_run=wb,
+    )
+    base_summary = result["summary"]
+
+    # Augment with config-level metadata (so the JSON schema matches
+    # Step 3's + the new Phase 2 fields).
+    base_summary.update({
+        "adapter_type": cfg.adapter.type,
+        "config_path":  str(Path(args.config).resolve()),
+        "episodes_file": str(cfg.eval.episodes_file),
+        "head_type": head_type,
+        "interpretation": interp,
+        "n_params": int(count_trainable_params(build_model(cfg))),
+        "seed": int(cfg.seed),
+        "seeds_first10": [int(s) for s in seeds[:10]],
+        "seeds_last10":  [int(s) for s in seeds[-10:]],
+        "trainer_type": "episodic",
+        "best_val_epoch": int(best_val_epoch),
+    })
+    return {
+        "summary": base_summary,
+        "pooled_probs": result["pooled_probs"],
+        "pooled_targets": result["pooled_targets"],
+        "last_id_scores": result["last_id_scores"],
+        "last_ood_scores": result["last_ood_scores"],
+    }
+
+
+# =====================================================================
+# main
+# =====================================================================
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--checkpoint", default=None,
+                        help="If omitted, derived from config "
+                             "(adapter+head+seed).")
+    parser.add_argument("--num-episodes", type=int, default=None,
+                        help="Truncate the canonical seed list to the "
+                             "first K seeds.")
+    parser.add_argument("--wandb-mode", choices=["online", "offline", "disabled"],
+                        default=None, help="Override cfg.wandb.mode")
+    parser.add_argument("--results-suffix", default="step3",
+                        help="Prefix for output JSON / PNG files in "
+                             "results_dir.")
+    args = parser.parse_args()
+
+    cfg = load_config(args.config)
+    logger = get_logger("bpeft.evaluate")
+    repo_root = Path(__file__).resolve().parents[1]
+
+    seeds = _load_test_seeds(repo_root, cfg)
+    if args.num_episodes is not None:
+        seeds = seeds[: int(args.num_episodes)]
+    n_eval = len(seeds)
+    trainer_type = cfg.get("trainer", {}).get("type", "single_episode") if isinstance(cfg, dict) else "single_episode"
+    logger.info(
+        f"config={args.config}  num_episodes={n_eval}  "
+        f"trainer.type={trainer_type}  "
+        f"(seeds from {cfg.eval.episodes_file})"
+    )
+
+    set_seed(int(cfg.seed))
+    device = get_device()
+    head_type = cfg.head.type
+    K = int(cfg.dataset.n_way)
+
+    extra_tags = [f"trainer:{trainer_type}",
+                  f"phase:{'2' if trainer_type == 'episodic' else '1'}"]
+    wb = _build_wandb_run(cfg, args, head_type, extra_tags=extra_tags)
+    if not wb.disabled:
+        logger.info(f"wandb run: {wb.run_name}  url={wb.url}")
+
+    if trainer_type == "single_episode":
+        bundle = _evaluate_finetune(cfg, args, logger, device, wb, seeds, repo_root)
+    elif trainer_type == "episodic":
+        bundle = _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root)
+    else:
+        raise ValueError(
+            f"Unknown trainer.type: {trainer_type!r}; expected "
+            f"'single_episode' or 'episodic'."
+        )
+
+    summary = bundle["summary"]
+    pooled_probs   = bundle["pooled_probs"]
+    pooled_targets = bundle["pooled_targets"]
+    last_id_scores = bundle["last_id_scores"]
+    last_ood_scores = bundle["last_ood_scores"]
+
+    # --- Final artifacts ----------------------------------------------
     out_dir = Path(cfg.output.results_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.results_suffix}_{cfg.adapter.type}_{head_type}"
-
+    tag = f"{args.results_suffix}_{cfg.adapter.type}_{_head_descriptor(cfg)}"
     metrics_path = out_dir / f"{tag}_metrics.json"
     rel_path     = out_dir / f"{tag}_reliability.png"
     hist_path    = out_dir / f"{tag}_ood_histogram.png"
@@ -266,32 +434,37 @@ def main() -> None:
     reliability_diagram(
         pooled_probs, pooled_targets, rel_path,
         num_bins=int(cfg.eval.ece_bins),
-        title=f"Reliability ({head_type}, {cfg.adapter.type})  ECE={pooled_ece:.3f}",
+        title=f"Reliability ({head_type}, {cfg.adapter.type})  "
+              f"ECE={summary['ece_pooled']:.3f}",
     )
     if last_id_scores is not None and last_ood_scores is not None:
         ood_histogram(
             last_id_scores, last_ood_scores, hist_path,
-            title=f"ID vs SVHN ({head_type})  AUROC={np.mean(per_ep_auroc):.3f}",
+            title=f"ID vs SVHN ({head_type})  "
+                  f"AUROC={summary['ood_auroc_mean']:.3f}",
         )
     confusion_matrix(
         pooled_probs, pooled_targets, cm_path, num_classes=K,
-        title=f"Confusion ({head_type})  acc={np.mean(per_ep_acc):.3f}",
+        title=f"Confusion ({head_type})  "
+              f"acc={summary['accuracy_mean']:.3f}",
     )
 
-    # Step 3 exit criterion: byte-identical metrics.json on repeated runs.
+    # sort_keys=True so a re-run on a fixed seed yields a byte-identical
+    # metrics.json (Step 3 exit criterion still applies in Phase 2).
     with open(metrics_path, "w") as f:
         json.dump(summary, f, indent=2, sort_keys=True)
     logger.info(f"saved metrics: {metrics_path}")
 
-    # Log final artifacts to W&B
     wb.update_summary({
-        "final/accuracy_mean": summary["accuracy_mean"],
-        "final/accuracy_ci95": summary["accuracy_ci95"],
-        "final/ece_pooled":    summary["ece_pooled"],
+        "final/accuracy_mean":  summary["accuracy_mean"],
+        "final/accuracy_ci95":  summary.get("accuracy_ci95", 0.0),
+        "final/f1_macro_mean":  summary.get("f1_macro_mean", 0.0),
+        "final/ece_pooled":     summary["ece_pooled"],
         "final/ece_per_episode_mean": summary["ece_per_episode_mean"],
-        "final/brier_mean":    summary["brier_mean"],
+        "final/brier_mean":     summary["brier_mean"],
         "final/ood_auroc_mean": summary["ood_auroc_mean"],
-        "final/num_episodes":  summary["num_episodes"],
+        "final/fpr_at_95_tpr_mean": summary.get("fpr_at_95_tpr_mean", 1.0),
+        "final/num_episodes":   summary["num_episodes"],
     })
     wb.log_image("plots/reliability_diagram", str(rel_path),
                  caption=f"{head_type} reliability")

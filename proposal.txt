@@ -1,0 +1,214 @@
+================================================================================
+RESEARCH PROPOSAL
+================================================================================
+Title: Bayesian Parameter-Efficient Fine-Tuning (B-PEFT) for Reliable
+       Few-Shot Vision with Lightweight CNN Backbones
+================================================================================
+
+
+1. CORE IDENTITY
+================================================================================
+Primary Title:
+  Bayesian Parameter-Efficient Fine-Tuning (B-PEFT) for Reliable Few-Shot
+  Vision with Lightweight CNN Backbones
+
+Keywords:
+  PEFT, Evidential Deep Learning, CNN Adaptation, Few-Shot Learning,
+  Uncertainty Estimation, OOD Detection
+
+Domain:
+  Computer Vision, Bayesian Deep Learning, Edge AI
+
+
+2. RESEARCH OBJECTIVE
+================================================================================
+To develop a framework that enables lightweight CNNs (e.g., MobileNetV3,
+ResNet18) to adapt to new tasks using only 1-10 samples per class while
+maintaining high calibration and out-of-distribution (OOD) robustness
+through evidential uncertainty regularization.
+
+
+3. PROBLEM DEFINITION
+================================================================================
+Problem 1: Parameter Inefficiency
+  Full fine-tuning of CNNs on small datasets leads to catastrophic forgetting
+  and high computational overhead. When only a few samples are available,
+  updating millions of parameters causes severe overfitting.
+
+Problem 2: The Reliability Gap
+  Standard PEFT methods (LoRA, Adapters) often inherit the overconfidence of
+  the base model. A model that says "95% confident" when it is actually only
+  60% correct is dangerous for safety-critical applications like medical
+  imaging or autonomous driving on edge devices.
+
+Problem 3: Architectural Bias
+  Most PEFT research focuses on Vision Transformers (ViT). CNNs have very
+  different properties — locality, translation invariance, hierarchical
+  feature extraction. How adapters behave inside convolutional blocks is
+  not well understood.
+
+
+4. RESEARCH QUESTIONS
+================================================================================
+RQ1: How does the placement of adapter modules (serial vs. parallel) within
+     a CNN bottleneck affect few-shot accuracy vs. parameter count?
+
+RQ2: Can Evidential Dirichlet Networks (EDN) provide superior calibration
+     compared to standard Softmax when fine-tuning with <500 trainable
+     parameters?
+
+RQ3: Does the integration of a Bayesian loss prior improve the detection
+     of near-OOD samples in low-data regimes?
+
+RQ4: What is the Pareto frontier between Inference Latency and Uncertainty
+     Quality on edge hardware?
+
+
+5. PROPOSED METHODOLOGY
+================================================================================
+
+A. Model Architectures
+-----------------------
+Backbones (all pretrained on ImageNet, frozen during fine-tuning):
+  - ResNet18: Classic residual network, 11.7M parameters
+  - MobileNetV3-Small: Depthwise-separable convolutions, 2.5M parameters
+  - ConvNeXt-Nano: Modernized CNN with transformer-inspired design
+
+PEFT Mechanisms:
+  - Bottleneck Adapters:
+      Down-projection (d → r) → ReLU → Up-projection (r → d)
+      Where d = feature dimension, r = bottleneck rank (r << d)
+      Inserted serial (after block) or parallel (alongside block)
+
+  - LoRA (Low-Rank Adaptation):
+      Applied to 1x1 and 3x3 convolutional kernels
+      W_new = W_frozen + A * B, where A ∈ R^(out × r), B ∈ R^(r × in)
+
+  - BitFit:
+      Only the bias terms of convolutional layers are unfrozen
+      Extremely parameter-efficient (< 0.1% of total params)
+
+B. Uncertainty Modeling (Evidential Framework)
+----------------------------------------------
+Instead of standard Cross-Entropy with Softmax, the model uses a Dirichlet
+Prior over class probabilities.
+
+For input x_i, the adapter-tuned CNN produces evidence e_k for each class k:
+  evidence_k = ReLU(f(x_i; θ)_k)
+
+Dirichlet concentration parameters:
+  α_k = evidence_k + 1
+
+Total Dirichlet strength:
+  S = Σ α_k
+
+Expected class probability:
+  p_k = α_k / S
+
+Epistemic uncertainty (vacuity):
+  u = K / S    (where K = number of classes)
+
+Interpretation:
+  - High S (lots of evidence) → low uncertainty → confident prediction
+  - Low S (little evidence) → high uncertainty → "I don't know"
+
+C. Training Strategy
+---------------------
+  - Backbone: Frozen (no gradient updates)
+  - Task: N-way K-shot classification (episodic training)
+  - Loss: Type II Maximum Likelihood (Evidential Loss)
+          + KL-Divergence Regularization with annealing
+  - Optimizer: Adam
+  - The KL term penalizes the model for producing evidence on wrong classes
+  - Annealing: KL weight starts at 0 and increases to 1 over training
+
+
+6. EXPERIMENTAL SETUP
+================================================================================
+
+Datasets (In-Distribution):
+  - CIFAR-FS: 100 classes from CIFAR-100, 64/16/20 split
+  - MiniImageNet: 100 classes, 64/16/20 split, 84x84 images
+  - CUB-200-2011: 200 bird species, fine-grained classification
+  - ISIC: Skin lesion images, medical domain
+
+Datasets (OOD / Robustness):
+  - SVHN: Street View House Numbers (far-OOD)
+  - TinyImageNet: 200 classes, cropped (near-OOD)
+  - Gaussian Noise: Synthetic random noise (far-OOD)
+  - CIFAR-10-C: 15 corruption types at 5 severity levels
+
+Primary Baselines:
+  - Full Fine-Tuning (all parameters trainable)
+  - Linear Probing (only final layer trainable)
+  - Standard LoRA with Softmax (non-Bayesian)
+
+Hardware Target:
+  - Development: local CPU-only Fedora workstation (code editing, unit tests)
+  - Training: Google Colab NVIDIA GPU (Tesla T4 / L4 / A100 depending on tier)
+  - Inference benchmark: CPU (local) + Colab GPU + Jetson Nano (if available)
+
+
+7. EVALUATION METRICS
+================================================================================
+
+Performance:
+  - Top-1 Accuracy
+  - Macro-F1 Score
+
+Calibration:
+  - Expected Calibration Error (ECE):
+      ECE = Σ (|B_m|/n) * |acc(B_m) - conf(B_m)|
+  - Brier Score:
+      BS = (1/N) Σ (p_i - y_i)^2
+
+Reliability (OOD Detection):
+  - AUROC for OOD detection
+  - FPR at 95% TPR (False Positive Rate at 95% True Positive Rate)
+
+Efficiency:
+  - Trainable Parameters (count and %)
+  - GPU Memory Delta (MB)
+  - Inference Latency (ms)
+  - FLOPs
+
+
+8. EXPECTED CONTRIBUTIONS
+================================================================================
+  1. First systematic study of PEFT + Evidential uncertainty on lightweight
+     CNNs for few-shot learning
+
+  2. Empirical analysis of adapter placement (serial vs parallel) in
+     convolutional architectures
+
+  3. Demonstration that evidential regularization improves OOD detection
+     in parameter-efficient fine-tuning settings
+
+  4. Practical guidelines for deploying uncertainty-aware few-shot models
+     on edge hardware (Pareto frontier analysis)
+
+
+9. PAPERS READ
+================================================================================
+  1. "Bayesian Parameter-Efficient Fine-Tuning for Large Vision-Language Models"
+     — Provides the framework for combining Bayesian methods with PEFT
+
+  2. "Conv-Adapter: Exploring Parameter Efficient Transfer Learning for CNNs"
+     — Demonstrates how adapters work in CNN architectures
+
+  3. "Evidential Deep Learning to Quantify Classification Uncertainty"
+     — The foundational paper for Dirichlet-based uncertainty estimation
+
+  4. "BayesLoRA: Bayesian Low-Rank Adaptation for Large Language Models"
+     — Shows how to make LoRA Bayesian for better uncertainty
+
+
+10. TIMELINE
+================================================================================
+  Phase 1 : Environment setup, data pipeline, backbone loading
+  Phase 2 : Baselines + all PEFT methods with softmax
+  Phase 3 : Evidential head + loss integration
+  Phase 4 : OOD detection experiments
+  Phase 5 : Full experiment grid + edge deployment
+  Phase 6 : Thesis writing and finalization
+================================================================================

@@ -1,0 +1,51 @@
+# Phase 2 (Step 4) — evidential softplus_kl0.5 on real CIFAR-FS Bertinetto
+# split, episodic meta-training with prototype head.
+#
+# Story: the Step 1-3 R1 trade-off (accuracy parity + AUROC win,
+# calibration framed as an intentional under-confidence trade) should
+# carry over from the CIFAR-100-test stand-in to the proper 64/16/20
+# split. If the AUROC gap > 0.05 holds on the real split, Phase 2 closes
+# and we move to Phase 3.
+extends: base.yaml
+
+trainer:
+  type: episodic
+  num_epochs: 30
+  episodes_per_epoch: 100
+  val_episodes_per_epoch: 100
+  early_stop_patience: 5
+  collapse_threshold: 0.25
+  train_seed_offset: 20000
+
+dataset:
+  # Step 4: switch from `class_ids: [0..19]` to Bertinetto split routing.
+  # Removing class_ids forces the loader to read data/cifar_fs_split.json.
+  class_ids: null
+  split: test       # The script reads cfg.dataset.split for the TEST evaluator;
+                    # the trainer overrides to "train" / "val" internally.
+  n_way: 5
+  k_shot: 5
+  q_query: 15
+
+head:
+  type: prototype
+  metric: l2
+  interpretation: evidential
+
+loss:
+  # Number of OUTER steps to anneal over. With episodes_per_epoch=100,
+  # this is ~10 epochs of ramp.
+  kl_weight_max: 0.5
+  kl_anneal_steps: 1000
+
+adapter:
+  type: bottleneck
+  rank: 16
+
+train:
+  lr: 5.0e-3
+  weight_decay: 0.0
+
+wandb:
+  project: bpeft-thesis
+  tags: [phase2, step4, evidential, prototype, cifar_fs_bertinetto]

@@ -1,0 +1,1183 @@
+================================================================================
+IMPLEMENTATION.TXT
+Project: B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) for Reliable
+         Few-Shot Vision with Lightweight CNN Backbones
+Vision:  proposal.txt           (the research vision)
+Master:  plan.txt                (6-phase execution plan with RQ coverage)
+This:    detailed step-by-step engineering breakdown organised into the 6
+         phases of plan.txt. Whenever this document and plan.txt disagree,
+         plan.txt wins; this file then needs an update.
+Reading: read proposal.txt and plan.txt first; this file fills in HOW.
+================================================================================
+
+
+--------------------------------------------------------------------------------
+0.  HOW TO USE THIS DOCUMENT
+--------------------------------------------------------------------------------
+
+Each step has:
+  Phase     which plan.txt phase it belongs to
+  RQ        which research question(s) it advances
+  GOAL      one sentence — what does "done" look like?
+  STATUS    DONE | IN PROGRESS | NEXT | NOT STARTED
+  DEPENDS   prior steps that must close before this can begin
+  ESTIMATE  calendar-weeks at the current part-time pace
+  ACTIONS   numbered concrete sub-tasks, each naming the file(s) touched
+  EXIT      objective criteria — every box must tick before the step closes
+  WRITEUP   the step_writeups/ document produced at closure
+  RISKS     known failure modes specific to this step
+
+Step numbering is sequential across phases for continuity with existing
+artefacts (step_writeups/step1.txt, step2.txt, step3.txt already exist).
+Steps 1-3 are the foundation work already completed; they are kept here
+in summary form so this document is the single source of truth for the
+project's engineering history.
+
+
+--------------------------------------------------------------------------------
+1.  STEP ↔ PHASE ↔ RQ ↔ STATUS MAP
+--------------------------------------------------------------------------------
+
+  Step  Phase  RQs          Step name                                Status
+  ----  -----  -----------  ---------------------------------------  -----------
+   1     1     RQ2          Calibration fix                          DONE
+   2     1     —            Clean config-driven repo                 DONE
+   3     1     —            wandb + reproducibility                  DONE
+   4     2     RQ2, RQ3     CIFAR-FS Bertinetto split + episodic     NEXT
+                            meta-training
+   5     3     RQ1, RQ2     LoRA + BitFit full integration           NOT STARTED
+   6     3     RQ1          Adapter placement study (serial /        NOT STARTED
+                            parallel inside CNN blocks)
+   7     4     RQ3          Near-OOD TinyImageNet + far-OOD          NOT STARTED
+                            Gaussian noise
+   8     5     RQ4 (prep)   MobileNetV3-Small backbone               NOT STARTED
+   9     5     RQ2, RQ3     MiniImageNet dataset                     NOT STARTED
+  10     5     all          MVT grid execution                       NOT STARTED
+  11     5     RQ4          Efficiency + Pareto frontier             NOT STARTED
+  12     5     (optional)   Extensions in priority order             NOT STARTED
+                            (ConvNeXt-Nano, CUB-200, ISIC,
+                             CIFAR-10-C corruption robustness)
+  13     6     —            Thesis writing & submission              NOT STARTED
+
+
+--------------------------------------------------------------------------------
+2.  WHAT IS ALREADY DONE — DOES IT ALIGN WITH THE NEW PLAN?
+--------------------------------------------------------------------------------
+
+Short answer: YES, all three completed steps align with the new plan.txt and
+proposal.txt. The science, the loss function, the repo structure, the
+logging and the reproducibility plumbing all carry forward unchanged. The
+ONLY thing that will change downstream is the trainer paradigm (per-episode
+single-task → episodic meta-training), and that is exactly what Step 4
+introduces.
+
+Detail per step below.
+
+----- STEP 1 — Calibration fix [DONE, aligns] ----------------------------------
+  Phase:  1
+  RQ:     RQ2 (preliminary)
+  Writeup: step_writeups/step1.txt
+  What it delivered:
+    - Diagnosed the pre-defence demo's broken evidential calibration
+      (two bugs: CE on softplus instead of evidential MSE+KL; KL prior
+      disabled).
+    - Replaced the buggy training with Sensoy 2018 evidential MSE + KL,
+      KL annealed 0 → 0.5 over 200 steps, softplus activation.
+    - Validated the R1 calibration trade-off framing (evidential
+      accuracy parity, +14pp OOD AUROC, small calibration cost).
+  Why it still aligns:
+    - The Sensoy 2018 loss is exactly what proposal.txt §5C specifies.
+    - The KL annealing schedule, softplus activation, and the loss
+      implementation in src/losses/evidential.py do not change between
+      single-episode and episodic protocols — only the OUTER loop
+      changes in Step 4.
+    - The R1 calibration story (which is what plan.txt commits to)
+      survives at every scale we've tested (1, 20, and 600 episodes).
+  Reused downstream:
+    src/losses/evidential.py, src/heads/linear_head.py (kept as a
+    legacy code path for per-episode evaluation in Step 4),
+    softplus activation, KL anneal mechanism.
+  NOT carried forward:
+    The single-episode trainer (FewShotTrainer.fit_episode) is kept for
+    *test-time* per-episode evaluation but is no longer the *training*
+    entry point from Step 4 onward.
+
+----- STEP 2 — Clean config-driven repo [DONE, aligns] -------------------------
+  Phase:  1
+  RQ:     — (infrastructure)
+  Writeup: step_writeups/step2.txt
+  What it delivered:
+    - src/ as subpackages (adapters/, backbones/, datasets/, evaluators/,
+      heads/, losses/, models/, trainers/, utils/) — one responsibility
+      per module.
+    - YAML config system with `extends:` deep merge; per-experiment files
+      are diff-sized.
+    - scripts/train.py and scripts/evaluate.py as the only CLI entry
+      points.
+    - 28 pytest smoke tests gating closure on `pytest tests/ → 0`.
+  Why it still aligns:
+    - Every step from 4 onward adds new modules into the existing
+      subpackages (src/adapters/lora.py becomes full, not stub;
+      src/backbones/mobilenetv3.py is added; src/datasets/tinyimagenet
+      _ood.py is added; etc.). The layout does not need to change.
+    - YAML configs scale linearly: Phase 5's MVT grid will commit ~16
+      additional small YAMLs, each ~10 lines, all extending base.yaml.
+    - scripts/train.py and scripts/evaluate.py remain the only entry
+      points — the episodic trainer is wired in through the
+      `trainer.type` config key, not a new script.
+  Reused downstream:
+    Everything. This is the load-bearing engineering of the project.
+
+----- STEP 3 — wandb + reproducibility [DONE, aligns] --------------------------
+  Phase:  1
+  RQ:     — (infrastructure)
+  Writeup: step_writeups/step3.txt
+  What it delivered:
+    - src/utils/wandb_utils.py: WandbRun wrapper, three first-class
+      modes (online / offline / disabled).
+    - src/utils/seed.py: deterministic seeding by default
+      (cudnn.deterministic, cublas workspace, all four RNGs).
+    - configs/test_episodes.yaml: canonical 600 test-episode seeds.
+    - Byte-identical metrics.json on rerun (verified via filecmp.cmp).
+    - 600-episode results: evidential acc 0.849 ± 0.006 / AUROC 0.951;
+      softmax acc 0.823 ± 0.006 / AUROC 0.850.
+  Why it still aligns:
+    - WandbRun handles per-epoch logging (just call .log({...},
+      step=epoch)) — no new logging surface needed for Step 4's
+      episodic trainer.
+    - The 600-seed test list is reused unchanged for Phase 2's final
+      test-set evaluation; Step 4 only adds a 100-seed val list
+      alongside it.
+    - Determinism still applies — the episodic trainer inherits
+      set_seed() at script startup.
+  Reused downstream:
+    src/utils/wandb_utils.py, src/utils/seed.py, src/utils/plots.py,
+    configs/test_episodes.yaml, the metrics JSON schema (with
+    additions for episodic training: e.g., best_val_epoch).
+
+
+--------------------------------------------------------------------------------
+3.  WHERE TO RESTART
+--------------------------------------------------------------------------------
+
+Next step: STEP 4 — CIFAR-FS Bertinetto split + episodic meta-training.
+
+Restart preconditions (verify before starting Step 4):
+  - You can run `pytest tests/` → 28 passed, exit 0.
+  - You can run
+        python scripts/train.py    --config configs/exp_step1.yaml
+        python scripts/evaluate.py --config configs/exp_step1.yaml \
+               --num-episodes 600 --wandb-mode disabled
+    end-to-end without changes, and the resulting metrics.json
+    matches results/step3_bottleneck_evidential_metrics.json on
+    accuracy, ECE, Brier, AUROC.
+  - configs/test_episodes.yaml is present with 600 seeds [0..599].
+
+If any of these fails, fix it before opening Step 4 — Step 4 builds on
+all three and will fail in confusing ways if the foundation has drifted.
+
+
+================================================================================
+4.  STEP 4 — CIFAR-FS BERTINETTO SPLIT + EPISODIC META-TRAINING
+================================================================================
+Phase:    2
+RQ:       Foundation for RQ2 and RQ3 on the real benchmark.
+STATUS:   NEXT
+DEPENDS:  Steps 1, 2, 3 (all done)
+ESTIMATE: 1-2 weeks
+
+GOAL:
+  Replace the CIFAR-100-test stand-in with the proper Bertinetto 2019
+  64/16/20 CIFAR-FS split, replace single-episode training with
+  episodic meta-training on the train split (with per-epoch validation
+  on the val split and early stop), and produce the Phase A baseline
+  numbers reported as mean ± 95% CI on 600 test-split episodes.
+
+PROTOCOL DECISIONS (committed in plan.txt §4 Phase 2):
+  A. Meta-training paradigm = ProtoNet-style episodic meta-training.
+     Each episode is one OUTER gradient step. The adapter is the
+     trainable PEFT module; the classifier head is parameter-free
+     prototype similarity computed from the support set inside each
+     episode. Per-episode-from-scratch fine-tuning is kept ONLY as a
+     test-time-evaluation fallback if the meta-trained version
+     collapses.
+  B. Train-time shot count = 5-shot only. 1-shot models are trained
+     in Step 10 (the MVT grid).
+  C. Train-time way count = 5-way. (Matches test-time; the standard
+     CIFAR-FS protocol does not vary way between train and test.)
+
+ARCHITECTURE DEVIATION FROM PROPOSAL (documented):
+  proposal.txt §5B describes the head as "Linear(features → K) + ReLU
+  → evidence". For episodic meta-training across hundreds of unseen
+  test classes, a fixed trained linear head with K output slots cannot
+  carry class identity between train and test classes. We therefore
+  replace the trained linear head with a parameter-free PROTOTYPE
+  similarity head:
+    prototype_k = mean(adapter_features[support_y == k])
+    logit_q_k   = -||adapter_features[q] - prototype_k||^2   (L2)
+                  or cosine(adapter_features[q], prototype_k)
+  The Dirichlet evidence pipeline is unchanged:
+    evidence = softplus(logits)
+    alpha    = evidence + 1
+    S        = sum(alpha)
+    p        = alpha / S
+    vacuity  = K / S
+  This deviation is documented in Chapter 3 (Methodology) of the
+  thesis. The standard CIFAR-FS literature (ProtoNet, R2D2,
+  MetaOptNet) all use prototype-style heads; ours is the same with an
+  evidential Dirichlet on top.
+
+ACTIONS:
+
+  4.1  data/cifar_fs_split.json (NEW, committed)
+       - Canonical Bertinetto 2019 64/16/20 CIFAR-100 class IDs.
+       - Three keys: "train" (64 IDs), "val" (16 IDs), "test" (20 IDs).
+       - Source: Bertinetto et al. 2019 ("Meta-learning with
+         differentiable closed-form solvers"), Appendix; reproduced in
+         the bertinetto/r2d2 reference implementation. Hardcode the
+         IDs in this file; do not derive them at runtime.
+       - Assertion utility: load_cifar_fs_split() must verify that the
+         three lists are disjoint and that their union is exactly
+         [0..99]. Raise on violation.
+
+  4.2  src/datasets/cifar_fs.py (MODIFIED)
+       - Remove the Step 1/2 stand-in (CIFAR-100 test, classes 0..19).
+       - Add: get_cifar_fs(split: str, image_size: int, data_root: str)
+         where split ∈ {"train", "val", "test"}. Returns a Dataset
+         that:
+           a) loads CIFAR-100 train split (for all of "train", "val",
+              "test" — the split is by CLASS, not by image-set);
+           b) filters to the class IDs from
+              data/cifar_fs_split.json[split];
+           c) re-indexes labels to a contiguous range
+              ([0..63], [0..15], [0..19]).
+       - Add data/cifar_fs_split.json overlap assertion at module
+         import time.
+
+  4.3  src/datasets/episode_sampler.py (MODIFIED)
+       - Keep existing sample_episode() for backward-compat and for
+         the test-time evaluator.
+       - Add: class EpisodicIterableDataset(torch.utils.data.IterableDataset)
+         - args: (dataset, n_way, k_shot, q_query, num_episodes,
+                  seed_offset)
+         - __iter__ yields num_episodes tuples of
+           (support_x, support_y, query_x, query_y), each with
+           seed = seed_offset + episode_idx so reruns are deterministic.
+         - Memoise the label → index map once on construction so each
+           episode is cheap.
+
+  4.4  src/heads/prototype_head.py (NEW)
+       - class PrototypeHead(nn.Module). Parameter-free
+         (model.heads has no params from this module).
+       - forward(support_features, support_labels, query_features,
+                 metric="l2"|"cosine") → query_logits
+       - L2 metric (default): logit_q_k = -||q - p_k||^2.
+       - Cosine metric: optional, gated by config head.metric.
+       - Handles the n_way / k_shot grouping internally.
+
+  4.5  src/models/bpeft_model.py (MODIFIED)
+       - Add a "prototype" head_type alongside "softmax" and
+         "evidential". For prototype mode:
+           a) backbone(images) → features
+           b) adapter(features) → adapted_features
+           c) prototype_head(adapted_features split into
+              support/query) → query_logits
+       - The Dirichlet interpretation of query_logits for evidential
+         mode happens in the LOSS / EVALUATOR, not in the head — same
+         as Step 1's design choice (heads emit raw logits; downstream
+         decides the interpretation).
+       - Keep linear_head for the test-time per-episode fallback
+         (see action 4.7).
+
+  4.6  src/trainers/episodic_trainer.py (NEW)
+       - class EpisodicTrainer with __init__(model, loss_fn,
+         optimizer, num_epochs, episodes_per_epoch, val_iterable,
+         val_episodes_per_epoch, early_stop_patience, kl_weight_max,
+         kl_anneal_steps, logger, wandb_run).
+       - .fit(train_iterable):
+           for epoch in range(num_epochs):
+               for episode_idx, (sx, sy, qx, qy) in
+                       enumerate(train_iterable.take(episodes_per_epoch)):
+                   optimizer.zero_grad()
+                   adapted_support = model.adapter_features(sx)
+                   adapted_query   = model.adapter_features(qx)
+                   logits = prototype_head(adapted_support, sy,
+                                            adapted_query)
+                   loss = loss_fn(logits, qy, step=global_step,
+                                   num_classes=n_way)
+                   loss.backward()
+                   optimizer.step()
+                   global_step += 1
+                   if wandb_run: wandb_run.log(... per-episode metrics)
+               # End of epoch.
+               val_acc, val_ece, val_brier = self._validate(
+                       val_iterable, val_episodes_per_epoch)
+               if wandb_run: wandb_run.log(per-epoch metrics, step=epoch)
+               # Early-stop on val accuracy plateau.
+               if val_acc <= best_val_acc:
+                   no_improve_epochs += 1
+                   if no_improve_epochs >= early_stop_patience: break
+               else:
+                   best_val_acc = val_acc
+                   no_improve_epochs = 0
+                   torch.save(model.state_dict(), best_ckpt_path)
+       - KL anneal: linear ramp 0 → kl_weight_max over
+         kl_anneal_steps OUTER steps (= 1 per episode). With
+         episodes_per_epoch=100 and num_epochs=20, total outer steps
+         = 2000; spec'd kl_anneal_steps = 500-1000.
+
+  4.7  src/evaluators/calibration.py and src/evaluators/ood.py
+       (MODIFIED, additive)
+       - Add evaluate_episodic(model, test_episodes_iter,
+         ood_loader, head_type, ece_bins) that:
+           a) for each test episode: forward support+query through
+              meta-trained (frozen-at-test) adapter; prototype-classify
+              query; compute per-episode acc, MACRO-F1, ECE, Brier;
+           b) accumulate the full vacuity distribution from ID + OOD
+              forward passes (no per-episode adapter fitting at test
+              time);
+           c) return a dict with the Step 3 schema PLUS:
+                f1_macro_mean, f1_macro_std, f1_macro_ci95
+                fpr_at_95_tpr
+                best_val_epoch
+       - The existing per-episode-fine-tune evaluator stays as
+         evaluate_finetune() — used only by Step 4's fallback
+         protocol below and by the legacy step1/step2/step3
+         reproduction tests.
+
+  4.7.1 src/evaluators/accuracy.py (MODIFIED)
+       - Add f1_macro(probs, targets) → tensor using sklearn-style
+         per-class precision/recall averaged unweighted across classes.
+       - Macro-F1 is the proposal §7 metric that was missing from
+         Phase 1's metrics JSONs; it lands here once and propagates
+         through every subsequent phase.
+
+  4.8  configs/val_episodes.yaml (NEW, committed)
+       - 100 fixed validation-episode seeds: [10000..10099] (offset
+         chosen to be far from test_episodes.yaml's [0..599] so val
+         and test episodes are disjoint).
+
+  4.9  configs/exp_phase2_evidential.yaml (NEW)
+       configs/exp_phase2_softmax.yaml    (NEW)
+       - extends: base.yaml
+       - dataset:
+           name: cifar_fs_bertinetto
+           train_class_ids: [...from data/cifar_fs_split.json...]
+           val_class_ids:   [...]
+           test_class_ids:  [...]
+           n_way: 5
+           k_shot: 5
+           q_query: 15
+         (or just `split: train|val|test` once cifar_fs.py reads the
+          split JSON internally — pick whichever keeps the YAML small)
+       - trainer:
+           type: episodic
+           num_epochs: 30
+           episodes_per_epoch: 100
+           val_episodes_per_epoch: 100
+           early_stop_patience: 5
+       - loss:
+           kl_weight_max: 0.5
+           kl_anneal_steps: 1000
+       - eval:
+           test_episodes_file: configs/test_episodes.yaml
+           val_episodes_file:  configs/val_episodes.yaml
+           ece_bins: 15
+       - head:
+           type: evidential    # or softmax in the sibling config
+           classifier: prototype
+           prototype_metric: l2
+
+  4.10 configs/base.yaml (MODIFIED, minimal)
+       - Add `trainer.type: episodic` as the new default.
+       - Add `head.classifier: prototype` and `head.prototype_metric: l2`.
+       - Old single-episode trainer remains available via
+         `trainer.type: single_episode` for backward-compat tests.
+
+  4.11 scripts/train.py (MODIFIED)
+       - Branch on cfg.trainer.type:
+           "episodic"        → build EpisodicTrainer + train/val
+                              iterables; call .fit()
+           "single_episode"  → existing Step 1-3 code path (untouched)
+       - Pass set_seed(cfg.seed) first as before.
+
+  4.12 scripts/evaluate.py (MODIFIED)
+       - Branch on cfg.trainer.type to choose evaluator:
+           "episodic"        → evaluate_episodic()
+           "single_episode"  → evaluate_finetune() (legacy)
+       - Read both seed lists from configs/{test,val}_episodes.yaml.
+
+  4.13 tests/test_cifar_fs_split.py (NEW)
+       - asserts data/cifar_fs_split.json has no overlap; union = 0..99.
+       - asserts get_cifar_fs("train") returns disjoint classes from
+         get_cifar_fs("test"), and that re-indexed labels are in the
+         right contiguous range.
+       tests/test_episodic_trainer.py (NEW)
+       - 1 epoch × 5 episodes smoke run on synthetic data, assert
+         val accuracy > 1/n_way (catches collapse).
+       tests/test_prototype_head.py (NEW)
+       - logit_q_k for a perfect prototype match is >> logit_q_(k')
+         for other classes.
+
+  4.14 step_writeups/step4.txt (NEW)
+       - Match the structure of step1/2/3.txt: executive summary,
+         what changed code-level, how it improved on previous step,
+         results vs Step 3, exit-criteria check, hooks for next step,
+         risk check, conclusion, files modified, supervisor
+         takeaways.
+
+EXIT CRITERIA (all must tick):
+
+  [ ] data/cifar_fs_split.json committed; assertion of disjoint
+      splits passes at import.
+  [ ] `python scripts/train.py --config configs/exp_phase2_evidential.yaml`
+      runs end-to-end on Colab T4 in ≤ 30 min.
+  [ ] Same for configs/exp_phase2_softmax.yaml.
+  [ ] Phase 2 results files exist:
+        results/phase2_bottleneck_evidential_metrics.json
+        results/phase2_bottleneck_softmax_metrics.json
+      Both record:
+        accuracy_mean, accuracy_ci95, ece_per_episode_mean,
+        ece_pooled, brier_mean, ood_auroc_mean, num_episodes=600,
+        best_val_epoch.
+  [ ] R1 trade-off holds on the real Bertinetto split:
+        evidential_AUROC - softmax_AUROC > 0.05
+      If it does NOT hold, escalate to the supervisor BEFORE
+      starting Step 5; the thesis story may need to be re-scoped.
+  [ ] pytest tests/ still passes (now 31+ tests).
+  [ ] Same config, two runs → byte-identical metrics.json
+      (Step 3 reproducibility invariant must survive Step 4).
+
+WRITEUP: step_writeups/step4.txt
+
+RISKS:
+
+  R-EPISODIC-COLLAPSE
+    The episodic trainer can converge to a uniform-output baseline if
+    the KL anneal is too aggressive or the LR is too high. Mitigation:
+    the smoke assertion in tests/test_episodic_trainer.py catches
+    val_acc ≤ 1/n_way; in scripts/train.py, after the first epoch, if
+    val_acc < 0.30 abort with a clear error. This stops Colab burning
+    GPU on a doomed run.
+
+  R-FALLBACK-PROTOCOL
+    If meta-training fails to converge after one full debug cycle (lr,
+    kl schedule, episodes_per_epoch), fall back to the per-episode-
+    fine-tune protocol on the Bertinetto test split — i.e. Step 1's
+    protocol applied to the real classes via evaluate_finetune(). This
+    still produces valid Phase 2 numbers and unblocks Phase 3. Document
+    the fallback in step4.txt and in Chapter 4 of the thesis.
+
+  R-SPLIT-DRIFT
+    The Bertinetto split JSON must NEVER be regenerated. If a future
+    contributor regenerates it (e.g. with a different RNG), comparisons
+    between phases become invalid. The split file's top-line comment
+    must read "DO NOT REGENERATE — frozen Bertinetto 2019 IDs".
+
+
+================================================================================
+5.  STEP 5 — LORA + BITFIT + NON-PEFT BASELINES
+================================================================================
+Phase:    3
+RQ:       RQ1 (extends placement options); RQ2 (evidential calibration
+          across PEFT methods); also delivers the proposal §6 primary
+          baselines (Full Fine-Tuning, Linear Probing).
+STATUS:   NOT STARTED
+DEPENDS:  Step 4
+ESTIMATE: 1.5-2 weeks
+
+GOAL:
+  Move LoRA from "smoke-tested" (the Step 2 stub) to a full integration
+  that runs in the episodic trainer on the Bertinetto test split, add
+  BitFit as a third PEFT method, AND add the two non-PEFT primary
+  baselines required by proposal.txt §6: Full Fine-Tuning and Linear
+  Probing. All produce 600-episode test metrics for both heads on
+  CIFAR-FS.
+
+ACTIONS:
+
+  5.1  src/adapters/lora.py (REWRITE from current stub)
+       - LoRALayer(in_features, out_features, rank, alpha,
+                   dropout=0.0).
+         W_eff = W_frozen + (alpha / rank) * A @ B
+         A: (in_features, rank), B: (rank, out_features).
+         A initialised Kaiming uniform; B initialised to zero so the
+         layer starts as identity.
+       - LoRAAdapter: wraps a frozen nn.Module's nn.Linear / nn.Conv2d
+         layers in LoRA. For ResNet-18, the natural targets are the
+         1×1 convs in the final block and the conv2 of each
+         BasicBlock; cfg.adapter.lora_targets in YAML controls which.
+       - Smoke test (already exists): identity at init. Strengthen
+         to: trainable_param_count(LoRAAdapter(rank=16)) matches the
+         analytical formula 2 * rank * (in + out).
+
+  5.2  src/adapters/bitfit.py (NEW)
+       - BitFitAdapter: a wrapper that unfreezes ONLY the bias
+         parameters of the backbone (and, optionally, adds a small
+         number of new bias parameters to a target set of layers).
+       - Counts trainable params: just the sum over named_parameters
+         where ".bias" in name and requires_grad is flipped to True.
+       - For ResNet-18 with all bias terms unfrozen: ~5K parameters
+         (well under the proposal's "<500" target only if restricted
+         to a subset of layers; document the choice in the writeup).
+
+  5.3  src/adapters/full_ft.py (NEW, baseline)
+       - FullFTAdapter: unfreezes the ENTIRE backbone. No adapter
+         module is inserted; .adapter_features(x) is just
+         backbone(x).
+       - This is the proposal §6 "Full Fine-Tuning" primary baseline.
+       - Trainable param count: full backbone (e.g. ResNet-18 ≈
+         11.7M params).
+       - Expected behaviour: catastrophic overfitting on 5-shot
+         (25 support images); accuracy on query collapses below the
+         PEFT methods. That outcome IS the result — it shows PEFT is
+         necessary in the few-shot regime.
+
+  5.4  src/adapters/linear_probe.py (NEW, baseline)
+       - LinearProbeAdapter: backbone stays frozen; no adapter
+         inserted; only the prototype / linear head is trainable.
+       - The proposal §6 "Linear Probing" primary baseline.
+       - Trainable param count: zero adapter params + the head.
+         Under the prototype-head protocol (Step 4) the head has
+         zero parameters, so this is the most extreme PEFT case:
+         all knowledge transfer comes from the frozen ImageNet
+         features.
+
+  5.5  src/models/bpeft_model.py (MODIFIED, additive)
+       - Factory accepts
+            cfg.adapter.type ∈ {bottleneck, lora, bitfit,
+                                full_ft, linear_probe}.
+       - Each adapter type implements the same interface:
+           build_adapter(backbone, cfg) → nn.Module that exposes
+             .adapter_features(x): Tensor → adapted feature Tensor
+       - For full_ft, the wrapper also flips requires_grad=True on
+         the underlying backbone.
+       - For linear_probe, the wrapper is the identity but the
+         backbone stays frozen — distinction from full_ft is one
+         line of code.
+
+  5.6  configs/exp_phase3_lora_<head>.yaml          (2 files)
+       configs/exp_phase3_bitfit_<head>.yaml        (2 files)
+       configs/exp_phase3_full_ft_<head>.yaml       (2 files, baseline)
+       configs/exp_phase3_linear_probe_<head>.yaml  (2 files, baseline)
+       = 8 configs.
+       - All extend base.yaml + the Phase 2 episodic trainer config.
+       - The full_ft configs use a smaller LR (e.g. 1e-5 vs 5e-3)
+         and weight_decay=1e-4 to give it a fair chance against
+         catastrophic overfitting. Document the choice.
+
+  5.7  Run all eight configs end-to-end through scripts/train.py +
+       scripts/evaluate.py.
+
+  5.8  results/phase3_<adapter>_<head>_metrics.json (8 files,
+       same schema as Step 3 / Step 4 with Macro-F1 added).
+
+  5.9  tests/test_lora.py        — identity at init; correct param count.
+       tests/test_bitfit.py      — only bias params are trainable; total
+                                   count matches analytical value.
+       tests/test_full_ft.py     — every backbone parameter has
+                                   requires_grad=True.
+       tests/test_linear_probe.py — backbone stays frozen; only the
+                                   head (zero or trivial) is trainable.
+
+  5.10 step_writeups/step5.txt — same structure as step4.txt; include
+       a baselines subsection that quotes the proposal §6 mandate and
+       the numerical results.
+
+EXIT CRITERIA:
+
+  [ ] LoRA, BitFit, Full-FT, and Linear Probe each produce a
+      600-episode eval on CIFAR-FS with BOTH heads — 8 result JSONs
+      in results/.
+  [ ] Trainable param counts logged and documented:
+        Bottleneck rank-16:  19,477
+        LoRA rank-16:        (computed; expected ~ 9-15K depending on
+                              target set)
+        BitFit (all biases): ~5K
+        Full-FT:             ~11.7M (ResNet-18)
+        Linear Probe:        ~0 (prototype head is param-free)
+  [ ] proposal §6 primary baselines reported alongside PEFT methods
+      in step_writeups/step5.txt with explicit accuracy / ECE / AUROC
+      / F1 numbers.
+  [ ] pytest tests/ still passes (37+ tests).
+  [ ] Byte-identical reruns still work for one of the eight
+      configurations (spot check).
+
+WRITEUP: step_writeups/step5.txt
+
+RISKS:
+  - LoRA target-set choice is consequential. For ResNet-18,
+    inserting LoRA into early conv layers can give too many trainable
+    params (>50K); restricting to the last block keeps it comparable
+    to Bottleneck. Document the chosen target set explicitly.
+  - Full-FT will almost certainly overfit catastrophically on 25-image
+    support sets. If it does NOT (i.e. it matches PEFT methods within
+    1pp), that is suspicious — check for a data leak. The expected
+    outcome is large gap in PEFT's favour and that IS the result the
+    proposal §3 (Problem 1, parameter inefficiency) predicts.
+
+
+================================================================================
+6.  STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)
+================================================================================
+Phase:    3
+RQ:       RQ1 (primary, this is where RQ1 gets answered).
+STATUS:   NOT STARTED
+DEPENDS:  Step 5
+ESTIMATE: 1 week
+
+GOAL:
+  Implement SERIAL (after BasicBlock.conv2 + bn2, before residual add)
+  and PARALLEL (alongside the block, summed at the block output)
+  insertion of Bottleneck adapters in ResNet-18, run both on CIFAR-FS,
+  and produce the placement comparison that answers RQ1.
+
+ACTIONS:
+
+  6.1  src/adapters/placement.py (NEW)
+       - register_serial_adapter(block, adapter): forward-hook that
+         applies adapter to the block's output before the residual
+         add.
+       - register_parallel_adapter(block, adapter): forward-hook
+         that runs the adapter alongside the block and adds outputs.
+       - Both rely on torchvision.models.resnet.BasicBlock structure
+         (conv1, bn1, relu, conv2, bn2, downsample, ...).
+
+  6.2  src/backbones/resnet18.py (MODIFIED, additive)
+       - build_resnet18_with_placed_adapters(cfg) returns a model
+         where the chosen placement is applied to the configured
+         block IDs (cfg.adapter.placement: "post_pool" (existing) /
+         "serial" / "parallel"; cfg.adapter.block_ids: [0,1,2,3]).
+
+  6.3  configs/exp_phase3_placement_serial_<head>.yaml,
+       configs/exp_phase3_placement_parallel_<head>.yaml — 4 files.
+
+  6.4  Run, evaluate, write results/phase3_placement_*_metrics.json.
+
+  6.5  Comparison plot: bar chart of (accuracy, AUROC, ECE) for
+       3 placement variants × 2 heads = 6 bars; saved at 300 dpi.
+
+  6.6  step_writeups/step6.txt + RQ1 paragraph drafted (which will
+       be lifted into Chapter 5 of the thesis).
+
+EXIT CRITERIA:
+
+  [ ] At least 3 placement variants compared on Bottleneck for each
+      head (post-pool from Step 4, serial new, parallel new) → 6
+      result JSONs.
+  [ ] Trainable param counts reported for each placement.
+  [ ] RQ1 paragraph written: "Serial placement gives X% accuracy
+      with Y params; parallel gives X'% with Y' params; post-pool
+      gives X''/Y''. Best Pareto-position is [variant]."
+  [ ] pytest tests/ still passes (test_placement.py added).
+
+WRITEUP: step_writeups/step6.txt
+
+RISKS:
+  - Hook-based insertion can interact badly with the residual
+    addition. Add a smoke test that forward-passes random input
+    through the model with hooks installed and asserts output shape
+    is unchanged.
+
+
+================================================================================
+7.  STEP 7 — NEAR-OOD TINYIMAGENET + FAR-OOD GAUSSIAN (RQ3)
+================================================================================
+Phase:    4
+RQ:       RQ3 (primary — near-OOD is the hard case).
+STATUS:   NOT STARTED
+DEPENDS:  Step 6
+ESTIMATE: 1 week
+
+GOAL:
+  Extend OOD evaluation beyond far-OOD SVHN to (a) near-OOD
+  TinyImageNet (the critical RQ3 hard case) and (b) far-OOD Gaussian
+  noise (sanity check + ablation). Report AUROC + FPR@95 for both
+  evidential and softmax on the best PEFT config from Step 5/6.
+
+ACTIONS:
+
+  7.1  src/datasets/tinyimagenet_ood.py (NEW)
+       - Download TinyImageNet (or document the manual path).
+       - Drop classes that overlap with CIFAR-FS test classes
+         (semantic overlap — e.g., if "dog breed X" appears in both).
+         Document the disjoint set in the writeup.
+       - Sample 500 images at the same resolution as the in-dist
+         pipeline (224×224 after resize).
+
+  7.2  src/datasets/gaussian_noise_ood.py (NEW)
+       - Synthesize 500 images of N(0, 1) noise at 3×224×224,
+         optionally clamp to [-3, 3] and re-normalise like CIFAR.
+       - Seeded for reproducibility.
+
+  7.3  src/evaluators/ood.py (MODIFIED, additive)
+       - Accept multiple OOD loaders, return a dict
+         keyed by OOD dataset name with {AUROC, FPR@95}.
+
+  7.4  Re-run scripts/evaluate.py on the Phase 3 winner with the
+       extended OOD list. Save results/phase4_ood_table.json:
+         {
+           "config": "exp_phase3_bottleneck_evidential",
+           "ood": {
+              "svhn":         {"auroc": ..., "fpr_at_95": ...},
+              "tinyimagenet": {"auroc": ..., "fpr_at_95": ...},
+              "gaussian":     {"auroc": ..., "fpr_at_95": ...},
+           },
+           "n_id": 600 episodes * 75 query, "n_ood": 500 per dataset
+         }
+
+  7.5  results/phase4_<config>_<ood>_histogram.png — vacuity / max-prob
+       distribution for each OOD dataset (3 plots × 2 heads = 6).
+
+  7.6  step_writeups/step7.txt + RQ3 paragraph drafted.
+
+EXIT CRITERIA:
+
+  [ ] AUROC + FPR@95 for at least 2 OOD datasets (SVHN +
+      TinyImageNet) for the best PEFT config × both heads.
+  [ ] RQ3 paragraph: "On far-OOD evidential wins by X pp AUROC.
+      On near-OOD evidential wins by Y pp (or ties; or loses)."
+      An honest answer in either direction is acceptable — it is
+      a finding.
+
+WRITEUP: step_writeups/step7.txt
+
+RISKS:
+  - TinyImageNet's semantic overlap with CIFAR-FS test classes
+    needs careful curation. Mitigation: hardcode a "TinyImageNet
+    safe class list" in tinyimagenet_ood.py.
+
+
+================================================================================
+8.  STEP 8 — MOBILENETV3-SMALL BACKBONE
+================================================================================
+Phase:    5
+RQ:       RQ4 (efficiency story requires a small backbone); also
+          extends RQ2 / RQ3 across backbones.
+STATUS:   NOT STARTED
+DEPENDS:  Step 7
+ESTIMATE: 0.5-1 week
+
+GOAL:
+  Add MobileNetV3-Small as a second backbone, validate the adapter
+  insertion points fit, and re-run the best (adapter, head) combo
+  from Step 6 on CIFAR-FS with this backbone.
+
+ACTIONS:
+
+  8.1  src/backbones/mobilenetv3.py (NEW)
+       - torchvision.models.mobilenet_v3_small(pretrained=True).
+       - feature_dim: 576 (the conv-features dim before classifier).
+       - Freeze all parameters.
+
+  8.2  src/adapters/bottleneck.py and src/adapters/lora.py — adjust
+       feature_dim handling (already config-driven; verify works at
+       576).
+
+  8.3  configs/exp_phase5_mbnet_<adapter>_<head>.yaml — 4 files.
+
+  8.4  Run + evaluate + save results/phase5_mbnet_*_metrics.json.
+
+  8.5  step_writeups/step8.txt (short — mostly a results table
+       confirming the protocol generalises).
+
+EXIT CRITERIA:
+
+  [ ] MobileNetV3-Small backbone runs the full episodic trainer
+      end-to-end.
+  [ ] Best (adapter, head) combo from Step 6 evaluated on
+      MobileNetV3 / CIFAR-FS with 600-episode CI.
+
+WRITEUP: step_writeups/step8.txt
+
+
+================================================================================
+9.  STEP 9 — MINIIMAGENET DATASET
+================================================================================
+Phase:    5
+RQ:       RQ2 / RQ3 (cross-dataset breadth).
+STATUS:   NOT STARTED
+DEPENDS:  Step 8 (or Step 7 — independent)
+ESTIMATE: 1 week
+
+GOAL:
+  Add MiniImageNet (Ravi & Larochelle 64/16/20 split) as a second
+  in-distribution dataset, so the MVT grid can report results on two
+  datasets.
+
+ACTIONS:
+
+  9.1  src/datasets/mini_imagenet.py (NEW)
+       - Ravi & Larochelle 2017 64/16/20 split (the canonical one;
+         hardcoded class list in data/mini_imagenet_split.json).
+       - Auto-download path (if accessible) or documented manual
+         path. Resize 84→224 to match the backbone input.
+       - Same split-disjoint assertion as CIFAR-FS.
+
+  9.2  Mirror Phase 2 / Step 4: episodic train/val/test on
+       MiniImageNet, both heads, best PEFT from Step 6.
+
+  9.3  results/phase5_mini_<adapter>_<head>_metrics.json.
+
+  9.4  step_writeups/step9.txt (short).
+
+EXIT CRITERIA:
+
+  [ ] MiniImageNet split JSON committed, disjoint asserted.
+  [ ] At least Bottleneck × {evidential, softmax} run on
+      MiniImageNet end-to-end.
+
+WRITEUP: step_writeups/step9.txt
+
+
+================================================================================
+10. STEP 10 — MVT GRID EXECUTION
+================================================================================
+Phase:    5
+RQ:       All four (this is the central results table of the thesis).
+STATUS:   NOT STARTED
+DEPENDS:  Steps 4-9
+ESTIMATE: 2-3 weeks (most of the calendar time is compute, not code)
+
+GOAL:
+  Run the Minimum Viable Thesis grid defined in plan.txt §4 Phase 5
+  and produce the headline results table.
+
+THE GRID:
+  backbones = {ResNet-18, MobileNetV3-Small}
+  adapters  = {Bottleneck, LoRA}                   (placement: best
+                                                    from Step 6)
+  heads     = {Softmax, Evidential}
+  datasets  = {CIFAR-FS, MiniImageNet}
+  shots     = {1-shot, 5-shot}
+  seeds     = {seed_a, seed_b, seed_c} per cell    (3 seeds)
+  = 2 × 2 × 2 × 2 × 2 × 3 = 96 PEFT runs
+
+PLUS BASELINES (proposal §6 — non-negotiable):
+  adapters  = {Full-FT, Linear Probe}
+  backbone  = ResNet-18 only
+  dataset   = CIFAR-FS only (MVT minimum; MiniImageNet is Step 12 ext.)
+  heads     = {Softmax, Evidential}
+  shots     = {1-shot, 5-shot}
+  seeds     = 3
+  = 2 × 1 × 1 × 2 × 2 × 3 = 24 baseline runs
+
+TOTAL: 96 PEFT + 24 baseline = 120 runs.
+Wall-clock: 120 × ~30 min = ~60 GPU-hours.
+On Colab Pro: ~2-3 weeks with checkpoint discipline.
+
+ACTIONS:
+
+  10.1 scripts/run_mvt_grid.sh (NEW)
+       - Loops over the 96 configurations, each spawning
+         scripts/train.py + scripts/evaluate.py via subprocess.
+       - Skips configurations whose checkpoint + metrics JSON already
+         exist (so a Colab session timeout doesn't restart from
+         scratch).
+
+  10.2 configs/grid/*.yaml — 96 small YAMLs auto-generated by
+       scripts/build_grid_configs.py from a single template + the
+       grid dimensions. Commit the generator AND the resulting
+       configs (so re-running doesn't drift).
+
+  10.3 scripts/aggregate_grid.py — reads every
+       results/grid_*_metrics.json, builds
+       results/mvt_results.json with structure:
+         {dataset}.{kshot}.{backbone}.{adapter}.{head}.{metric}
+            = {"mean": ..., "std": ..., "ci95": ...}.
+
+  10.4 Three master tables produced from mvt_results.json:
+        - Accuracy table (latex booktabs, 300dpi PNG)
+        - Calibration table (ECE + Brier)
+        - OOD AUROC table (SVHN + TinyImageNet)
+
+  10.5 step_writeups/step10.txt — final results narrative.
+
+EXIT CRITERIA:
+
+  [ ] All 96 PEFT cells AND all 24 baseline cells have a metrics
+      JSON in results/grid/.
+  [ ] mvt_results.json complete; no missing cells; baselines
+      reported as separate rows alongside PEFT methods.
+  [ ] Three master tables saved in LaTeX + 300 dpi PNG. The
+      accuracy table has a clear "Baselines" subsection.
+  [ ] Wandb dashboard groups runs by (dataset, shots), tagged
+      with phase=5 and grid; baseline runs additionally tagged
+      "baseline".
+  [ ] One reliability + one OOD-histogram PNG per (dataset, head)
+      combination at 300 dpi (16 plots total).
+
+WRITEUP: step_writeups/step10.txt
+
+RISKS:
+  - Compute budget. 48 GPU-hours on Colab Pro is tight. Run the
+    grid in priority order: 5-shot first (more important for
+    accuracy parity claim), 1-shot second; CIFAR-FS first,
+    MiniImageNet second. If compute runs out, missing cells must
+    be on MiniImageNet 1-shot — document and continue.
+
+
+================================================================================
+11. STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)
+================================================================================
+Phase:    5
+RQ:       RQ4 (primary — this is where RQ4 gets answered).
+STATUS:   NOT STARTED
+DEPENDS:  Step 10
+ESTIMATE: 1 week
+
+GOAL:
+  For every (backbone, adapter, head) combination in the MVT grid,
+  measure parameters, FLOPs, latency, and memory; produce the
+  Pareto frontier plot that answers RQ4.
+
+ACTIONS:
+
+  11.1 src/utils/efficiency.py (NEW)
+       - count_trainable_params(model) — already exists; reuse.
+       - count_total_params(model).
+       - count_flops(model, input_shape) — via fvcore.nn.FlopCountAnalysis.
+       - measure_latency_gpu(model, input_shape, n_warmup=10,
+         n_measure=100) → (mean_ms, std_ms).
+       - measure_latency_cpu(model, input_shape, n_warmup=5,
+         n_measure=50) — proxy for edge.
+       - measure_peak_memory(model, input_shape) — torch.cuda.max
+         _memory_allocated.
+
+  11.2 scripts/efficiency_table.py — runs the suite on every
+       (backbone, adapter, head) combo (heads are not in the
+       efficiency loop directly — eval pipeline differs only by loss,
+       so 8 of the 12 combos collapse).
+       Writes results/efficiency_table.json.
+
+  11.3 results/pareto_latency_vs_auroc.png — scatter, one point per
+       config, Pareto-optimal marked with star. One plot per dataset.
+
+  11.4 results/pareto_params_vs_accuracy.png — same Pareto highlight.
+
+  11.5 step_writeups/step11.txt + RQ4 paragraph drafted.
+
+EXIT CRITERIA:
+
+  [ ] efficiency_table.json complete for all MVT cells.
+  [ ] Two Pareto plots saved (one per dataset).
+  [ ] RQ4 paragraph: numerical answer, "best Pareto point is
+      [config]; trade-off curve has shape X."
+  [ ] Explicit limitation documented: "no Jetson Nano access; CPU
+      latency used as edge proxy."
+
+WRITEUP: step_writeups/step11.txt
+
+
+================================================================================
+12. STEP 12 — OPTIONAL EXTENSIONS (DROP ORDER)
+================================================================================
+Phase:    5
+RQ:       Breadth-only; RQs are already answered by Step 11.
+STATUS:   NOT STARTED — execute IFF time allows.
+DEPENDS:  Step 11
+ESTIMATE: variable; each extension is independent
+
+GOAL:
+  If time remains after Step 11, extend coverage in the priority order
+  fixed by plan.txt §5. Each extension is its own mini-step with its
+  own writeup section in step_writeups/step12.txt.
+
+DROP ORDER (highest priority first — do top-down, skip bottom-up):
+
+  12.A ConvNeXt-Nano backbone (or EfficientNet-B0 fallback)
+       - src/backbones/convnext_nano.py (or efficientnet_b0.py)
+       - Re-run best (adapter, head) from Step 10 on both datasets.
+
+  12.B BitFit in the MVT grid
+       - Adds BitFit to the {Bottleneck, LoRA} adapter set, doubling
+         the grid for one backbone. Already implemented in Step 5.
+       - Update mvt_results.json + tables.
+
+  12.C CUB-200-2011 dataset (fine-grained)
+       - src/datasets/cub200.py
+       - Run best config on CUB.
+
+  12.D ISIC medical dataset (drop earliest if time tight)
+       - src/datasets/isic.py — beware download + licence issues.
+       - Run best config on ISIC.
+
+  12.E CIFAR-10-C corruption robustness (drop second-earliest)
+       - src/datasets/cifar10c.py — 15 corruption types × 5 severities.
+       - Report AUROC at each severity for best evidential config.
+
+  12.F Gaussian-noise OOD (drop third-earliest; already done in
+       Step 7 if Step 7 included it)
+
+EXIT CRITERIA: per extension, the same template as the parent steps —
+a result JSON + a one-paragraph writeup section.
+
+WRITEUP: step_writeups/step12.txt (one section per extension actually
+attempted).
+
+
+================================================================================
+13. STEP 13 — THESIS WRITING & SUBMISSION
+================================================================================
+Phase:    6
+RQ:       All four — each gets a Discussion subsection.
+STATUS:   NOT STARTED
+DEPENDS:  Steps 4-11 closed; Step 12 optional
+ESTIMATE: 3-4 weeks
+
+GOAL:
+  Submit the document.
+
+ACTIONS:
+
+  13.1 Architecture diagram (TikZ or draw.io): frozen backbone +
+       adapter placement points + evidential head + Dirichlet
+       interpretation. One vector figure for Chapter 3.
+
+  13.2 Convert every numerical result to LaTeX (booktabs) tables.
+
+  13.3 Re-render every plot at 300 dpi with consistent fonts.
+
+  13.4 Chapter 1 — Introduction (2-3 pp): motivation, RQs,
+       contributions.
+
+  13.5 Chapter 2 — Literature Review (5-8 pp): the 4 papers in
+       proposal.txt §9 plus standard PEFT, EDL, and few-shot
+       references.
+
+  13.6 Chapter 3 — Methodology (8-12 pp): architecture, evidential
+       Dirichlet math, KL anneal, episodic training protocol,
+       PROTOTYPE head deviation from §5B documented here.
+
+  13.7 Chapter 4 — Experimental Setup (3-5 pp): datasets, splits,
+       seeds, hardware, hyperparameters; full reproducibility
+       statement citing configs/test_episodes.yaml.
+
+  13.8 Chapter 5 — Results (10-15 pp): MVT grid tables, calibration
+       analysis, OOD analysis, ablations, efficiency.
+
+  13.9 Chapter 6 — Discussion (3-5 pp): one subsection per RQ,
+       each with an explicit numerical answer + table reference;
+       threats to validity; honest framing of the R1 calibration
+       trade-off.
+
+  13.10 Chapter 7 — Conclusion + Future Work (2-3 pp).
+
+  13.11 Abstract (250 words). BibTeX file alphabetised.
+
+  13.12 Supervisor review pass; final revisions; submit.
+
+EXIT CRITERIA:
+
+  [ ] All 7 chapters drafted.
+  [ ] Every RQ in Chapter 6 has a numerical answer + figure or
+      table reference.
+  [ ] Supervisor signs off.
+  [ ] Document submitted.
+
+WRITEUP: thesis/ (the document itself; no step_writeup needed).
+
+
+================================================================================
+14. PROJECT-WIDE RISK NOTES (live; re-read at each step opening)
+================================================================================
+
+R1  CALIBRATION TRADE-OFF MUST STAY HONEST
+    The R1 framing — accuracy parity + OOD AUROC win + small calibration
+    cost — is the thesis story committed to in plan.txt and the
+    supervisor briefing. Do NOT chase a strict ECE win by cherry-picking
+    seeds or hyperparameters across the MVT grid. If evidential beats
+    softmax on ECE in some cells and loses in others, report all cells.
+
+R2  COLAB SESSION LIMITS
+    Phases 2 (Step 4) and 5 (Step 10) are the long-running phases.
+    scripts/train.py MUST support --resume-from <checkpoint> before
+    Step 10 starts. Save checkpoints to Drive every epoch in episodic
+    training, every config in the grid.
+
+R3  REPO IS THE SOURCE OF TRUTH
+    All experiments live in this single repo. No fork, no parallel
+    notebook playground. Step writeups (step_writeups/*) are the
+    durable record of what was tried, even for failed attempts.
+
+R4  600 TEST SEEDS ARE FROZEN
+    configs/test_episodes.yaml is committed truth. Every step's final
+    evaluation reads from this file. Do not regenerate, do not slice
+    silently. Same for the (new) configs/val_episodes.yaml.
+
+R5  DROP ORDER IS BINDING
+    plan.txt §5 fixes the drop order for Step 12 extensions. Use it.
+    The temptation to drop the WRITING phase (Step 13) to fit one more
+    experiment is the most common way thesis projects fail. Resist it.
+
+R6  EPISODIC COLLAPSE
+    Specific to Step 4. Smoke-test: after epoch 1, val_acc must
+    exceed 1/n_way + 0.05. If not, abort and re-tune.
+
+R7  SCOPE CREEP
+    Anything not connected to one of RQ1-RQ4 (or to Phase 6 writing)
+    is out of scope by construction. The proposal is large; the plan
+    is the trimmed version that actually ships. Do not add experiments
+    that "would be interesting" — they will not be cited in the
+    Discussion and they cost calendar.
+
+
+================================================================================
+15. CROSS-REFERENCE INDEX
+================================================================================
+
+For each artefact in plan.txt §8 (artefact inventory), the step that
+produces it:
+
+  Code:
+    src/adapters/lora.py                 Step 5 (rewrite)
+    src/adapters/bitfit.py               Step 5 (new)
+    src/adapters/full_ft.py              Step 5 (new, baseline)
+    src/adapters/linear_probe.py         Step 5 (new, baseline)
+    src/adapters/placement.py            Step 6 (new)
+    src/backbones/mobilenetv3.py         Step 8 (new)
+    src/backbones/convnext_nano.py       Step 12.A (optional)
+    src/datasets/cifar_fs.py             Step 4 (Bertinetto rewrite)
+    src/datasets/episode_sampler.py      Step 4 (IterableDataset)
+    src/datasets/mini_imagenet.py        Step 9 (new)
+    src/datasets/tinyimagenet_ood.py     Step 7 (new)
+    src/datasets/gaussian_noise_ood.py   Step 7 (new)
+    src/datasets/cub200.py               Step 12.C (optional)
+    src/datasets/isic.py                 Step 12.D (optional)
+    src/datasets/cifar10c.py             Step 12.E (optional)
+    src/heads/prototype_head.py          Step 4 (new)
+    src/trainers/episodic_trainer.py     Step 4 (new)
+    src/utils/efficiency.py              Step 11 (new)
+    scripts/run_mvt_grid.sh              Step 10 (new)
+    scripts/build_grid_configs.py        Step 10 (new)
+    scripts/aggregate_grid.py            Step 10 (new)
+    scripts/efficiency_table.py          Step 11 (new)
+
+  Data / configs:
+    data/cifar_fs_split.json             Step 4
+    data/mini_imagenet_split.json        Step 9
+    configs/val_episodes.yaml            Step 4
+    configs/exp_phase2_*.yaml            Step 4
+    configs/exp_phase3_*.yaml            Steps 5, 6
+    configs/grid/*.yaml                  Step 10
+
+  Results:
+    results/phase2_*_metrics.json        Step 4
+    results/phase3_*_metrics.json        Steps 5, 6
+    results/phase4_ood_table.json        Step 7
+    results/phase5_*_metrics.json        Steps 8, 9
+    results/grid/*_metrics.json          Step 10
+    results/mvt_results.json             Step 10
+    results/efficiency_table.json        Step 11
+    results/pareto_*.png                 Step 11
+    results/master_tables.{tex,json}     Step 10
+
+  Documentation:
+    step_writeups/step{1..3}.txt         DONE
+    step_writeups/step{4..12}.txt        Steps 4-12
+    Thesis document (Ch1-7)              Step 13
+
+
+================================================================================
+END OF IMPLEMENTATION.TXT
+================================================================================
