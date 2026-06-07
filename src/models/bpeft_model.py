@@ -25,7 +25,9 @@ import torch.nn as nn
 
 from ..backbones import build_backbone
 from ..adapters import build_adapter
-from ..heads import build_head, PrototypeHead
+from ..heads import build_head, PrototypeHead, ScaledPrototypeHead
+
+_PROTOTYPE_HEAD_TYPES = (PrototypeHead, ScaledPrototypeHead)
 
 
 class BPEFTModel(nn.Module):
@@ -84,7 +86,7 @@ class BPEFTModel(nn.Module):
 
         Raises if the model was not built with a PrototypeHead.
         """
-        if not isinstance(self.head, PrototypeHead):
+        if not isinstance(self.head, _PROTOTYPE_HEAD_TYPES):
             raise TypeError(
                 "forward_proto() requires a PrototypeHead; got "
                 f"{type(self.head).__name__}. Check cfg.head.type == 'prototype'."
@@ -99,7 +101,7 @@ class BPEFTModel(nn.Module):
         """Same as forward_proto() but starts from pre-computed BACKBONE
         features (skips the frozen backbone). The adapter is still applied.
         """
-        if not isinstance(self.head, PrototypeHead):
+        if not isinstance(self.head, _PROTOTYPE_HEAD_TYPES):
             raise TypeError(
                 "forward_proto_from_features() requires a PrototypeHead; got "
                 f"{type(self.head).__name__}."
