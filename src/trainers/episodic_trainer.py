@@ -6,11 +6,12 @@ Per episode:
   1. Sample (support, query) of (n_way × k_shot) + (n_way × q_query)
      images from the TRAIN split (Bertinetto 64 train classes).
   2. Forward both through frozen backbone -> trainable adapter ->
-     parameter-free prototype head.
+     prototype head.
   3. Compute loss on query (cross-entropy for softmax interpretation,
      softplus -> evidential MSE+KL for evidential interpretation).
   4. Backprop. The adapter is the only thing that updates; the prototype
-     head is parameter-free.
+     head is parameter-free (or has a small learnable affine for
+     evidential — see ScaledPrototypeHead in src/heads/prototype_head.py).
 
 Per epoch:
   - episodes_per_epoch outer updates,
@@ -22,11 +23,21 @@ Per epoch:
 KL annealing for evidential mode: linear ramp 0 -> kl_weight_max over
 kl_anneal_steps OUTER steps (1 outer step = 1 episode).
 
-Smoke-collapse guard:
-  After epoch 1 the validation accuracy MUST exceed 1/n_way + 0.05
-  (the spec's R-EPISODIC-COLLAPSE guard, implementation.txt Step 4).
-  Below that threshold the trainer raises EpisodicCollapse so Colab
-  doesn't burn GPU on a doomed run.
+Collapse guard (R-EPISODIC-COLLAPSE — strengthened in action 4.20):
+  After epoch 1 ALL of the following are checked; any failure raises
+  EpisodicCollapse:
+    (a) val_acc (from HEAD PROBABILITIES, not raw logits) <= threshold
+    (b) evidential only: mean evidence < 1e-3 (softplus output ~0)
+    (c) after epoch 2: train_loss unchanged (|loss2 - loss1| < 1e-5)
+  Previously only (a) was checked, and val_acc was incorrectly computed
+  from raw prototype scores, masking the evidential collapse.
+
+Instrumentation added (action 4.19):
+  - accuracy in both train and val is computed from the HEAD's predicted
+    PROBABILITIES (same path as scripts/evaluate.py uses)
+  - mean evidence and mean Dirichlet strength S are logged each epoch
+    for evidential runs
+  - adapter gradient-norm is logged after each epoch's last optimizer step
 """
 from __future__ import annotations
 import copy
@@ -39,8 +50,16 @@ import torch.nn.functional as F
 
 
 class EpisodicCollapse(RuntimeError):
-    """Raised when validation accuracy after epoch 1 is at or below
-    random-chance + 0.05. The spec's R-EPISODIC-COLLAPSE guard."""
+    """Raised when the collapse guard fires after epoch 1 (or epoch 2).
+
+    Original guard: val_acc <= threshold (from raw prototype scores — this
+    was insufficient; it missed the evidential collapse in Step 4's first
+    run because the backbone's raw features gave 0.78 accuracy even while
+    the evidential output was stuck at 0.200).
+
+    Strengthened guard (action 4.20): also checks mean evidence and loss
+    stagnation.
+    """
 
 
 def _one_hot(target: torch.Tensor, num_classes: int,
@@ -48,14 +67,29 @@ def _one_hot(target: torch.Tensor, num_classes: int,
     return torch.eye(num_classes, dtype=dtype, device=device)[target]
 
 
+def _logits_to_probs(logits: torch.Tensor,
+                     interpretation: str,
+                     num_classes: int) -> torch.Tensor:
+    """Convert prototype-head logits to a probability vector.
+
+    This is the SAME path that scripts/evaluate.py uses, so the trainer's
+    accuracy and the evaluator's accuracy are consistent (action 4.19).
+
+    For softmax: softmax(logits).
+    For evidential: softplus(logits) -> evidence -> alpha -> p = alpha/S.
+    """
+    if interpretation == "softmax":
+        return torch.softmax(logits, dim=-1)
+    # evidential
+    evidence = F.softplus(logits)
+    alpha = evidence + 1.0
+    S = alpha.sum(dim=-1, keepdim=True)
+    return alpha / S
+
+
 def _logits_to_loss_input(logits: torch.Tensor,
                           interpretation: str) -> torch.Tensor:
-    """Prototype-head logits to the tensor the loss function expects.
-
-    - softmax     interpretation: pass raw logits straight to CE.
-    - evidential  interpretation: softplus -> non-negative evidence,
-                                  ready for evidential_mse_loss.
-    """
+    """Prototype-head logits to the tensor the loss function expects."""
     if interpretation == "softmax":
         return logits
     if interpretation == "evidential":
@@ -65,22 +99,26 @@ def _logits_to_loss_input(logits: torch.Tensor,
 
 @dataclass
 class EpisodicHistory:
-    """Per-epoch stats. The trainer dumps this into the checkpoint so
-    the writeup / wandb summary can read it back without recomputing.
-    """
-    epoch:            List[int]            = field(default_factory=list)
-    train_loss:       List[float]          = field(default_factory=list)
-    train_acc:        List[float]          = field(default_factory=list)
-    val_acc:          List[float]          = field(default_factory=list)
-    val_loss:         List[float]          = field(default_factory=list)
-    kl_weight_at_end: List[float]          = field(default_factory=list)
+    """Per-epoch stats. Dumped into the checkpoint so writeup / wandb
+    can read it back without recomputing."""
+    epoch:              List[int]   = field(default_factory=list)
+    train_loss:         List[float] = field(default_factory=list)
+    train_acc:          List[float] = field(default_factory=list)
+    val_acc:            List[float] = field(default_factory=list)
+    val_loss:           List[float] = field(default_factory=list)
+    kl_weight_at_end:   List[float] = field(default_factory=list)
+    # Evidential-specific diagnostics (action 4.19).
+    mean_evidence:      List[float] = field(default_factory=list)
+    mean_strength_S:    List[float] = field(default_factory=list)
+    adapter_grad_norm:  List[float] = field(default_factory=list)
 
 
 class EpisodicTrainer:
-    """Outer epoch loop + per-episode forward + outer step + val + early
-    stop. Intentionally KEEPS the same shape as the Step 1-3
-    FewShotTrainer so scripts/train.py can branch on cfg.trainer.type
-    without much extra wiring.
+    """Outer epoch loop + per-episode forward + outer step + val + early stop.
+
+    Intentionally keeps the same shape as the Step 1-3 FewShotTrainer so
+    scripts/train.py can branch on cfg.trainer.type without much extra
+    wiring.
     """
 
     def __init__(
@@ -101,6 +139,8 @@ class EpisodicTrainer:
         wandb_run=None,
         device: torch.device | str = "cpu",
         collapse_threshold: float = 0.25,
+        # Minimum mean evidence below which collapse is declared (4.20b).
+        min_evidence_threshold: float = 1e-3,
     ):
         if interpretation not in ("softmax", "evidential"):
             raise ValueError(
@@ -132,6 +172,7 @@ class EpisodicTrainer:
         self.wandb_run = wandb_run
         self.device = device
         self.collapse_threshold = float(collapse_threshold)
+        self.min_evidence_threshold = float(min_evidence_threshold)
 
         self.history = EpisodicHistory()
         self.best_val_acc: float = -1.0
@@ -147,13 +188,11 @@ class EpisodicTrainer:
         if self.interpretation == "softmax":
             return F.cross_entropy(loss_input, query_y)
 
-        # Evidential.
         kl_w = (min(1.0, global_step / max(1, int(self.kl_anneal_steps)))
                 * float(self.kl_weight_max))
         target_oh = _one_hot(
             query_y, self.num_classes, loss_input.dtype, loss_input.device,
         )
-        # Reuse the existing Sensoy 2018 implementation.
         from ..losses.evidential import evidential_mse_loss
         return evidential_mse_loss(
             loss_input, target_oh, num_classes=self.num_classes, kl_weight=kl_w,
@@ -175,23 +214,53 @@ class EpisodicTrainer:
 
     def _query_acc_from_logits(self, q_logits: torch.Tensor,
                                qy: torch.Tensor) -> float:
-        preds = q_logits.argmax(dim=-1)
+        """Accuracy from the HEAD's predicted probabilities (action 4.19).
+
+        Uses the same softmax / evidential probability path as
+        scripts/evaluate.py, so the trainer's reported accuracy matches
+        what the evaluator measures. Previously used raw logit argmax,
+        which gave correct results for softmax but masked evidential
+        collapse (frozen backbone features still ranked correctly even
+        when evidential probabilities were uniform).
+        """
+        probs = _logits_to_probs(q_logits, self.interpretation, self.num_classes)
+        preds = probs.argmax(dim=-1)
         return float((preds == qy.to(q_logits.device)).float().mean().item())
+
+    def _mean_evidence(self, q_logits: torch.Tensor) -> float:
+        """Mean evidential strength (action 4.19 logging). 0 for softmax."""
+        if self.interpretation != "evidential":
+            return 0.0
+        return float(F.softplus(q_logits).mean().item())
+
+    def _adapter_grad_norm(self) -> float:
+        """L2 norm of all adapter parameter gradients (action 4.19)."""
+        sq_sum = sum(
+            p.grad.detach().norm().item() ** 2
+            for p in self.model.adapter.parameters()
+            if p.grad is not None
+        )
+        return sq_sum ** 0.5
 
     # ------------------------------------------------------------------
     # Train / validate loops
     # ------------------------------------------------------------------
-    def _run_train_epoch(self, train_iter: Iterable,
-                         global_step_start: int) -> tuple[float, float, int]:
+    def _run_train_epoch(
+        self, train_iter: Iterable, global_step_start: int
+    ) -> tuple[float, float, int, float, float]:
+        """Run one training epoch.
+
+        Returns (train_loss, train_acc, global_step, mean_evidence, adapter_grad_norm).
+        """
         self.model.train()
-        # Make sure frozen-BatchNorm in the backbone stays in eval mode
-        # (same invariant as Step 1's FewShotTrainer.fit_episode).
         self.model.backbone.eval()
         for p in self.model.backbone.parameters():
             p.requires_grad = False
 
-        total_loss = 0.0
-        total_acc = 0.0
+        total_loss      = 0.0
+        total_acc       = 0.0
+        total_evidence  = 0.0
+        last_grad_norm  = 0.0
         n_eps = 0
         gs = global_step_start
 
@@ -200,26 +269,36 @@ class EpisodicTrainer:
             q_logits = self._forward_episode(sx, sy, qx)
             loss = self._episode_loss(q_logits, qy.to(q_logits.device), gs)
             loss.backward()
+            last_grad_norm = self._adapter_grad_norm()
             self.optimizer.step()
 
-            total_loss += float(loss.item())
-            total_acc  += self._query_acc_from_logits(q_logits, qy)
+            total_loss     += float(loss.item())
+            total_acc      += self._query_acc_from_logits(q_logits.detach(), qy)
+            total_evidence += self._mean_evidence(q_logits.detach())
             n_eps += 1
             gs += 1
 
-        return total_loss / max(1, n_eps), total_acc / max(1, n_eps), gs
+        n = max(1, n_eps)
+        return (total_loss / n, total_acc / n, gs,
+                total_evidence / n, last_grad_norm)
 
     @torch.no_grad()
-    def _run_val_epoch(self, val_iter: Iterable) -> tuple[float, float]:
+    def _run_val_epoch(
+        self, val_iter: Iterable
+    ) -> tuple[float, float, float, float]:
+        """Run one validation epoch.
+
+        Returns (val_loss, val_acc, mean_evidence, mean_strength_S).
+        """
         self.model.eval()
-        total_loss = 0.0
-        total_acc = 0.0
+        total_loss     = 0.0
+        total_acc      = 0.0
+        total_evidence = 0.0
+        total_S        = 0.0
         n_eps = 0
+
         for sx, sy, qx, qy in val_iter:
             q_logits = self._forward_episode(sx, sy, qx)
-            # Use kl_weight=kl_weight_max for the val loss (no anneal at
-            # val time). It's only used for monitoring; the early-stop
-            # signal is val ACCURACY.
             loss_input = _logits_to_loss_input(q_logits, self.interpretation)
             if self.interpretation == "softmax":
                 loss = F.cross_entropy(loss_input, qy.to(loss_input.device))
@@ -233,10 +312,18 @@ class EpisodicTrainer:
                     loss_input, target_oh, num_classes=self.num_classes,
                     kl_weight=float(self.kl_weight_max or 0.0),
                 )
+                # Log evidence diagnostics.
+                ev = loss_input  # already = softplus(logits) for evidential
+                total_evidence += float(ev.mean().item())
+                total_S        += float((ev + 1.0).sum(dim=-1).mean().item())
+
             total_loss += float(loss.item())
             total_acc  += self._query_acc_from_logits(q_logits, qy)
             n_eps += 1
-        return total_loss / max(1, n_eps), total_acc / max(1, n_eps)
+
+        n = max(1, n_eps)
+        return (total_loss / n, total_acc / n,
+                total_evidence / n, total_S / n)
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -245,28 +332,25 @@ class EpisodicTrainer:
         """Run the full episodic training schedule.
 
         Args:
-            train_iterable_factory: a *callable* that returns a fresh
-                training-episode iterator for the next epoch. The
-                trainer calls this once per epoch so each epoch can use
-                a different seed_offset and the episodes are NOT the
-                same across epochs.
-            val_iterable_factory:   same, for the validation stream.
-                Typically called with a FIXED seed_offset so val
-                comparisons across epochs are paired episode-for-
-                episode.
+            train_iterable_factory: callable returning a fresh training-
+                episode iterator for each epoch (called once per epoch).
+            val_iterable_factory:   same for validation (fixed seed_offset
+                so val comparisons across epochs are paired episode-for-
+                episode).
 
         Returns:
-            dict with: history (EpisodicHistory), best_val_acc,
-            best_val_epoch, best_state_dict (the meta-trained adapter
-            state at the best-validation epoch).
+            dict with: history, best_val_acc, best_val_epoch,
+            best_state_dict.
         """
         global_step = 0
-        no_improve = 0
+        no_improve  = 0
+
         for epoch in range(1, self.num_epochs + 1):
-            tr_loss, tr_acc, global_step = self._run_train_epoch(
+            (tr_loss, tr_acc, global_step,
+             tr_evidence, adapter_gnorm) = self._run_train_epoch(
                 train_iterable_factory(epoch), global_step,
             )
-            val_loss, val_acc = self._run_val_epoch(
+            val_loss, val_acc, val_evidence, val_S = self._run_val_epoch(
                 val_iterable_factory(epoch),
             )
             kl_end = self._kl_weight_at_step(global_step)
@@ -277,38 +361,59 @@ class EpisodicTrainer:
             self.history.val_loss.append(val_loss)
             self.history.val_acc.append(val_acc)
             self.history.kl_weight_at_end.append(kl_end)
+            self.history.mean_evidence.append(val_evidence)
+            self.history.mean_strength_S.append(val_S)
+            self.history.adapter_grad_norm.append(adapter_gnorm)
 
             if self.logger is not None:
                 self.logger.info(
                     f"epoch {epoch:3d}/{self.num_epochs}  "
                     f"train_loss={tr_loss:.4f}  train_acc={tr_acc:.3f}  "
                     f"val_loss={val_loss:.4f}  val_acc={val_acc:.3f}  "
-                    f"kl_w={kl_end:.3f}  global_step={global_step}"
+                    f"kl_w={kl_end:.3f}  "
+                    f"mean_ev={val_evidence:.4f}  mean_S={val_S:.4f}  "
+                    f"grad_norm={adapter_gnorm:.4f}  "
+                    f"global_step={global_step}"
                 )
             if self.wandb_run is not None:
                 self.wandb_run.log({
-                    "train/epoch": epoch,
-                    "train/loss_epoch": tr_loss,
-                    "train/acc_epoch":  tr_acc,
-                    "val/loss":         val_loss,
-                    "val/acc":          val_acc,
-                    "train/kl_weight":  kl_end,
-                    "train/global_step": global_step,
+                    "train/epoch":        epoch,
+                    "train/loss_epoch":   tr_loss,
+                    "train/acc_epoch":    tr_acc,
+                    "train/mean_evidence": tr_evidence,
+                    "train/adapter_grad_norm": adapter_gnorm,
+                    "val/loss":           val_loss,
+                    "val/acc":            val_acc,
+                    "val/mean_evidence":  val_evidence,
+                    "val/mean_strength_S": val_S,
+                    "train/kl_weight":    kl_end,
+                    "train/global_step":  global_step,
                 }, step=epoch)
 
-            # Collapse guard (R-EPISODIC-COLLAPSE).
-            if epoch == 1 and val_acc <= self.collapse_threshold:
-                raise EpisodicCollapse(
-                    f"validation accuracy after epoch 1 was {val_acc:.3f}, "
-                    f"<= collapse_threshold ({self.collapse_threshold}). "
-                    f"Likely causes: KL anneal too aggressive, LR too "
-                    f"high, or sampler / dataset mis-wired. Abort before "
-                    f"burning more compute."
-                )
+            # ----------------------------------------------------------
+            # Collapse guard (action 4.20 — strengthened).
+            # Check after epoch 1 for (a) and (b); after epoch 2 for (c).
+            # ----------------------------------------------------------
+            if epoch == 1:
+                _reason = self._collapse_reason_epoch1(val_acc, val_evidence)
+                if _reason:
+                    raise EpisodicCollapse(
+                        f"Collapse detected after epoch 1: {_reason}  "
+                        f"val_acc={val_acc:.3f}  mean_evidence={val_evidence:.6f}  "
+                        f"train_loss={tr_loss:.6f}"
+                    )
+            if epoch == 2:
+                _reason = self._collapse_reason_epoch2(tr_loss)
+                if _reason:
+                    raise EpisodicCollapse(
+                        f"Collapse detected after epoch 2: {_reason}  "
+                        f"train_loss_ep1={self.history.train_loss[0]:.6f}  "
+                        f"train_loss_ep2={tr_loss:.6f}"
+                    )
 
             # Early stop on val acc plateau.
             if val_acc > self.best_val_acc + 1e-6:
-                self.best_val_acc = val_acc
+                self.best_val_acc   = val_acc
                 self.best_val_epoch = epoch
                 self.best_state_dict = copy.deepcopy(self.model.state_dict())
                 no_improve = 0
@@ -324,14 +429,47 @@ class EpisodicTrainer:
                         )
                     break
 
-        # Restore best weights so the caller's `model` is the one with
-        # the best val accuracy (not the last-epoch one).
         if self.best_state_dict is not None:
             self.model.load_state_dict(self.best_state_dict)
 
         return {
-            "history": self.history,
+            "history":        self.history,
             "best_val_acc":   float(self.best_val_acc),
             "best_val_epoch": int(self.best_val_epoch),
             "best_state_dict": self.best_state_dict,
         }
+
+    # ------------------------------------------------------------------
+    # Collapse guard helpers (action 4.20)
+    # ------------------------------------------------------------------
+    def _collapse_reason_epoch1(self, val_acc: float,
+                                val_evidence: float) -> str:
+        """Return a non-empty reason string if collapse is detected after
+        epoch 1, else return empty string."""
+        reasons = []
+        # (a) probability-based val_acc at or below random-chance threshold.
+        if val_acc <= self.collapse_threshold:
+            reasons.append(
+                f"val_acc {val_acc:.3f} <= threshold {self.collapse_threshold}"
+            )
+        # (b) evidential only: mean evidence near zero → softplus output ~0.
+        if (self.interpretation == "evidential"
+                and val_evidence < self.min_evidence_threshold):
+            reasons.append(
+                f"mean_evidence {val_evidence:.2e} < "
+                f"min_evidence_threshold {self.min_evidence_threshold:.2e}"
+            )
+        return "; ".join(reasons)
+
+    def _collapse_reason_epoch2(self, tr_loss_ep2: float) -> str:
+        """Return a non-empty reason string if the loss did not move
+        between epoch 1 and epoch 2 (stagnation = (c) in 4.20)."""
+        if len(self.history.train_loss) < 2:
+            return ""
+        tr_loss_ep1 = self.history.train_loss[0]
+        if abs(tr_loss_ep2 - tr_loss_ep1) < 1e-5:
+            return (
+                f"train_loss frozen: |{tr_loss_ep2:.6f} - "
+                f"{tr_loss_ep1:.6f}| < 1e-5"
+            )
+        return ""

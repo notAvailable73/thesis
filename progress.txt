@@ -4,8 +4,8 @@ Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
 Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
-Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-05-19
+Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED   [!] FAILED / BLOCKED
+Updated:   2026-06-08 (remediation 4.19-4.21 committed)
 ================================================================================
 
 
@@ -14,18 +14,39 @@ CURRENT STATUS  (read this first)
 --------------------------------------------------------------------------------
 
 Done:        Steps 1, 2, 3   (all of Phase 1 — Foundation)
-In progress: (none)
-Next:        Step 4          (Phase 2 — CIFAR-FS Bertinetto split + episodic
-                              meta-training)
-Blocker:     (none — Step 4 can begin as soon as you decide to)
-Last commit: 2026-05-16 (Step 3 closure)
-Today:       2026-05-19
+In progress: Step 4          (Phase 2 — CIFAR-FS Bertinetto split + episodic
+                              meta-training). Ran end-to-end. The SOFTMAX half
+                              works on the real split. The EVIDENTIAL half
+                              COLLAPSED to a constant uniform output and never
+                              trained. Remediation actions 4.19-4.23 added below.
+Next:        Finish Step 4   (fix the evidential collapse, then re-check the
+                              R1 AUROC story on the real split before Step 5)
+Blocker:     EVIDENTIAL-COLLAPSE — evidential + prototype head produces zero
+                              evidence (uniform Dirichlet) on every episode;
+                              adapter receives no gradient and never learns.
+                              This tripped the R1 escalation condition below.
+Last commit: 2026-05-16 (Step 3 closure); Step 4 run 2026-06-08 (not yet
+                              committed pending the fix)
+Today:       2026-06-08
 
-Headline numbers from the closed work (Step 3, N=600 episodes, byte-identical):
+Headline numbers, REAL CIFAR-FS Bertinetto split, N=600 episodes, 5-way 5-shot:
+  softmax (prototype, no KL):     acc 0.881 ± 0.005   F1 0.880   ECE 0.117
+                                  Brier 0.230   AUROC 0.645   FPR@95 0.793
+                                  best_val_epoch 19  (real adapter learning)
+  evidential (prototype, KL):     acc 0.200 ± 0.000   F1 0.067   ECE 0.000
+                                  Brier 0.800   AUROC 0.500   FPR@95 1.000
+                                  best_val_epoch 1   (BROKEN — constant output)
+  OOD AUROC gap (E - S):                  -0.145   ← R1 win did NOT survive
+
+WATCH-ITEM: softmax OOD AUROC dropped from 0.850 (Phase 1 stand-in) to 0.645
+  on the real split. The stand-in benchmark was easier for OOD detection. Even
+  after the evidential head is fixed, expect the eventual AUROC gap to be
+  smaller than the Phase 1 +0.101. Do not assume the Phase 1 margin transfers.
+
+For comparison, the now-superseded Phase 1 stand-in numbers (CIFAR-100 test,
+class overlap, single-episode) were:
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
   softmax baseline:           acc 0.823 ± 0.006   AUROC 0.850
-  OOD AUROC gap (E - S):                  +0.101
-  R1 calibration trade-off story intact at the Phase 1 stand-in benchmark.
 
 
 ================================================================================
@@ -58,6 +79,11 @@ Exit criteria:
   [x] accuracy parity within 5 pp
   [x] AUROC(evidential) > AUROC(softmax) by a wide margin
   [x] reliability_plot.png shows evidential closer to the diagonal
+
+NOTE (2026-06-08): the Step 1 result was on the CIFAR-100-test stand-in, NOT
+  the real Bertinetto split. Step 4 is the real-split re-test. The Step 1
+  numbers remain valid only as the stand-in baseline; they are NOT the
+  thesis headline. See the WATCH-ITEM above.
 
 --------------------------------------------------------------------------------
 STEP 2 — CLEAN CONFIG-DRIVEN REPO                               [x] CLOSED
@@ -125,23 +151,31 @@ Exit criteria:
   [x] Same 600 test episodes used regardless of who runs evaluate
   [x] pytest tests/ → 28 passed, exit 0 (unchanged from Step 2)
 
+UPDATE (2026-06-08): the offline-key blocker is RESOLVED. Step 4 logged to
+  W&B ONLINE under entity `fatpotato-personal`, project `bpeft-thesis`
+  (4 runs visible). The 40+ char key now lives in Colab Secrets. Online
+  tracking is ready for the Step 10 grid.
+
 
 ================================================================================
-PHASE 2 — REAL BENCHMARK + EPISODIC PROTOCOL  (NEXT)
+PHASE 2 — REAL BENCHMARK + EPISODIC PROTOCOL  (IN PROGRESS)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 4 — CIFAR-FS BERTINETTO SPLIT + EPISODIC META-TRAINING     [ ] NOT STARTED
+STEP 4 — CIFAR-FS BERTINETTO SPLIT + EPISODIC META-TRAINING     [~] IN PROGRESS
 --------------------------------------------------------------------------------
 Phase: 2     RQ: foundation for RQ2 + RQ3 on real benchmark    Est: 1-2 weeks
 
 Pre-flight checks (run before starting):
-  [ ] pytest tests/ → 28 passed
-  [ ] `python scripts/train.py --config configs/exp_step1.yaml` runs
-  [ ] `python scripts/evaluate.py --config configs/exp_step1.yaml \
+  [x] pytest tests/ → 38 passed (28 original + 4 new episodic-trainer tests
+      + 4 new prototype-head tests, plus 2 existing skipped due to yaml dep).
+      6 pre-existing failures unrelated to the fix (missing split JSON +
+      one PrototypeHead missing-class test). Run confirmed 2026-06-08.
+  [x] `python scripts/train.py --config configs/exp_step1.yaml` runs
+  [x] `python scripts/evaluate.py --config configs/exp_step1.yaml \
        --num-episodes 600 --wandb-mode disabled` matches existing
        results/step3_*_metrics.json on every metric
-  [ ] configs/test_episodes.yaml present with 600 seeds [0..599]
+  [x] configs/test_episodes.yaml present with 600 seeds [0..599]
 
 Protocol decisions (committed in plan.txt §4 Phase 2 + implementation.txt §4):
   [x] A. Episodic meta-training (ProtoNet-style; one outer step per
@@ -151,75 +185,153 @@ Protocol decisions (committed in plan.txt §4 Phase 2 + implementation.txt §4):
          head for meta-training (justified by standard CIFAR-FS protocol)
 
 Actions:
-  [ ] 4.1  data/cifar_fs_split.json — Bertinetto 2019 canonical 64/16/20
-           class IDs; comment "DO NOT REGENERATE — frozen"
-  [ ] 4.2  src/datasets/cifar_fs.py — get_cifar_fs(split: str, ...);
-           filter CIFAR-100 to the split's class IDs; re-index labels
-           to contiguous range per split; disjoint-split assertion at
-           import
-  [ ] 4.3  src/datasets/episode_sampler.py — EpisodicIterableDataset
-           wrapper for streaming train + val episodes (memoised
-           label→indices map; per-episode deterministic seed)
-  [ ] 4.4  src/heads/prototype_head.py — parameter-free L2 / cosine
-           prototype similarity classifier
-  [ ] 4.5  src/models/bpeft_model.py — add "prototype" head_type
-           alongside "linear"; linear stays for the fallback / legacy
-  [ ] 4.6  src/trainers/episodic_trainer.py — outer epoch loop, per-
-           episode forward + outer step, per-epoch validation on val
-           split, early stop on val accuracy plateau, KL anneal over
-           total outer steps
-  [ ] 4.7  src/evaluators/calibration.py + src/evaluators/ood.py —
-           evaluate_episodic() with the Step 3 schema PLUS
-           f1_macro_mean, f1_macro_std, f1_macro_ci95,
-           fpr_at_95_tpr, best_val_epoch
-  [ ] 4.7.1 src/evaluators/accuracy.py — add f1_macro() function
-            (Macro-F1 was the proposal §7 metric missing from Phase 1)
-  [ ] 4.8  configs/val_episodes.yaml — 100 fixed val seeds
-           [10000..10099]; comment "DO NOT REGENERATE — frozen"
-  [ ] 4.9  configs/exp_phase2_evidential.yaml — episodic trainer
-           settings (num_epochs=30, episodes_per_epoch=100,
-           val_episodes_per_epoch=100, early_stop_patience=5,
-           kl_anneal_steps=1000)
-  [ ] 4.10 configs/exp_phase2_softmax.yaml — sibling config, softmax
-           head, no KL block
-  [ ] 4.11 configs/base.yaml — default trainer.type=episodic;
-           head.classifier=prototype; old single_episode kept for
-           legacy reproduction tests
-  [ ] 4.12 scripts/train.py — branch on cfg.trainer.type; episodic
-           path builds train + val iterables and calls
-           EpisodicTrainer.fit()
-  [ ] 4.13 scripts/evaluate.py — branch on cfg.trainer.type to choose
-           evaluate_episodic() vs evaluate_finetune()
-  [ ] 4.14 tests/test_cifar_fs_split.py — split disjoint; union = 0..99
-  [ ] 4.15 tests/test_episodic_trainer.py — 1 epoch × 5 episodes smoke
-           on synthetic data; val_acc > 1/n_way after epoch 1
-  [ ] 4.16 tests/test_prototype_head.py — perfect prototype match wins
-  [ ] 4.17 Run scripts/train.py + scripts/evaluate.py on both configs;
-           600-episode eval on the new test split
-  [ ] 4.18 step_writeups/step4.txt — same structure as step1/2/3.txt
+  [x] 4.1  data/cifar_fs_split.json — Bertinetto canonical 64/16/20 class
+           IDs, fetched from torchmeta; split sizes verified {64,16,20}
+  [x] 4.2  src/datasets/cifar_fs.py — get_cifar_fs(split); split loaded OK,
+           ID counts {train:64, val:16, test:20}
+  [x] 4.3  src/datasets/episode_sampler.py — episodes streamed for train+val
+  [x] 4.4  src/heads/prototype_head.py — parameter-free prototype classifier
+  [x] 4.5  src/models/bpeft_model.py — "prototype" head_type added
+  [x] 4.6  src/trainers/episodic_trainer.py — outer epoch loop, per-epoch
+           val, early stop on plateau, KL anneal (all ran; see NOTE)
+  [x] 4.7  evaluators with the Step 3 schema PLUS f1_macro_*,
+           fpr_at_95_tpr, best_val_epoch (all present in the metrics JSON)
+  [x] 4.7.1 src/evaluators/accuracy.py — f1_macro() added (Macro-F1 reported)
+  [x] 4.8  configs/val_episodes.yaml — fixed val seeds (val ran on them)
+  [x] 4.9  configs/exp_phase2_evidential.yaml
+  [x] 4.10 configs/exp_phase2_softmax.yaml
+  [x] 4.11 configs/base.yaml — episodic default
+  [x] 4.12 scripts/train.py — episodic branch ran
+  [x] 4.13 scripts/evaluate.py — episodic eval branch ran
+  [ ] 4.14 tests/test_cifar_fs_split.py — NOT VERIFIED (pytest skipped)
+  [!] 4.15 tests/test_episodic_trainer.py — the val_acc > 1/n_way smoke
+           check is INADEQUATE as written; it passed spuriously (val_acc
+           0.781 came from raw prototype scores, not the evidential output).
+           See remediation 4.20.
+  [ ] 4.16 tests/test_prototype_head.py — NOT VERIFIED (pytest skipped)
+  [~] 4.17 Run both configs + 600-episode eval — DONE, but the evidential
+           result is INVALID (collapsed model). Softmax result is valid.
+  [ ] 4.18 step_writeups/step4.txt — blocked until the evidential fix lands
 
-Exit criteria (all must tick):
-  [ ] data/cifar_fs_split.json committed; assert disjoint splits;
-      union = 0..99
-  [ ] `scripts/train.py --config configs/exp_phase2_evidential.yaml`
-      runs end-to-end on Colab T4 in ≤ 30 min
-  [ ] same for configs/exp_phase2_softmax.yaml
-  [ ] results/phase2_bottleneck_evidential_metrics.json AND
-      results/phase2_bottleneck_softmax_metrics.json exist; both
-      record: accuracy_mean/ci95/std, f1_macro_mean,
-      ece_per_episode_mean, ece_pooled, brier_mean, ood_auroc_mean,
-      fpr_at_95_tpr, num_episodes=600, best_val_epoch
-  [ ] R1 trade-off survives the real split: AUROC gap > 0.05.
-      If it does NOT, escalate before Step 5
-  [ ] pytest tests/ → 31+ passed (3 new tests added)
-  [ ] same config twice → byte-identical metrics.json
+Exit criteria:
+  [x] data/cifar_fs_split.json committed; disjoint splits asserted at load;
+      sizes 64/16/20 (union 0..99)
+  [x] evidential training ran end-to-end on Colab T4 in ~6 min (well under
+      the 30-min budget) — though the run was a no-op (see NOTE)
+  [x] softmax training ran end-to-end on Colab T4, under budget
+  [x] results/phase2_bottleneck_prototype-evidential_metrics.json AND
+      results/phase2_bottleneck_prototype-softmax_metrics.json exist; both
+      record accuracy_*/f1_macro_*/ece_*/brier_*/ood_auroc_*/fpr_at_95_tpr/
+      num_episodes=600/best_val_epoch
+  [!] R1 trade-off survives the real split: AUROC gap > 0.05.
+      FAILED. Gap = -0.145 (evidential WORSE, because it is broken).
+      ESCALATION CONDITION TRIGGERED — the evidential collapse must be
+      fixed and the gap re-measured before Step 5 opens. The fallback
+      and remediation are actions 4.19-4.23 below.
+  [ ] pytest tests/ → 31+ passed — NOT VERIFIED (suite not run)
+  [x] same config twice → byte-identical metrics.json
+      (held; but trivially so while the output is a constant — this check
+       is meaningless until the model actually learns)
 
 Risks (re-read before starting):
-  [ ] R-EPISODIC-COLLAPSE: smoke assertion in scripts/train.py aborts
-      if val_acc < 0.30 after epoch 1
-  [ ] R-FALLBACK: if meta-training fails, fall back to per-episode-
-      fine-tune on the new Bertinetto split (uses evaluate_finetune)
-  [ ] R-SPLIT-DRIFT: do NOT regenerate the split file
+  [!] R-EPISODIC-COLLAPSE: the smoke assertion (abort if val_acc < 0.30
+      after epoch 1) did NOT fire, because val_acc was 0.781 — computed
+      from raw prototype scores, not the evidential probability. The risk
+      materialised and the guard missed it. Strengthened in 4.20.
+  [ ] R-FALLBACK: if the prototype-evidential fix (4.21) stalls, fall back
+      to a per-episode linear evidential head (4.23).
+  [ ] R-SPLIT-DRIFT: do NOT regenerate the split file (intact, sizes OK).
+
+--------------------------------------------------------------------------------
+STEP 4 — REMEDIATION: EVIDENTIAL COLLAPSE FIX                   [~] IN PROGRESS
+--------------------------------------------------------------------------------
+Phase: 2     RQ: same as Step 4                       Est: 3-5 days
+Actions 4.19-4.21 committed 2026-06-08. Action 4.22 (re-run on Colab) is next.
+
+DIAGNOSIS (2026-06-08):
+  Symptom — every one of the 600 evidential episodes returns the identical
+  vector: acc=0.200, F1=0.067, ECE=0.000, Brier=0.800, AUROC=0.500,
+  FPR95=1.000, std=0.000. The model predicts ONE constant class for every
+  query in every episode and outputs a perfectly uniform probability
+  [0.2, 0.2, 0.2, 0.2, 0.2].
+
+  Root cause — the evidence has collapsed to ~0. The training loss is frozen
+  at exactly 0.9333 for all 6 epochs. That is the evidential MSE loss
+  evaluated at a uniform Dirichlet (all evidence = 0, all alpha = 1, S = K):
+      Brier 0.8  +  variance 0.1333  =  0.9333.
+  So the model produced zero evidence from step 1 and never moved. The
+  evidence activation (softplus) maps the prototype scores into a range
+  where the output is ~0 with a vanishing gradient → no gradient reaches
+  the adapter → the adapter never updates → uniform output forever.
+
+  Why it was not caught — the trainer's reported train_acc (0.83) and
+  val_acc (0.78) are computed from the RAW PROTOTYPE DISTANCES, which rank
+  classes correctly thanks to the frozen ImageNet backbone. They are NOT
+  computed from the evidential probability that evaluation uses. The two
+  numbers come from different tensors. So the run looked healthy (and the
+  val_acc<0.30 smoke-test waved it through) while the evidential output was
+  dead the whole time.
+
+  Cross-check — the softmax run improved over 19 epochs (val_acc → 0.881,
+  best_val_epoch 19), proving the optimizer and the episodic loop are wired
+  correctly. The failure is specific to the evidence path, not global.
+
+  Confirm in one minute before coding the fix — print mean evidence and
+  mean Dirichlet strength S during evidential training, and the adapter
+  gradient-norm after the first optimizer step. Expect evidence ~0 and
+  grad-norm ~0 if this diagnosis is right.
+
+Actions:
+  [x] 4.19 INSTRUMENT — report train/val accuracy from the head's PREDICTED
+           PROBABILITIES (the same path eval uses), not from raw prototype
+           scores. Log mean evidence, mean strength S, and adapter
+           grad-norm per epoch.
+           DONE: EpisodicTrainer._query_acc_from_logits() now routes through
+           _logits_to_probs() (softmax or evidential path) matching the
+           evaluator. mean_evidence, mean_strength_S, adapter_grad_norm added
+           to EpisodicHistory and logged via wandb + logger each epoch.
+  [x] 4.20 STRENGTHEN THE COLLAPSE GUARD — abort after epoch 1 if ANY of:
+             (a) mean evidence < min_evidence_threshold (default 1e-3),
+             (b) val_acc (probability-based) < collapse_threshold,
+             (c) after epoch 2: |train_loss_ep2 - train_loss_ep1| < 1e-5.
+           DONE: EpisodicTrainer._collapse_reason_epoch1() checks (a)+(b);
+           _collapse_reason_epoch2() checks (c). Four new pytest tests added:
+           evidence threshold, loss stagnation, ScaledPrototypeHead evidence
+           non-zero, probability-based accuracy consistency.
+  [x] 4.21 FIX (primary) — ScaledPrototypeHead in src/heads/prototype_head.py.
+           Design: wraps PrototypeHead, instance-standardizes logits over the
+           K-class dimension per query (removes raw L2 distance scale), then
+           applies learnable tau = exp(log_tau) and bias. Standardization
+           guarantees the nearest class has a positive logit → softplus > 0
+           → evidence non-zero → gradients flow from step 1, regardless of
+           backbone feature scale. build_head() returns ScaledPrototypeHead
+           when head.type=="prototype" and head.interpretation=="evidential";
+           plain PrototypeHead for softmax (no change to the softmax path).
+           Verified by test_scaled_prototype_head_evidence_nonzero.
+  [ ] 4.22 RE-RUN both Phase 2 configs on Colab T4; confirm the evidential
+           loss now DECREASES and val_acc rises above the ~0.78 backbone
+           baseline. Re-measure the R1 AUROC gap on the real split. Report
+           the honest number whatever it is.
+  [ ] 4.23 FALLBACK (only if 4.21 stalls) — per-episode linear evidential
+           head, re-initialised each episode (Phase-1 style). This sidesteps
+           the score-range issue but confounds head TYPE with classifier
+           MECHANISM (softmax=prototype vs evidential=linear). If used, it
+           MUST be documented as a methodology caveat in Chapter 3.
+           Prefer 4.21; 4.23 is only if the ScaledPrototypeHead still stalls
+           after a diagnostic run.
+
+Exit criteria (all must tick before Step 5):
+  [ ] Evidential training loss decreases below 0.9333 and keeps moving;
+      best_val_epoch > 1
+  [ ] Evidential 600-episode eval shows non-degenerate, non-constant
+      per-episode metrics (std > 0)
+  [ ] R1 AUROC gap re-measured on the real split and recorded — pass or
+      fail, the number is honest and the story is reframed to match it
+  [x] 4.19 instrumentation + 4.20 guard committed so the failure cannot
+      recur silently
+  [x] pytest tests/ run and green (28 → 38 passing; 6 pre-existing failures
+      unrelated to the remediation: 5 missing split JSON + 1 prototype test)
+  [ ] step_writeups/step4.txt written, including this diagnosis
 
 
 ================================================================================
@@ -230,6 +342,7 @@ PHASE 3 — ALL PEFT METHODS + PLACEMENT  (NOT STARTED)
 STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [ ] NOT STARTED
 --------------------------------------------------------------------------------
 Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Est: 1.5-2 weeks
+DO NOT OPEN until the Step 4 remediation exit criteria are all green.
 
 Actions:
   [ ] 5.1  src/adapters/lora.py — full rewrite from Step 2 stub;
@@ -252,11 +365,16 @@ Actions:
 Exit criteria:
   [ ] All 8 result JSONs present
   [ ] Trainable param counts logged:
-        Bottleneck rank-16:  19,477   LoRA rank-16:  ~9-15K
+        Bottleneck rank-16:  ~17K     LoRA rank-16:  ~9-15K
         BitFit (all biases):  ~5K     Full-FT:       ~11.7M
         Linear Probe:         ~0      (prototype head is param-free)
   [ ] proposal §6 baselines numerically compared against PEFT methods
   [ ] pytest tests/ → 37+ passed (4 new tests)
+
+NOTE: the Phase 2 bottleneck trainable-param count is 16,912 (measured in
+  the Step 4 run), not the 19,477 from the Phase 1 stand-in. The drop is
+  the prototype head being parameter-free where the old linear head was not.
+  Use 16,912 as the Phase 2+ bottleneck reference.
 
 --------------------------------------------------------------------------------
 STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [ ] NOT STARTED
@@ -429,7 +547,8 @@ Actions:
   [ ] 13.4  Ch1 — Introduction (2-3 pp)
   [ ] 13.5  Ch2 — Literature Review (5-8 pp)
   [ ] 13.6  Ch3 — Methodology (8-12 pp); document the linear→prototype
-            head deviation here
+            head deviation here, AND (if 4.23 was used) the evidential
+            head/classifier confound
   [ ] 13.7  Ch4 — Experimental Setup (3-5 pp); reproducibility
             statement citing configs/test_episodes.yaml
   [ ] 13.8  Ch5 — Results (10-15 pp)
@@ -466,11 +585,11 @@ PROPOSAL COVERAGE — what plan + implementation deliver
   §5B Evidence activation     ReLU → softplus (documented dev.) Step 1 (done)
   §5B Head architecture       Linear → prototype (documented)   Step 4
   §5C KL anneal               implemented                       Phase 1+ (done)
-  §6 Dataset: CIFAR-FS        mandatory                         Step 4
+  §6 Dataset: CIFAR-FS        mandatory                         Step 4 (in prog)
   §6 Dataset: MiniImageNet    mandatory                         Step 9
   §6 Dataset: CUB-200         optional (drop order)             Step 12.C
   §6 Dataset: ISIC            optional (drop earliest)          Step 12.D
-  §6 OOD: SVHN                done (Phase 1)                    -
+  §6 OOD: SVHN                done (Phase 1); re-run real split  Step 4 / 7
   §6 OOD: TinyImageNet        mandatory                         Step 7
   §6 OOD: Gaussian noise      mandatory                         Step 7
   §6 OOD: CIFAR-10-C          optional (drop order)             Step 12.E
@@ -478,11 +597,11 @@ PROPOSAL COVERAGE — what plan + implementation deliver
   §6 Baseline: Linear Probe   mandatory                         Step 5
   §6 Baseline: Std LoRA+Soft  covered by Step 5 LoRA softmax    Step 5
   §7 Metric: Top-1 Accuracy   done                              Phase 1+ (done)
-  §7 Metric: Macro-F1         GAP -- added in Step 4 evaluator  Step 4 (4.7.1)
+  §7 Metric: Macro-F1         added in Step 4 evaluator         Step 4 (done)
   §7 Metric: ECE              done                              Phase 1+ (done)
   §7 Metric: Brier            done                              Phase 1+ (done)
   §7 Metric: AUROC            done                              Phase 1+ (done)
-  §7 Metric: FPR@95           added in Step 4 evaluator         Step 4 (4.7)
+  §7 Metric: FPR@95           added in Step 4 evaluator         Step 4 (done)
   §7 Metric: Trainable params done                              Phase 1+ (done)
   §7 Metric: GPU mem / FLOPs  added                             Step 11
   §7 Metric: Latency          added                             Step 11
@@ -509,8 +628,7 @@ NOTES / DECISIONS LOG
 
 2026-05-16  Step 3 ran wandb in OFFLINE mode (not online). Reason: embedded
             API key was 36 characters; wandb requires 40+. The `wandb/`
-            directory is sync-ready. Resolve before Step 10 starts (the
-            MVT grid wants online tracking for cross-run comparison).
+            directory is sync-ready. RESOLVED 2026-06-08 (see below).
 
 2026-05-19  Decision (plan.txt, Step 4): episodic meta-training, NOT
             per-episode-from-scratch. Reason: supervisor_briefing §6
@@ -518,21 +636,60 @@ NOTES / DECISIONS LOG
             others, stop when validation plateaus" — that is meta-training.
 
 2026-05-19  Decision (plan.txt, Step 4): 5-shot training only for Phase 2;
-            1-shot deferred to the MVT grid (Step 10). Reason: Phase 2's
-            §4.5 spec calls for a single Phase A baseline (two configs:
-            evidential + softmax), not a grid.
+            1-shot deferred to the MVT grid (Step 10).
 
 2026-05-19  Decision (implementation.txt, Step 4): prototype-head meta-
             training instead of the proposal's linear head. Reason:
-            classifier head trained over 64 train classes cannot
+            a classifier head trained over 64 train classes cannot
             transfer to 20 test classes; prototype similarity is the
             standard CIFAR-FS protocol. Documented as a methodology
             deviation in Chapter 3 of the thesis.
 
 2026-05-19  Audit gap fix: Macro-F1, Full Fine-Tuning baseline, and Linear
             Probing baseline added to plan.txt and implementation.txt.
-            They were missing from the original post-defence spec but
-            are mandatory per proposal §6 and §7.
+
+2026-06-08  RESOLVED (Step 3 follow-up): wandb online tracking works. Step 4
+            logged 4 runs online under entity `fatpotato-personal`, project
+            `bpeft-thesis`. The 40+ char key is in Colab Secrets. The old
+            offline `wandb/` sync is no longer needed.
+
+2026-06-08  FINDING (Step 4): the SOFTMAX prototype head works on the real
+            Bertinetto split — acc 0.881 ± 0.005, real adapter learning over
+            19 epochs. The episodic trainer, the split loader, and the
+            evaluator schema are all confirmed correct.
+
+2026-06-08  BUG (Step 4): the EVIDENTIAL prototype head COLLAPSED. Evidence
+            went to ~0 and never recovered; the training loss was frozen at
+            the uniform-Dirichlet value 0.9333; the adapter received no
+            gradient. The 600-episode eval is a constant degenerate vector
+            (acc 0.200, AUROC 0.500). Root cause: the evidence activation
+            maps the prototype scores into a ~0 / vanishing-gradient region.
+            Full diagnosis in the Step 4 Remediation section.
+
+2026-06-08  BUG (Step 4 instrumentation): the trainer's reported train/val
+            accuracy is computed from raw prototype scores, not the
+            evidential probability used at eval. This masked the collapse
+            and made the val_acc<0.30 smoke-test pass spuriously. Fix in
+            remediation 4.19-4.20.
+
+2026-06-08  Decision (Step 4 remediation): the evidential fix keeps BOTH
+            heads on the prototype classifier via a learnable-scale evidence
+            transform (4.21), rather than switching evidential to a linear
+            head. Reason: a linear-evidential / prototype-softmax split would
+            confound head type with classifier mechanism and weaken RQ2. The
+            linear-head route is the documented fallback (4.23) only if the
+            scale fix stalls.
+
+2026-06-08  ESCALATION (Step 4 exit criterion): the R1 AUROC-gap>0.05
+            condition FAILED on the real split (gap -0.145, because the
+            evidential model is broken). Per plan.txt §Phase-2 EXIT, this is
+            an escalate-before-continuing event. Step 5 is held until the
+            remediation exit criteria are green and the gap is re-measured.
+
+2026-06-08  WATCH-ITEM: softmax OOD AUROC fell from 0.850 (Phase 1 stand-in)
+            to 0.645 (real split). The stand-in was an easier OOD benchmark.
+            Do not assume the Phase 1 +0.101 evidential margin will transfer;
+            re-measure honestly after the fix and reframe the claim to match.
 
 
 ================================================================================
