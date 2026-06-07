@@ -1,0 +1,587 @@
+================================================================================
+PLAN.TXT
+Project: B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) for Reliable
+         Few-Shot Vision with Lightweight CNN Backbones
+Owner:   Mainul
+Master:  proposal.txt   (the research vision; this plan exists to execute it)
+Spec:    implementation.txt
+                        (the detailed step-by-step build instructions that this
+                         plan organises into 6 phases)
+Status:  living document — update this file as phases close
+================================================================================
+
+
+--------------------------------------------------------------------------------
+0.  WHAT THIS DOCUMENT IS (READ FIRST)
+--------------------------------------------------------------------------------
+
+proposal.txt is the research vision: the title, the four research questions,
+the methodology, the proposed experiments. It does not say WHEN or HOW to
+build any of it.
+
+implementation.txt is the step-by-step engineering spec. Its 13 steps each
+belong to one of this plan's six phases and each is tagged with the
+research question(s) it advances.
+
+THIS document — plan.txt — is the master execution plan. It owns:
+  - the mapping from the proposal's four RQs to concrete deliverables
+  - the order in which those deliverables get built (six phases)
+  - the cut buffer if time runs short (priority-ordered drop list)
+  - the current state of the project (what is done, in-progress, not started)
+
+Anything in implementation.txt is a finer-grained breakdown of one or more
+phases in this document. When the two disagree, this file wins and the
+spec should be updated. progress.txt tracks per-step task completion.
+
+
+--------------------------------------------------------------------------------
+1.  THE THESIS IN ONE PAGE (proposal.txt distilled)
+--------------------------------------------------------------------------------
+
+CLAIM:
+  Lightweight CNNs (ResNet-18, MobileNetV3-Small, ConvNeXt-Nano) can be
+  adapted to new few-shot tasks using <1% of their parameters AND remain
+  well-calibrated AND know when an input is out-of-distribution, by
+  combining parameter-efficient fine-tuning (Bottleneck adapters, LoRA,
+  BitFit) with an evidential Dirichlet head + KL-regularised loss.
+
+WHY IT MATTERS:
+  Most PEFT work is on Vision Transformers and reports accuracy only.
+  Edge / safety-critical deployments need (a) small parameter footprints,
+  (b) honest confidence on familiar inputs, and (c) the ability to flag
+  unfamiliar inputs. No prior paper has done a systematic study of those
+  three things together on lightweight CNNs.
+
+FOUR RESEARCH QUESTIONS (verbatim from proposal.txt §4):
+  RQ1  How does the placement of adapter modules (serial vs. parallel)
+       within a CNN bottleneck affect few-shot accuracy vs. parameter count?
+
+  RQ2  Can Evidential Dirichlet Networks (EDN) provide superior calibration
+       compared to standard Softmax when fine-tuning with <500 trainable
+       parameters?
+
+  RQ3  Does the integration of a Bayesian loss prior improve the detection
+       of near-OOD samples in low-data regimes?
+
+  RQ4  What is the Pareto frontier between Inference Latency and Uncertainty
+       Quality on edge hardware?
+
+EVERY DELIVERABLE IN THIS PLAN MUST CONNECT TO AT LEAST ONE RQ.
+If a piece of work doesn't move an RQ forward, drop it.
+
+
+--------------------------------------------------------------------------------
+2.  COVERAGE MAP — WHERE EACH RQ GETS ANSWERED
+--------------------------------------------------------------------------------
+
+  RQ     Topic                              Primary phase   Secondary phase
+  ----   --------------------------------   -------------   ---------------
+  RQ1    Adapter placement (serial vs       Phase 3         Phase 5 (grid)
+         parallel inside CNN block)
+  RQ2    Evidential vs Softmax calibration  Phase 1+3       Phase 5 (grid)
+         (validated on the Phase 1 stand-in
+         only; the real-split re-test is
+         blocked on the Phase 2 evidential
+         fix — see status below)
+  RQ3    Bayesian OOD detection, including  Phase 4         Phase 5 (grid)
+         near-OOD (TinyImageNet) which is
+         the hard case
+  RQ4    Latency / FLOPs / memory vs        Phase 5         (none)
+         uncertainty quality, Pareto plot
+
+R1 RESULT — PHASE 1 (stand-in) vs PHASE 2 (real split):
+  Phase 1, CIFAR-100-test stand-in, N=600:
+    evidential AUROC 0.951 vs softmax 0.850  (+0.101) — looked like a clear
+    RQ3 win for far-OOD.
+  Phase 2, real Bertinetto CIFAR-FS split, N=600:
+    softmax works (acc 0.881, AUROC 0.645). The evidential head COLLAPSED to
+    a constant uniform output (acc 0.200, AUROC 0.500) — a bug, not a result.
+    The gap is therefore -0.145 and the R1 win has NOT yet reproduced on the
+    real split. The escalation condition has fired; the fix is the immediate
+    Phase 2 priority (progress.txt "Step 4 — Remediation").
+  TWO honest cautions carried forward:
+    (1) The stand-in was an easier OOD benchmark — softmax AUROC alone fell
+        0.850 → 0.645 on the real split. Expect any post-fix evidential
+        margin to be SMALLER than +0.101.
+    (2) Do not write the +0.10 number into the thesis. Re-measure on the
+        real split after the fix and state whatever the honest number is.
+
+
+METRICS CATALOG (proposal.txt §7 — everything reported by the evaluators):
+  Performance:    Top-1 Accuracy, Macro-F1
+  Calibration:    ECE (per-episode mean + pooled), Brier
+  Reliability:    OOD AUROC, FPR @ 95% TPR
+  Efficiency:     trainable params, total params, GPU memory delta,
+                  inference latency (T4 GPU + Colab CPU), FLOPs
+  The Phase 2 evaluator now records all six Performance + Calibration +
+  Reliability metrics (Macro-F1 and FPR@95 were added in Step 4); the
+  Efficiency block is added in Phase 5 (Step 11).
+
+
+--------------------------------------------------------------------------------
+3.  CURRENT STATUS (snapshot as of 2026-06-08)
+--------------------------------------------------------------------------------
+
+DONE:
+  Phase 1 — Foundation
+    [x] Step 1: calibration fix (Sensoy evidential MSE+KL, KL anneal
+                0 → 0.5 over 200 steps, softplus activation). R1 trade-off
+                story confirmed at N=20 on the stand-in.
+    [x] Step 2: clean subpackage repo, YAML configs, single CLI per task,
+                28 pytest tests passing.
+    [x] Step 3: wandb logging through one wrapper, determinism by default,
+                canonical 600-seed test list, byte-identical metrics.json
+                on rerun. (W&B online tracking now confirmed working as of
+                the Step 4 run.)
+
+IN PROGRESS:
+  Phase 2 — Real benchmark + episodic protocol (Step 4)
+    [x] CIFAR-FS Bertinetto 64/16/20 split fetched, committed, disjoint.
+    [x] Episodic meta-training loop runs end-to-end on Colab T4 (<30 min).
+    [x] SOFTMAX prototype head WORKS on the real split: acc 0.881 ± 0.005,
+        real adapter learning over 19 epochs. Pipeline confirmed correct.
+    [!] EVIDENTIAL prototype head COLLAPSED: zero evidence, frozen loss,
+        constant uniform output (acc 0.200, AUROC 0.500). Adapter never
+        trained. This is a bug in how the evidential head consumes the
+        prototype scores — diagnosed, fix scoped (progress.txt Step 4
+        Remediation, actions 4.19-4.23).
+    [!] R1 AUROC-gap>0.05 EXIT CRITERION FAILED (gap -0.145). Escalation
+        fired. Phase 3 is HELD until the fix lands and the gap is re-measured.
+
+NOT STARTED:
+  Phases 3, 4, 5, 6 (defined below). Phase 3 is BLOCKED on the Phase 2 fix.
+
+
+--------------------------------------------------------------------------------
+4.  THE SIX PHASES (matches proposal.txt §10 timeline)
+--------------------------------------------------------------------------------
+
+The proposal's six phases are the load-bearing units. Each phase below has:
+  - GOAL    (one sentence — what does "done" look like?)
+  - RQs     (which research questions it advances)
+  - BUILDS  (concrete artefacts produced)
+  - EXIT    (objective criteria for closing the phase)
+  - TIME    (calendar-weeks at the user's current part-time pace)
+  - SPEC    (which implementation.txt steps it absorbs)
+  - STATUS
+
+
+--------------------------------------------------------------------------------
+PHASE 1 — Foundation (DONE)
+--------------------------------------------------------------------------------
+GOAL:    Get one head-to-head Softmax vs Evidential comparison running
+         end-to-end on a clean, reproducible, instrumented codebase, with
+         the R1 calibration trade-off story validated on a stand-in.
+RQs:     RQ2 (preliminary), RQ3 (preliminary, far-OOD only).
+BUILDS:  Clean src/ subpackages, YAML config system, scripts/train.py and
+         scripts/evaluate.py, wandb wrapper, deterministic seeding,
+         600-episode test seed list, pytest suite (28 tests).
+EXIT:    [x] R1 calibration story validated on the stand-in (evidential
+             AUROC > softmax AUROC by a stable margin with tight CI).
+         [x] pytest tests/ returns 0.
+         [x] Same config twice → byte-identical metrics.json.
+TIME:    ~3-4 weeks of part-time work (already spent).
+SPEC:    Steps 1, 2, 3 of implementation.txt.
+STATUS:  CLOSED. See step_writeups/step1.txt, step2.txt, step3.txt.
+         CAVEAT: the result is on the CIFAR-100-test stand-in, not the real
+         split. Phase 2 is the real-split re-test and supersedes it.
+
+
+--------------------------------------------------------------------------------
+PHASE 2 — Real benchmark + episodic protocol (IN PROGRESS)
+--------------------------------------------------------------------------------
+GOAL:    Replace the CIFAR-100-test stand-in with the proper Bertinetto
+         64/16/20 CIFAR-FS split, replace single-episode training with
+         episodic meta-training (adapter learns across many train episodes
+         and is evaluated on unseen test classes), and produce the Phase A
+         baseline numbers that everything downstream is compared against.
+RQs:     Foundation for RQ2 and RQ3 on the real benchmark; does not yet
+         answer any RQ on its own.
+BUILDS:  data/cifar_fs_split.json (committed),                        [done]
+         src/datasets/cifar_fs.py (Bertinetto split loader),          [done]
+         src/datasets/episode_sampler.py (streaming train episodes),  [done]
+         src/trainers/episodic_trainer.py (outer loop, per-epoch val,
+            early stop on plateau),                                   [done]
+         configs/val_episodes.yaml (fixed val seeds),                 [done]
+         configs/exp_phase2_{evidential,softmax}.yaml,                [done]
+         results/phase2_*_metrics.json (N=600 on the new test split), [partial:
+            softmax valid; evidential invalid pending the fix]
+         + evidence-scale fix to the evidential head,                 [TODO 4.21]
+         + accuracy/evidence instrumentation in the trainer,          [TODO 4.19]
+         + strengthened collapse guard,                               [TODO 4.20]
+         step_writeups/step4.txt.                                     [blocked]
+EXIT:    [x] No class appears in two of {train, val, test} splits (asserted
+             at load; sizes 64/16/20, union 0..99).
+         [x] Single command runs full episodic training in <= 30 min on
+             Colab T4 (both configs ran in ~6 min).
+         [~] Phase A baseline numbers reported with mean ± 95% CI for both
+             heads. SOFTMAX done (acc 0.881 ± 0.005). EVIDENTIAL pending the
+             fix — the current numbers are a degenerate constant, not a
+             baseline.
+         [!] R1 trade-off survives the move to the real split (AUROC gap
+             >= 0.05). FAILED — gap -0.145 because the evidential head is
+             broken. ESCALATED. Must be re-measured after the fix.
+ADDED EXIT (remediation — all must tick before Phase 3 opens):
+         [ ] Evidential training loss decreases below 0.9333 and keeps
+             moving; best_val_epoch > 1.
+         [ ] Evidential 600-episode eval is non-degenerate (per-episode
+             std > 0).
+         [ ] R1 AUROC gap re-measured and recorded honestly (pass or fail).
+         [ ] Trainer reports accuracy from the head probabilities (same path
+             as eval) and logs mean evidence; collapse guard catches a zero-
+             evidence run. Committed so the failure cannot recur silently.
+TIME:    ~1-2 weeks original + ~3-5 days remediation.
+SPEC:    Step 4 of implementation.txt.
+DECISION (already taken):
+         A. Protocol = episodic meta-training (adapter persists across
+            episodes, learns to adapt fast). Per-episode-from-scratch is
+            NOT used.
+         B. Train-time shot count = 5-shot for Phase 2. 1-shot models are
+            trained later in Phase 5's grid.
+         C. (2026-06-08) The evidential fix KEEPS the prototype head on both
+            sides via a learnable-scale evidence transform, rather than
+            switching evidential to a linear head. A linear-evidential /
+            prototype-softmax split would confound head type with classifier
+            mechanism and weaken RQ2. The linear-head route is the documented
+            fallback only if the scale fix stalls.
+STATUS:  IN PROGRESS. Pipeline confirmed via the softmax run; evidential
+         head fix is the immediate priority. See progress.txt Step 4 +
+         Step 4 Remediation for the action list and full diagnosis.
+
+
+--------------------------------------------------------------------------------
+PHASE 3 — All PEFT methods + adapter placement (RQ1)   [BLOCKED ON PHASE 2 FIX]
+--------------------------------------------------------------------------------
+GOAL:    Bring LoRA from "smoke-tested" to fully integrated, add BitFit,
+         and study adapter PLACEMENT inside the CNN (serial after conv2
+         vs parallel alongside the block), so that RQ1 is answered with
+         concrete numbers.
+RQs:     RQ1 (primary), RQ2 (extends across PEFT methods).
+BUILDS:  src/adapters/lora.py (full integration, not stub),
+         src/adapters/bitfit.py (new — unfreeze bias terms only),
+         src/adapters/placement.py (serial / parallel hooks into ResNet18
+            residual blocks),
+         configs/exp_phase3_lora_{evidential,softmax}.yaml,
+         configs/exp_phase3_bitfit_{evidential,softmax}.yaml,
+         configs/exp_phase3_serial_{evidential,softmax}.yaml,
+         configs/exp_phase3_parallel_{evidential,softmax}.yaml,
+         results/phase3_<adapter>_<head>_metrics.json,
+         step_writeups/step5_partial.txt (placement and PEFT-method
+            subsection of the MVT grid).
+EXIT:    [ ] LoRA and BitFit each produce a 600-episode eval on CIFAR-FS
+             with both heads, recorded in results/.
+         [ ] At least three placement variants compared on Bottleneck
+             (post-pool, serial-in-block, parallel-in-block).
+         [ ] mvt_results.json schema is established and the four cells
+             written so far validate against it.
+         [ ] RQ1 has at least one paragraph of conclusions backed by
+             numbers + a parameter count column.
+TIME:    ~2 weeks.
+SPEC:    Steps 5 + 6 of implementation.txt.
+STATUS:  NOT STARTED — and HELD. Do not open until the Phase 2 evidential
+         fix is green. Running the PEFT grid with a broken evidential head
+         would burn GPU on numbers that have to be thrown away.
+
+
+--------------------------------------------------------------------------------
+PHASE 4 — OOD breadth (RQ3)
+--------------------------------------------------------------------------------
+GOAL:    Test the Bayesian OOD claim on more than just far-OOD SVHN.
+         Near-OOD (TinyImageNet cropped to non-overlapping classes) is
+         the critical hard case for RQ3 — if evidential still wins there,
+         the contribution is real; if it ties or loses, the story
+         contracts but is still defensible.
+RQs:     RQ3 (primary), RQ2 (calibration under distribution shift).
+BUILDS:  src/datasets/tinyimagenet_ood.py,
+         src/datasets/gaussian_noise_ood.py,
+         src/datasets/cifar10c.py (optional — drop if time short),
+         AUROC + FPR@95 reported for every OOD dataset × best PEFT config,
+         results/phase4_ood_table.json,
+         results/phase4_*_histogram.png (vacuity / max-prob per OOD set),
+         step_writeups/step6_ood.txt.
+EXIT:    [ ] AUROC + FPR@95 for at least two OOD datasets per best PEFT
+             config (SVHN + TinyImageNet minimum).
+         [ ] One reliability + one OOD-histogram figure per OOD dataset.
+         [ ] Explicit honest call on RQ3: "evidential wins on far-OOD by
+             X, on near-OOD by Y" with confidence intervals.
+TIME:    ~1 week.
+SPEC:    Step 7 of implementation.txt.
+STATUS:  NOT STARTED.
+
+
+--------------------------------------------------------------------------------
+PHASE 5 — Full grid + more backbones + edge efficiency (RQ4)
+--------------------------------------------------------------------------------
+GOAL:    Run the Minimum Viable Thesis grid across multiple backbones,
+         datasets, and shot counts, and produce the efficiency / Pareto
+         analysis that answers RQ4.
+RQs:     RQ4 (primary), RQ1+RQ2+RQ3 (breadth — same conclusions at scale).
+BUILDS:  src/backbones/mobilenetv3.py,
+         src/backbones/convnext_nano.py (or efficientnet_b0 fallback,
+            documented),
+         src/datasets/mini_imagenet.py,
+         src/datasets/cub200.py (optional),
+         src/datasets/isic.py (optional, drop earliest),
+         scripts/run_mvt_grid.sh (loops the configured grid),
+         src/utils/efficiency.py (param count, FLOPs via fvcore,
+            inference latency on T4 + Colab CPU, peak memory),
+         results/mvt_results.json:
+            {dataset}.{kshot}.{backbone}.{adapter}.{head}.{metric} = mean ± std,
+         results/pareto_latency_vs_auroc.png,
+         results/pareto_params_vs_accuracy.png,
+         results/master_tables.{tex,json},
+         step_writeups/step5_grid.txt + step7_efficiency.txt.
+
+         MVT GRID (the minimum that answers all 4 RQs):
+            backbones    = {ResNet-18, MobileNetV3-Small}
+            adapters     = {Bottleneck, LoRA}
+            heads        = {Softmax, Evidential}
+            datasets     = {CIFAR-FS, MiniImageNet}
+            shots        = {1-shot, 5-shot}
+            seeds        = 3 per cell
+            = 2 * 2 * 2 * 2 * 2 * 3 = 96 runs at ~30 min each = ~48 GPU-hours
+            On Colab Pro this is ~2 weeks of careful checkpoint discipline.
+
+         REQUIRED BASELINES (proposal.txt §6 Primary Baselines):
+            + Full Fine-Tuning      (no PEFT — all backbone params trainable)
+            + Linear Probing        (only the final classifier trainable;
+                                     no adapter, no LoRA)
+            Both run on ResNet-18 × CIFAR-FS × {1-shot, 5-shot} × both heads
+            × 3 seeds = 24 runs (~12 GPU-hours).
+            Standard-LoRA-with-Softmax (the third primary baseline) is
+            already covered by the {LoRA, Softmax} cell of the MVT grid.
+
+         OPTIONAL EXTENSIONS (only if Phases 2-4 finished on time):
+            + ConvNeXt-Nano backbone
+            + CUB-200 dataset
+            + ISIC dataset
+            + BitFit included in the grid (already built in Phase 3 — adds
+              only run-time, not engineering)
+            + Baselines extended to MobileNetV3-Small and MiniImageNet
+EXIT:    [ ] mvt_results.json complete with no missing cells in the
+             minimum grid.
+         [ ] Two Pareto plots saved at 300 dpi.
+         [ ] RQ4 has explicit numbers (latency in ms, AUROC, FLOPs,
+             params) for every backbone in the grid.
+         [ ] Master tables emitted in LaTeX (booktabs) ready for the
+             results chapter.
+TIME:    ~3-4 weeks (this is the longest phase; budget conservatively).
+SPEC:    Steps 8, 9, 10, 11 (+ optional 12) of implementation.txt.
+STATUS:  NOT STARTED.
+
+
+--------------------------------------------------------------------------------
+PHASE 6 — Thesis writing
+--------------------------------------------------------------------------------
+GOAL:    Submit the document.
+RQs:     All four — each gets its own subsection in Chapter 6 (Discussion)
+         with a direct numerical answer + figure reference.
+BUILDS:  Ch1 Introduction, Ch2 Literature, Ch3 Methodology, Ch4 Setup,
+         Ch5 Results, Ch6 Discussion, Ch7 Conclusion + Future Work,
+         Abstract (250 w), BibTeX file, all figures at 300 dpi.
+EXIT:    [ ] Supervisor signs off on a final pre-submission read.
+         [ ] Document submitted.
+TIME:    ~3-4 weeks.
+SPEC:    Step 13 of implementation.txt.
+STATUS:  NOT STARTED.
+
+
+--------------------------------------------------------------------------------
+5.  MVT VS FULL PROPOSAL — WHAT MUST SHIP, WHAT CAN DROP
+--------------------------------------------------------------------------------
+
+The proposal's experimental matrix (3 backbones × 3 PEFT × 4 in-dist × 4
+OOD × 2 shots × 3 seeds = 1,728 configurations) is not feasible on Colab
+Pro in 12 weeks. The plan therefore distinguishes a Minimum Viable Thesis
+from a Full proposal coverage, and commits explicitly to the MVT with a
+drop order for everything beyond it.
+
+MINIMUM VIABLE THESIS (mandatory — non-negotiable):
+  - All of Phase 1, 2, 6.
+  - Phase 3: Bottleneck + LoRA, both heads, placement study (RQ1).
+  - Phase 4: SVHN + TinyImageNet (RQ3 with near-OOD).
+  - Phase 5: ResNet-18 + MobileNetV3-Small backbones,
+             CIFAR-FS + MiniImageNet datasets,
+             1-shot + 5-shot,
+             efficiency table + Pareto plot (RQ4),
+             plus Full-FT and Linear Probe baselines on ResNet-18
+             × CIFAR-FS (proposal.txt §6 — non-negotiable).
+  This footprint answers all four RQs and produces ~96 PEFT grid runs
+  + 24 baseline runs.
+
+EXTENSIONS — kept in priority order; drop FROM THE BOTTOM if time short:
+   1. ConvNeXt-Nano backbone           (proposal §5A line 3)
+   2. BitFit included in the MVT grid  (already built; adds run-time only)
+   3. CUB-200-2011 dataset             (fine-grained few-shot angle)
+   4. ISIC medical dataset             (drop first; legal/download risk)
+   5. CIFAR-10-C corruption robustness (drop second; nice-to-have)
+   6. Gaussian-noise OOD               (drop third; sanity check only)
+   7. Jetson Nano latency              (drop fourth; explicit limitation
+                                         in the thesis: "no Jetson access;
+                                         CPU as edge proxy")
+
+This drop order is binding: if Phase 5 runs over, items are dropped in
+this exact sequence, not by personal preference. Maintain RQ coverage
+above breadth.
+
+
+--------------------------------------------------------------------------------
+6.  TIMELINE (calendar, not wall-clock)
+--------------------------------------------------------------------------------
+
+Today:               2026-06-08
+Phase 1 closed:      2026-05-16 (Step 3 writeup, step_writeups/step3.txt)
+Phase 2 started:     ~2026-06-08 (Step 4 first run; softmax green, evidential
+                                  collapse found same day)
+
+Projection at the current part-time pace (~1 spec-day per 1.5 calendar-days),
+including the ~3-5 day Phase 2 remediation:
+
+  Phase 2 remediation (3-5 days)  ->  done by  ~2026-06-15
+  Phase 3  (~10 days)             ->  ~2 weeks ->  done by  ~2026-06-30
+  Phase 4  (~5 days)              ->  ~1 week  ->  done by  ~2026-07-07
+  Phase 5  (~20 days)             ->  ~3-4 wk  ->  done by  ~2026-08-04
+  Phase 6  (~20 days)             ->  ~3-4 wk  ->  done by  ~2026-09-01
+
+Total wall-clock: ~12-13 weeks from today. The evidential-collapse fix has
+pushed the projection out by roughly the original Phase 2 slack; there is no
+longer buffer for un-dropped extensions. If extensions are added without
+dropping anything in §5, expect a 2-4 week overrun.
+
+
+--------------------------------------------------------------------------------
+7.  RISKS AND MITIGATIONS (live)
+--------------------------------------------------------------------------------
+
+R1  THE CALIBRATION CLAIM REMAINS A TRADE-OFF, NOT A WIN
+    Phase 1 confirmed evidential ECE does not beat softmax ECE on the
+    stand-in. The real-split number is not in yet (blocked on the Phase 2
+    evidential fix), and the stand-in was an easier OOD benchmark
+    (softmax AUROC fell 0.850 → 0.645 on the real split). Re-measure on
+    real CIFAR-FS + MiniImageNet and report the honest trade-off. Do NOT
+    carry the +0.10 stand-in margin into the thesis, and do NOT chase a
+    strict ECE win by cherry-picking.
+
+R2  COLAB SESSION LIMITS WILL CUT LONG RUNS
+    Phase 5's grid is the danger zone. Save checkpoint every epoch to
+    Drive. scripts/train.py must support --resume-from <checkpoint>
+    before Phase 5 starts. Resume from checkpoint; never restart from
+    scratch.
+
+R3  ONE REPO ONLY
+    All work continues in the existing repo. The pre-defence demo state
+    is preserved through git tags / step_writeups. Do not branch into a
+    parallel codebase.
+
+R4  THE 600 TEST SEEDS ARE FROZEN
+    configs/test_episodes.yaml is treated as committed truth. Every
+    phase's evaluation reads from this file. Do not regenerate, do not
+    re-seed, do not slice down without recording the slice in the
+    metrics JSON.
+
+R5  TIME-PRESSURE DROP ORDER
+    Section 5 of this plan defines the drop order. Use it. The
+    temptation to drop the writing phase to fit in one more experiment
+    is the most common way thesis projects fail; resist it.
+
+R6  EPISODIC TRAINING CAN COLLAPSE SILENTLY  [MATERIALISED 2026-06-08]
+    This risk HAPPENED in the first Step 4 run: the evidential head
+    produced zero evidence, the loss froze at the uniform-Dirichlet value
+    0.9333, and the model output a constant uniform prediction on all 600
+    test episodes (acc 0.200, AUROC 0.500). The adapter never trained.
+    The original mitigation (abort if val_acc < 1/K after epoch 1) DID NOT
+    FIRE, because the trainer's val_acc was computed from raw prototype
+    scores (which the frozen backbone keeps sensible, ~0.78), not from the
+    evidential probability that evaluation actually uses. The guard watched
+    the wrong number.
+    STRENGTHENED MITIGATION (now mandatory, progress.txt 4.19-4.20):
+      (a) The trainer must report train/val accuracy from the HEAD'S
+          PREDICTED PROBABILITIES — the same path eval uses.
+      (b) Log mean evidence, mean Dirichlet strength S, and adapter
+          gradient-norm every epoch.
+      (c) Abort after epoch 1 if mean evidence ~0, OR train_loss is
+          unchanged epoch-1 to epoch-2, OR probability-based val_acc < 1/K.
+      (d) For evidential heads on a distance/similarity classifier, scale
+          the scores into the evidence activation with a learnable
+          temperature so evidence is non-zero and gradients flow.
+
+R7  CONVNEXT-NANO MAY NOT BE AVAILABLE IN timm
+    If timm's ConvNeXt-Nano weights are not pretrained on ImageNet-1k
+    or are otherwise unsuitable, swap to EfficientNet-B0 and document
+    the swap in Chapter 4. Do not block Phase 5 on a single backbone
+    name.
+
+R8  EVIDENTIAL/CLASSIFIER MISMATCH IS A RECURRING HAZARD  [NEW 2026-06-08]
+    The collapse in R6 was caused by feeding the evidential head a score
+    range its activation could not turn into usable evidence. The SAME
+    hazard returns every time the evidential head meets a new classifier
+    or a new backbone (different feature scale): LoRA in Phase 3,
+    MobileNetV3 / ConvNeXt in Phase 5, MiniImageNet features in Phase 5.
+    Mitigation: the R6(b) evidence logging stays on for EVERY evidential
+    run, and a one-line "mean evidence > 0 after step 1" check is part of
+    each new config's first smoke run before a full 600-episode eval is
+    launched.
+
+
+--------------------------------------------------------------------------------
+8.  WHAT FEEDS THE THESIS WRITING (artefact inventory)
+--------------------------------------------------------------------------------
+
+By the time Phase 6 starts, the following artefacts must exist:
+
+  Code:
+    src/ subpackages for adapters, backbones, datasets, evaluators,
+    heads, losses, models, trainers, utils. configs/ with one YAML per
+    experiment in the MVT grid. scripts/{train,evaluate}.py + the grid
+    runner.
+
+  Results:
+    results/mvt_results.json (the headline table; one row per cell),
+    results/phase4_ood_table.json,
+    results/pareto_*.png x 2,
+    results/master_tables.{tex,json},
+    one reliability + one OOD-histogram + one confusion-matrix PNG per
+    grid cell at 300 dpi.
+
+  Documentation:
+    step_writeups/step{1..7}.txt — one per closed phase / sub-phase,
+    matching the style of the existing step1.txt and step2.txt. step4.txt
+    must include the evidential-collapse diagnosis and the fix, since it
+    is a genuine methodology episode worth a paragraph in Chapter 3.
+    A single step_writeups/SUMMARY.txt written in Phase 6 stitches them
+    into a narrative for the supervisor.
+
+  External:
+    wandb dashboard (project "bpeft-thesis", entity fatpotato-personal)
+    with all grid runs tagged by phase, dataset, shot count, and config
+    name.
+
+If any of these does not exist by the start of Phase 6, the writing
+phase is blocked. The earlier phases must close their artefacts
+properly; do not leave "I'll regenerate that later" loose ends.
+
+
+--------------------------------------------------------------------------------
+9.  ONE PARAGRAPH I CAN READ TO THE SUPERVISOR
+--------------------------------------------------------------------------------
+
+"Phase 1 is closed and the codebase is clean, instrumented, and reproducible
+to the byte. Phase 2 moved everything onto the real Bertinetto CIFAR-FS split
+with episodic meta-training. The softmax baseline works well there (88%
+accuracy with genuine adapter learning), which confirms the data pipeline and
+the trainer. The evidential head, however, collapsed on the real split — it
+produced zero evidence and a constant prediction — which I traced to how the
+evidential layer consumes the prototype-distance scores. I have the diagnosis
+and a fix scoped (a learnable evidence scale plus better collapse
+instrumentation), and I am holding the rest of the experiments until that is
+green and I have re-measured the calibration / OOD comparison honestly on the
+real split. After that, Phase 3 is LoRA, BitFit, and adapter placement (RQ1),
+Phase 4 is near-OOD TinyImageNet (RQ3), and Phase 5 is the grid plus the
+efficiency / Pareto analysis (RQ4), then writing. The minimum viable footprint
+still answers all four research questions; the optional extensions are in a
+documented drop order so the thesis ships on time."
+
+
+================================================================================
+END OF PLAN.TXT
+================================================================================
