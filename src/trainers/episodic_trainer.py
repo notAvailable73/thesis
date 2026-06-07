@@ -48,21 +48,6 @@ def _one_hot(target: torch.Tensor, num_classes: int,
     return torch.eye(num_classes, dtype=dtype, device=device)[target]
 
 
-def _logits_to_loss_input(logits: torch.Tensor,
-                          interpretation: str) -> torch.Tensor:
-    """Prototype-head logits to the tensor the loss function expects.
-
-    - softmax     interpretation: pass raw logits straight to CE.
-    - evidential  interpretation: softplus -> non-negative evidence,
-                                  ready for evidential_mse_loss.
-    """
-    if interpretation == "softmax":
-        return logits
-    if interpretation == "evidential":
-        return F.softplus(logits)
-    raise ValueError(f"Unknown interpretation: {interpretation!r}")
-
-
 @dataclass
 class EpisodicHistory:
     """Per-epoch stats. The trainer dumps this into the checkpoint so
@@ -143,20 +128,22 @@ class EpisodicTrainer:
     # ------------------------------------------------------------------
     def _episode_loss(self, q_logits: torch.Tensor, query_y: torch.Tensor,
                       global_step: int) -> torch.Tensor:
-        loss_input = _logits_to_loss_input(q_logits, self.interpretation)
         if self.interpretation == "softmax":
-            return F.cross_entropy(loss_input, query_y)
+            return F.cross_entropy(q_logits, query_y)
 
-        # Evidential.
+        # Evidential: logits -> evidence via the head's to_evidence (the
+        # single source of truth shared with the evaluator, so the
+        # softplus/recentre can never drift between train and test).
+        evidence = self.model.head.to_evidence(q_logits)
         kl_w = (min(1.0, global_step / max(1, int(self.kl_anneal_steps)))
                 * float(self.kl_weight_max))
         target_oh = _one_hot(
-            query_y, self.num_classes, loss_input.dtype, loss_input.device,
+            query_y, self.num_classes, evidence.dtype, evidence.device,
         )
         # Reuse the existing Sensoy 2018 implementation.
         from ..losses.evidential import evidential_mse_loss
         return evidential_mse_loss(
-            loss_input, target_oh, num_classes=self.num_classes, kl_weight=kl_w,
+            evidence, target_oh, num_classes=self.num_classes, kl_weight=kl_w,
         )
 
     def _kl_weight_at_step(self, step: int) -> float:
@@ -220,17 +207,17 @@ class EpisodicTrainer:
             # Use kl_weight=kl_weight_max for the val loss (no anneal at
             # val time). It's only used for monitoring; the early-stop
             # signal is val ACCURACY.
-            loss_input = _logits_to_loss_input(q_logits, self.interpretation)
             if self.interpretation == "softmax":
-                loss = F.cross_entropy(loss_input, qy.to(loss_input.device))
+                loss = F.cross_entropy(q_logits, qy.to(q_logits.device))
             else:
+                evidence = self.model.head.to_evidence(q_logits)
                 target_oh = _one_hot(
-                    qy.to(loss_input.device), self.num_classes,
-                    loss_input.dtype, loss_input.device,
+                    qy.to(evidence.device), self.num_classes,
+                    evidence.dtype, evidence.device,
                 )
                 from ..losses.evidential import evidential_mse_loss
                 loss = evidential_mse_loss(
-                    loss_input, target_oh, num_classes=self.num_classes,
+                    evidence, target_oh, num_classes=self.num_classes,
                     kl_weight=float(self.kl_weight_max or 0.0),
                 )
             total_loss += float(loss.item())

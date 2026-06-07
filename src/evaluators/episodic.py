@@ -29,7 +29,6 @@ from typing import Iterable, Tuple, Optional
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from .accuracy import accuracy, f1_macro
 from .calibration import expected_calibration_error, brier_score
@@ -57,15 +56,20 @@ def _proto_logits_for_query(model, support_feats: torch.Tensor,
 
 def _logits_to_id_score(logits: torch.Tensor,
                         num_classes: int,
-                        interpretation: str) -> torch.Tensor:
+                        interpretation: str,
+                        head) -> torch.Tensor:
     """Map prototype-similarity logits to an in-distribution score per
     sample. Higher score => looks more in-distribution.
 
-    - "evidential": softplus -> evidence -> Dirichlet -> 1 - vacuity
+    - "evidential": head.to_evidence -> Dirichlet -> 1 - vacuity
     - "softmax":    softmax  -> max_p
+
+    `head` supplies the SAME logits->evidence mapping used at train time
+    (PrototypeHead.to_evidence); evaluating with a different mapping than
+    training was the latent train/test-skew risk this signature removes.
     """
     if interpretation == "evidential":
-        evidence = F.softplus(logits)
+        evidence = head.to_evidence(logits)
         _, vacuity = evidence_to_probs_and_vacuity(evidence, num_classes)
         return 1.0 - vacuity
     if interpretation == "softmax":
@@ -75,11 +79,11 @@ def _logits_to_id_score(logits: torch.Tensor,
 
 
 def _logits_to_probs(logits: torch.Tensor, num_classes: int,
-                     interpretation: str) -> torch.Tensor:
+                     interpretation: str, head) -> torch.Tensor:
     """Map prototype-similarity logits to a probability vector per
     sample (used for ECE / Brier / Macro-F1)."""
     if interpretation == "evidential":
-        evidence = F.softplus(logits)
+        evidence = head.to_evidence(logits)
         probs, _vac = evidence_to_probs_and_vacuity(evidence, num_classes)
         return probs
     if interpretation == "softmax":
@@ -143,7 +147,8 @@ def evaluate_episodic(
             qx_feats = backbone(qx)
 
             q_logits = _proto_logits_for_query(model, sx_feats, sy, qx_feats)
-            probs = _logits_to_probs(q_logits, num_classes, interpretation)
+            probs = _logits_to_probs(q_logits, num_classes, interpretation,
+                                     model.head)
 
             acc = accuracy(probs, qy)
             f1  = f1_macro(probs, qy, num_classes=num_classes)
@@ -165,9 +170,9 @@ def evaluate_episodic(
                     model, sx_feats, sy, ood_features,
                 )
                 id_score  = _logits_to_id_score(q_logits, num_classes,
-                                                interpretation)
+                                                interpretation, model.head)
                 ood_score = _logits_to_id_score(ood_logits, num_classes,
-                                                interpretation)
+                                                interpretation, model.head)
                 id_np  = id_score.cpu().numpy()
                 ood_np = ood_score.cpu().numpy()
                 last_id_scores, last_ood_scores = id_np, ood_np

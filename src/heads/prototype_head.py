@@ -48,7 +48,37 @@ class PrototypeHead(nn.Module):
     SUPPORTED: tuple[str, ...] = ("l2", "cosine")
 
     def __init__(self, metric: Literal["l2", "cosine"] = "l2",
-                 cosine_scale: float = 10.0):
+                 cosine_scale: float = 10.0,
+                 evidence_affine: bool = False,
+                 evidence_scale_init: float = 1.0,
+                 evidence_bias_init: float = 0.0):
+        """Parameter-free prototype-similarity classifier.
+
+        Evidence mapping (evidential interpretation only)
+        -------------------------------------------------
+        The Step 4 bug was applying ``softplus`` directly to L2 logits
+        (``-||q-p||^2``), which are large-negative for real backbone
+        features (||features|| is O(10) for ResNet-18 post-avgpool). For
+        those logits ``softplus(logit) ~ 0`` for every class, so evidence
+        collapses to zero -> uniform Dirichlet -> random accuracy AND
+        vanishing gradients (the model never learns). See step4 writeup.
+
+        The fix routes ALL three softplus call-sites (trainer loss, eval
+        probs, eval OOD score) through ``to_evidence`` so they can never
+        drift, and maps logits to evidence as::
+
+            evidence = softplus(logits * scale + bias)
+
+        ``scale`` (>0) and ``bias`` recentre the logits into the regime
+        where softplus is informative AND differentiable. With
+        ``evidence_affine=True`` they are 2 learnable scalars so the
+        operating point adapts per dataset/backbone across the MVT grid
+        (recommended; cosine logits cluster high for ReLU features, so a
+        fixed recentre is fragile). With ``evidence_affine=False`` they
+        are fixed constants (``scale=1, bias=0`` reproduces the old
+        ``softplus(logits)`` exactly; non-default values give the fixed
+        L2-recentre fallback documented in implementation.txt Step 4).
+        """
         super().__init__()
         if metric not in self.SUPPORTED:
             raise ValueError(
@@ -56,6 +86,37 @@ class PrototypeHead(nn.Module):
             )
         self.metric = metric
         self.cosine_scale = float(cosine_scale)
+        self.evidence_affine = bool(evidence_affine)
+        if self.evidence_affine:
+            # softplus(raw_scale) keeps the effective scale strictly > 0.
+            # raw_scale init chosen so softplus(raw_scale) == scale_init.
+            scale_init = max(float(evidence_scale_init), 1e-4)
+            raw = torch.log(torch.expm1(torch.tensor(scale_init)))
+            self._evidence_raw_scale = nn.Parameter(raw)
+            self._evidence_bias = nn.Parameter(
+                torch.tensor(float(evidence_bias_init))
+            )
+        else:
+            self.register_buffer(
+                "_evidence_scale_const",
+                torch.tensor(float(evidence_scale_init)),
+            )
+            self.register_buffer(
+                "_evidence_bias_const",
+                torch.tensor(float(evidence_bias_init)),
+            )
+
+    def to_evidence(self, logits: torch.Tensor) -> torch.Tensor:
+        """Map prototype-similarity logits to non-negative Dirichlet
+        evidence. Single source of truth for the softplus step so the
+        trainer and evaluator can never disagree."""
+        if self.evidence_affine:
+            scale = F.softplus(self._evidence_raw_scale)
+            bias = self._evidence_bias
+        else:
+            scale = self._evidence_scale_const
+            bias = self._evidence_bias_const
+        return F.softplus(logits * scale + bias)
 
     @staticmethod
     def _prototypes(support_features: torch.Tensor,

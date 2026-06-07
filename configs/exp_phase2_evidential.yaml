@@ -29,8 +29,24 @@ dataset:
 
 head:
   type: prototype
-  metric: l2
+  # Step 4 collapse fix: cosine (scale-invariant) instead of raw L2.
+  # Raw-L2 logits are O(-50) for ResNet-18 features -> softplus -> ~0
+  # evidence everywhere -> uniform Dirichlet -> random acc + dead
+  # gradients. Cosine logits are bounded; the learnable evidence affine
+  # (scale+bias) then recentres them so the Dirichlet is sharp.
+  metric: cosine
+  cosine_scale: 10.0
   interpretation: evidential
+  # Learnable evidence affine: evidence = softplus(scale*logit + bias).
+  # Init places the softplus "knee" at cosine ~= 0.6 (logit = 10*0.6 = 6,
+  # since -bias/scale = 18/3 = 6) so evidence switches ON for in-class
+  # similarities and stays ~0 for OOD. Chosen by a val + noise-OOD-proxy
+  # sweep (see step4 writeup): vs the naive (1.0,0.0) init this lifts the
+  # ID-vs-OOD vacuity gap from +0.06 to +0.62 with no accuracy cost
+  # (softplus is monotonic -> argmax/accuracy are unchanged by scale/bias).
+  evidence_affine: true
+  evidence_scale_init: 3.0
+  evidence_bias_init: -18.0
 
 loss:
   # Number of OUTER steps to anneal over. With episodes_per_epoch=100,

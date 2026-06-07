@@ -29,6 +29,13 @@ head:
   metric: l2             # l2 | cosine
   cosine_scale: 10.0
   interpretation: evidential   # only consulted when type == prototype
+  # Evidence mapping for prototype+evidential (Step 4 collapse fix).
+  # evidence = softplus(logits * scale + bias). With evidence_affine: true
+  # the scale/bias are 2 learnable scalars (robust across the grid); with
+  # false they are fixed (1.0/0.0 == legacy softplus(logits)).
+  evidence_affine: false
+  evidence_scale_init: 1.0
+  evidence_bias_init: 0.0
 
 loss:
   # type is auto-selected to match `head.type` for single-episode runs:

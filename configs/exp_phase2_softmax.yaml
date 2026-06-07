@@ -21,7 +21,11 @@ dataset:
 
 head:
   type: prototype
-  metric: l2
+  # Same metric as the evidential sibling so the head-to-head comparison
+  # isolates softmax-vs-evidential, not l2-vs-cosine. Cosine ProtoNet is
+  # a standard few-shot baseline (Chen 2019 "A Closer Look").
+  metric: cosine
+  cosine_scale: 10.0
   interpretation: softmax
 
 # Softmax interpretation does not use KL annealing; keys are kept here

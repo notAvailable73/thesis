@@ -15,6 +15,12 @@ def build_head(spec: dict, in_dim: int, num_classes: int):
       episodic meta-training) the spec may also include:
         metric:       "l2" | "cosine"                  (default: l2)
         cosine_scale: float                            (default: 10.0)
+        evidence_affine:     bool   learn 2 evidence-mapping scalars
+                                    (default: False)
+        evidence_scale_init: float  initial / fixed evidence scale
+                                    (default: 1.0)
+        evidence_bias_init:  float  initial / fixed evidence bias
+                                    (default: 0.0)
 
       The interpretation of the prototype-head logits (softmax vs
       evidential Dirichlet) is set by spec["interpretation"]
@@ -35,6 +41,9 @@ def build_head(spec: dict, in_dim: int, num_classes: int):
         return PrototypeHead(
             metric=spec.get("metric", "l2"),
             cosine_scale=float(spec.get("cosine_scale", 10.0)),
+            evidence_affine=bool(spec.get("evidence_affine", False)),
+            evidence_scale_init=float(spec.get("evidence_scale_init", 1.0)),
+            evidence_bias_init=float(spec.get("evidence_bias_init", 0.0)),
         )
     raise ValueError(f"Unknown head type: {htype}")
 
