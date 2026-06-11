@@ -292,12 +292,14 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
         "best_val_acc":   result["best_val_acc"],
         "best_val_epoch": result["best_val_epoch"],
         "train_history": {
-            "epoch":            list(history.epoch),
-            "train_loss":       list(history.train_loss),
-            "train_acc":        list(history.train_acc),
-            "val_loss":         list(history.val_loss),
-            "val_acc":          list(history.val_acc),
-            "kl_weight_at_end": list(history.kl_weight_at_end),
+            "epoch":             list(history.epoch),
+            "train_loss":        list(history.train_loss),
+            "train_acc":         list(history.train_acc),
+            "val_loss":          list(history.val_loss),
+            "val_acc":           list(history.val_acc),
+            "kl_weight_at_end":  list(history.kl_weight_at_end),
+            "mean_evidence":     list(history.mean_evidence),
+            "adapter_grad_norm": list(history.adapter_grad_norm),
         },
     }, ckpt_path)
     logger.info(
