@@ -106,8 +106,11 @@ ood:
 # WANDB_API_KEY in env; `mode: offline` writes to ./wandb/ without uploading.
 wandb:
   project: bpeft-thesis
-  mode: online
-  disabled: false
+  # wandb is OFF by default: disabled=true makes WandbRun a complete no-op
+  # (no init, no offline-run files, no console noise) regardless of the
+  # --wandb-mode flag the notebook passes. Set disabled:false to re-enable.
+  mode: disabled
+  disabled: true
   group: null
   tags: []
 

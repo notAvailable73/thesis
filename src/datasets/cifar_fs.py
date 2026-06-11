@@ -186,6 +186,15 @@ def get_cifar_fs(data_root: str = "data", image_size: int = 224,
 
     transform = _build_transform(image_size)
     use_train_partition = split in ("train", "val")
+    # Pre-fetch with a browser User-Agent: the Toronto host 403s torchvision's
+    # default downloader, which breaks fresh (gitignored) clones on Colab.
+    from ._robust_download import ensure_archive
+    ensure_archive(
+        data_root, "cifar-100-python.tar.gz",
+        ["https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
+         "http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"],
+        extracted_dirname="cifar-100-python",
+    )
     base = datasets.CIFAR100(
         root=data_root, train=use_train_partition,
         download=True, transform=transform,

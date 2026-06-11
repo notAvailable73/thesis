@@ -16,6 +16,13 @@ def get_svhn_ood(data_root: str = "data", image_size: int = 224,
         transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
     ])
     svhn_root = os.path.join(data_root, "svhn")
+    # Browser-UA pre-fetch (same rationale as CIFAR): robust on fresh clones.
+    from ._robust_download import ensure_archive
+    ensure_archive(
+        svhn_root, "test_32x32.mat",
+        ["http://ufldl.stanford.edu/housenumbers/test_32x32.mat",
+         "https://ufldl.stanford.edu/housenumbers/test_32x32.mat"],
+    )
     dataset = datasets.SVHN(root=svhn_root, split="test",
                              download=True, transform=transform)
     rng = random.Random(seed)
