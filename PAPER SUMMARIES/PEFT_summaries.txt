@@ -1,0 +1,424 @@
+################################################################################
+PAPER SUMMARIES — PEFT sub-topic reference for thesis:
+"Bayesian PEFT (B-PEFT) for Reliable Few-Shot Vision with Lightweight CNN Backbones"
+Generated: 2026-07-05
+################################################################################
+
+Papers processed: 8   |   PDFs in folder: 8   (nothing skipped)
+Source PDFs: BITIFT .pdf, CONV MEETS LORA.pdf, CONV-Adapter.pdf, CONV-LORA.pdf,
+             LORA.pdf, PEFT NLP.pdf, PEFT-LLM.pdf, Unified View.pdf
+(The .txt framework file "Bayesian PEFT_ evidential uncertainty_few_shot CNN
+ framework.txt" is your own proposal and was read for context only, NOT summarized.)
+
+Extraction note: all 8 PDFs parsed cleanly with PyMuPDF (good text yield, no
+scanned/image-only files). Where a specific detail was not stated in a PDF, this
+is called out explicitly rather than guessed. Ordered foundations -> CNN-specific
+-> surveys for thesis-building convenience.
+
+
+================================================================================
+==== PAPER 1: Parameter-Efficient Transfer Learning for NLP (Houlsby Adapters) ====
+   [source PDF: PEFT NLP.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "Parameter-Efficient Transfer Learning for NLP."
+   Neil Houlsby, Andrei Giurgiu, Stanisław Jastrzębski, Bruna Morrone, Quentin de
+   Laroussilhe, Andrea Gesmundo, Mona Attariyan, Sylvain Gelly (Google Research /
+   Jagiellonian Univ.). ICML 2019 (PMLR 97). arXiv:1902.00751.
+
+2. CORE IDEA: Fine-tuning a whole model per task is parameter-inefficient. This
+   paper introduces "adapter modules" — tiny trainable bottleneck layers inserted
+   into a frozen pre-trained Transformer. Only the adapters (plus LayerNorm and the
+   classifier) train, so each new task adds ~3% parameters yet stays within ~0.4%
+   of full fine-tuning on GLUE. This is the seminal adapter paper.
+
+3. METHOD / ARCHITECTURE: Bottleneck adapter with an internal skip connection:
+       h <- h + f(h · W_down) · W_up          (W_down: d->m, W_up: m->d, m << d)
+   Nonlinearity f in the middle. Params per adapter = 2md + d + m. Two adapters are
+   inserted serially per Transformer layer: one after the multi-head-attention
+   projection, one after the feed-forward sub-layer, each applied to the sub-layer
+   output BEFORE its residual add + LayerNorm. Near-identity init: projection
+   weights near zero so the module ≈ identity at start (critical for stability;
+   diverging too far from identity breaks training).
+
+4. HYPERPARAMETERS / TRAINING: Base model BERT. Optimizer Adam; LR warmup over
+   first 10% of steps then linear decay to 0; batch size 32; trained on 4 Cloud
+   TPUs. Per-task HP sweep over bottleneck size m (chosen for the accuracy/param
+   trade-off; ~0.5–8% of model params) and LR. Trainable = adapters + LayerNorm +
+   final linear classifier.
+
+5. DATASETS & METRICS: GLUE benchmark (9 tasks) + 17 further public text-classif.
+   datasets + SQuAD extractive QA. Metric: accuracy / GLUE test metrics.
+
+6. IMPLEMENTATION NOTES: Near-identity (near-zero) init is the make-or-break detail.
+   Training LayerNorm alone is NOT enough for good performance — you need the
+   bottleneck too. Ablations show adapter tuning automatically leans on the higher
+   (later) layers of the network; lower-layer adapters can be pruned with little
+   loss. Adapters add inference latency (they run sequentially in-line) — a point
+   LoRA later attacks.
+
+7. OFFICIAL CODE REPO: https://github.com/google-research/adapter-bert (stated in
+   paper).
+
+8. RELEVANCE TO THESIS: This is the canonical serial bottleneck adapter (down ->
+   nonlinearity -> up + skip, near-identity init) your B-PEFT framework inserts
+   serially/parallel inside CNN blocks and later caps with an evidential Dirichlet
+   head.
+
+
+================================================================================
+==== PAPER 2: LoRA — Low-Rank Adaptation of Large Language Models ====
+   [source PDF: LORA.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "LoRA: Low-Rank Adaptation of Large Language Models."
+   Edward Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean
+   Wang, Lu Wang, Weizhu Chen (Microsoft). ICLR 2022. arXiv:2106.09685 (v2).
+
+2. CORE IDEA: Motivated by the "low intrinsic dimension" of adaptation, LoRA
+   hypothesizes the weight UPDATE during fine-tuning is itself low-rank. It freezes
+   pre-trained weights and learns a low-rank product added to chosen weight
+   matrices, cutting trainable params by orders of magnitude (down to ~0.01% for
+   GPT-3 175B) with NO added inference latency (the update merges into the weight).
+
+3. METHOD / ARCHITECTURE: For a frozen weight W0 in R^(d×k):
+       W = W0 + ΔW = W0 + B·A,   B in R^(d×r), A in R^(r×k), r << min(d,k)
+       forward:  h = W0·x + B·A·x
+   Init: A ~ random Gaussian, B = 0  => ΔW = 0 at start. Scale ΔW·x by α/r, where α
+   is a constant (set to the first r tried and not tuned; scaling α ≈ tuning LR, and
+   removes the need to re-tune when r changes). Applied to attention projection
+   matrices (they study Wq, Wk, Wv, Wo; default = adapt Wq and Wv only, freeze MLP).
+   At deploy, compute W0+BA once — swap tasks by subtracting BA and adding B'A'.
+
+4. HYPERPARAMETERS / TRAINING: Optimizer Adam; NVIDIA V100 GPUs. Rank r as small as
+   1–8 (r=4 on query+value gave ~10,000× checkpoint-size reduction on GPT-3, 350GB
+   -> 35MB; VRAM 1.2TB -> 350GB; ~25% training speedup). α set once, not tuned.
+
+5. DATASETS & METRICS: RoBERTa & DeBERTa on GLUE (accuracy/corr per task); GPT-2 on
+   E2E NLG (Li & Liang setup); GPT-3 175B on WikiSQL (NL->SQL) and SAMSum
+   (summarization) + MNLI. Reports inference-latency tables vs adapters.
+
+6. IMPLEMENTATION NOTES: B=0 / A~Gaussian init is essential (training starts as the
+   pristine pre-trained model). Adapting Wq+Wv beats spending the same budget on a
+   single matrix. Merging weights means you CANNOT batch different-task LoRAs in one
+   forward pass unless you keep them un-merged. LoRA is orthogonal to prefix tuning
+   and composable with it.
+
+7. OFFICIAL CODE REPO: https://github.com/microsoft/LoRA (linked in paper).
+
+8. RELEVANCE TO THESIS: LoRA's W0+BA update is exactly the low-rank arm your
+   framework applies to 1×1 and 3×3 conv kernels, and "Standard LoRA + Softmax" is
+   your named non-Bayesian baseline against which evidential B-PEFT is measured.
+
+
+================================================================================
+==== PAPER 3: BitFit — Bias-term Fine-tuning ====
+   [source PDF: BITIFT .pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "BitFit: Simple Parameter-efficient Fine-tuning for
+   Transformer-based Masked Language-models." Elad Ben-Zaken, Shauli Ravfogel, Yoav
+   Goldberg (Bar-Ilan Univ. / Allen Institute for AI). As printed: arXiv:2106.10199
+   (v5, Sep 2022); the PDF prints no conference banner (this is the ACL-2022 work).
+
+2. CORE IDEA: Freeze everything except the bias terms (and the task classifier).
+   With ~0.08–0.09% of parameters trainable, BitFit matches — sometimes beats —
+   full fine-tuning on small/medium data. Beyond utility, it argues fine-tuning
+   mostly "exposes" knowledge already in the LM rather than learning new knowledge.
+
+3. METHOD / ARCHITECTURE: In a BERT layer, freeze all weight matrices W and gains g;
+   train only the additive bias vectors b in every linear sub-layer (query/key/value
+   biases b_q,b_k,b_v; attention-output bias b_m1; both LayerNorm biases b_LN; the
+   two MLP biases b_m2,b_m3) plus a new linear head. A cheaper subset tunes only b_q
+   (query bias) and b_m2 (intermediate-MLP bias) ≈ half the biases = 0.04% of params
+   with only marginal loss. Bias amount of change measured as mean |b0−bF|.
+
+4. HYPERPARAMETERS / TRAINING: Optimizer AdamW; batch size 16; 5 random seeds
+   reported as mean±std. Bias-only LR from {1e-4, 4e-4, 7e-4, 1e-3} (larger than
+   full-FT's {1e-5..5e-5} because small LRs converge too slowly); converges in ≤8
+   epochs (up to 20 on a few tasks). Larger LR + more stable optimization is a real
+   BitFit advantage vs unstable full-FT of large models.
+
+5. DATASETS & METRICS: GLUE (WNLI excluded), + PTB POS tagging (token-level) +
+   SQuAD v1.1. Metrics per GLUE task (acc, F1, Matthews/Spearman corr).
+
+6. IMPLEMENTATION NOTES: Bias terms are SPECIAL — a random subset of equal size
+   ("rand uniform"/"rand row-col") does far worse, so it's not just "any 0.09%".
+   The key bias b_k barely changes; b_q and b_m2 move most. BitFit wins in the
+   small-data regime and the advantage REVERSES as data grows (shown on SQuAD
+   subsets) — smaller generalization gap than full-FT. Appendix maps bias names to
+   HuggingFace parameter names (useful for reimplementation).
+
+7. OFFICIAL CODE REPO: https://github.com/benzakenelad/BitFit (stated in-text,
+   footnote page 2).
+
+8. RELEVANCE TO THESIS: BitFit is your extreme "<0.1% params" baseline (unfreeze
+   only conv biases) and directly informs RQ2's "<500 trainable parameters"
+   evidential-calibration question.
+
+
+================================================================================
+==== PAPER 4: Conv-Adapter — PET for ConvNets ====
+   [source PDF: CONV-Adapter.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "Conv-Adapter: Exploring Parameter Efficient Transfer
+   Learning for ConvNets." Hao Chen, Ran Tao, Han Zhang, Yidong Wang, Xiang Li, Wei
+   Ye, Jindong Wang, Guosheng Hu, Marios Savvides (CMU / Peking Univ. / MSRA /
+   Oosto). As printed: arXiv:2208.07463 (v4, 12 Apr 2024) — preprint, no conference
+   banner in the PDF.
+
+2. CORE IDEA: PET was largely a Transformer/NLP story; this is the first systematic
+   PET design specifically for CNNs. Conv-Adapter is a lightweight, domain-
+   transferable, architecture-agnostic module that modulates intermediate CNN
+   features while the backbone stays frozen. It matches or beats full fine-tuning on
+   23 classification tasks with ~3.5% of backbone params, and shines in few-shot.
+
+3. METHOD / ARCHITECTURE: A convolutional bottleneck built from DEPTH-WISE SEPARABLE
+   convolutions (preserving locality, unlike a 1×1/linear adapter):
+       Δh = W_up ⊗ f( W_down ⊗̂ z )
+   where ⊗̂ = depth-wise K×K conv (W_down: C_in/γ × γ × K×K, K matches the adapted
+   block's kernel to keep the receptive field), f = same nonlinearity as backbone,
+   ⊗ = point-wise 1×1 conv (W_up). γ = channel compression factor. Composed as
+       h <- h + α · Δh,   α = learnable per-channel scaling vector, init to ones.
+   Spatial size is deliberately preserved (matters for dense prediction). Four
+   insertion schemes crossed over 2 axes (which representation × parallel/sequential):
+   Convolution-Parallel, Convolution-Sequential, Residual-Parallel, Residual-
+   Sequential. Convolution-Parallel gives the best accuracy/param trade-off.
+
+4. HYPERPARAMETERS / TRAINING: Optimizer AdamW. Per-dataset grid search over LR,
+   weight decay, and compression factor γ (validation split). Classification
+   backbones: ResNet-50 BiT-M (ImageNet-21k), ConvNeXt-B/L, Swin-B/L; also CLIP,
+   MoCov3, ImageNet-1k pretraining. Detection: Faster-RCNN, 1× schedule, batch 16,
+   AdamW LR 2e-4, step-decay at epochs 8 & 11. Segmentation: UPerNet, 80k iters,
+   512×512 crops (ConvNeXt: 640×640, 160k iters), polynomial LR decay.
+
+5. DATASETS & METRICS: VTAB-1k (19 tasks: Natural/Specialized/Structured, 1k
+   train each), FGVC (CUB-200, Stanford Dogs, Stanford Cars, NABirds); few-shot
+   1/2/4/8-shot on 5 FGVC sets (Food101, Flowers, Pets, Cars, Aircraft); MS-COCO
+   detection (AP/AP50/AP75); ADE20K segmentation (mIoU). Metric: top-1 accuracy.
+
+6. IMPLEMENTATION NOTES: Depth-wise-separable beats regular and 1×1/linear adapters
+   (best accuracy at minimal params); LOSS OF LOCALITY from 1×1 adapters is the core
+   failure mode. Match the adapter kernel size to the block (larger kernel -> better,
+   more params). Init scaling α = ones is best; robust to γ ∈ {1,2,4}, worse for
+   large γ. Parallel > sequential for classification. On big domain gaps (VTAB
+   Structured) adapt WHOLE residual blocks, not just the K×K conv. Few-shot gains
+   are largest at 1/2-shot (up to +11% at 1-shot on ConvNeXt-B); avg +3.39% over
+   shots. CKA analysis: Conv-Adapter beats full-FT when full-FT changes filters
+   little (high CKA similarity). NOTE: full text > model window; abstract/method/
+   experiments/ablations were read directly; deep appendix HP tables were not.
+
+7. OFFICIAL CODE REPO: https://github.com/Hhhhhhao/Conv-Adapter/tree/main (stated;
+   detection/segmentation built on open-mmlab MMDetection/MMSegmentation).
+
+8. RELEVANCE TO THESIS: The single most direct precedent — adapters INSIDE CNNs with
+   an explicit serial-vs-parallel placement study (your RQ1) and strong few-shot
+   results on lightweight CNN backbones; your bottleneck-adapter design mirrors it.
+
+
+================================================================================
+==== PAPER 5: ConvLoRA + AdaBN — Domain Adaptation via Self-Training ====
+   [source PDF: CONV-LORA.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "ConvLoRA and AdaBN based Domain Adaptation via Self-
+   Training." Sidra Aleem, Julia Dietlmeier, Eric Arazo, Suzanne Little (Dublin City
+   University, Ireland). IEEE ISBI 2024 (accepted 2 Feb 2024). arXiv:2402.04964.
+
+2. CORE IDEA: For multi-target unsupervised domain adaptation (UDA) in medical image
+   segmentation, keeping a separate full model per target domain is too expensive.
+   They adapt LoRA to CNNs ("ConvLoRA") and pair it with Adaptive Batch Norm (AdaBN),
+   cutting trainable params by >99% while matching/beating full fine-tuning. Claimed
+   first adaptation of LoRA to CNNs.
+
+3. METHOD / ARCHITECTURE: For a frozen conv weight W_PTCONV in R^(m×n):
+       W_PTCONV + ΔW_CONV = W_PTCONV + X·Y,   X in R^(m×r), Y in R^(n×r), r << min
+       forward:  h = W_PTCONV·x + X·Y·x
+   X ~ random Gaussian, Y = 0 at start (same zero-init trick as LoRA). ConvLoRA
+   adapters are injected into the ENCODER of a 2D U-Net. AdaBN replaces BN by
+   recomputing target-domain batch-wise running mean/variance (parameter-FREE, not
+   trainable). Adaptation is unsupervised via SELF-TRAINING: an Early Segmentation
+   Head (ESH) after the shared encoder is trained on the frozen source model's
+   predictions used as pseudo-labels; only ConvLoRA params + BN running stats update.
+
+4. HYPERPARAMETERS / TRAINING: Source model: 100 epochs, batch 32, LR 1e-3, Adam,
+   cross-entropy, 80:10:10 split. ESH: 20 epochs. Adaptation: only 5 epochs, LR
+   1e-4 (beyond 5 epochs -> overfitting). ConvLoRA rank r=2 (since original kernel
+   size was 3). Only 10 images per target domain used for adaptation. Images min-max
+   scaled, resized 256×256. PyTorch 2.0.1, RTX 3090.
+
+5. DATASETS & METRICS: Calgary-Campinas CC359 brain-MRI skull-stripping (multi-
+   vendor GE/Philips/Siemens × 1.5T/3T = 6 domains; source = GE-3). Metric: Surface
+   Dice Score (SDS) — mean±std over 3 seeds.
+
+6. IMPLEMENTATION NOTES: Param count drops 24.3M -> 57,714 (99.80% reduction);
+   AdaBN adds ZERO trainable params yet boosts every domain. Ablation: domain shift
+   is NOT confined to early layers (contra prior work) — adapting the WHOLE encoder
+   is best; ConvLoRA in the DECODER did not help; BN-only adaptation didn't help.
+   5 epochs is the sweet spot (overfits after). Small ranks suffice.
+
+7. OFFICIAL CODE REPO: https://github.com/aleemsidra/ConvLoRA (linked from the
+   "Code is available at: ConvLoRA" hyperlink in the PDF).
+
+8. RELEVANCE TO THESIS: Concrete proof LoRA works inside CNN conv layers in an
+   extreme low-data (10 images) medical regime — directly supports your LoRA-on-conv
+   arm, adapter-placement ablation, and the medical (ISIC) low-shot direction.
+
+
+================================================================================
+==== PAPER 6: Conv-LoRA — PEFT for the Segment Anything Model (SAM) ====
+   [source PDF: CONV MEETS LORA.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "Convolution Meets LoRA: Parameter Efficient Finetuning
+   for Segment Anything Model." Zihan Zhong, Zhiqiang Tang, Tong He, Haoyang Fang,
+   Chun Yuan (Tsinghua Univ. / Amazon Web Services). ICLR 2024. arXiv:2401.17868.
+
+2. CORE IDEA: SAM's plain-ViT encoder lacks vision-specific inductive bias and its
+   binary-mask pretraining suppresses high-level semantics. Conv-LoRA injects ultra-
+   lightweight convolutions INTO the LoRA bottleneck to restore local priors, and
+   uses a Mixture-of-Experts to place that prior at the right feature scale — adapting
+   SAM to specialized-domain semantic segmentation while staying parameter-efficient.
+
+3. METHOD / ARCHITECTURE: Recap LoRA: h = W0·x + Wd·We·x (encoder We: r×a, decoder
+   Wd: b×r). Conv-LoRA inserts conv operations between We and Wd, wrapped in MoE:
+       h = W0·x + Wd · ( Σ_i G(We·x)_i · E_i(We·x) )
+   Each expert E_i handles one feature scale s_i:
+       E_i(x) = Interpolate( Conv3x3( Interpolate(x, s_i) ), 1/s_i )
+   i.e. up/down-sample to scale s_i, 3×3 conv, then restore to ViT's default scale.
+   Gating G is top-k (default k=1) — sparse, so cost stays low. Separately, SAM is
+   made end-to-end for MULTI-CLASS: freeze the prompt encoder (constant prompt
+   tokens), add a small classification MLP branch in the mask decoder, and fully
+   fine-tune the (lightweight) mask decoder.
+
+4. HYPERPARAMETERS / TRAINING: Optimizer Adam; LR 1e-4 default (3e-4 for agriculture
+   & remote-sensing sets); weight decay 1e-4; batch 4; 30 epochs. Loss = "structure
+   loss" = weighted-IoU + BCE. Number of experts = 8 by default (each a distinct
+   scaling ratio). Extra MoE load-balancing loss (per Shazeer et al.) weighted 1.0
+   (binary) / 2.0 (multi-class). Random horizontal flip augmentation.
+
+5. DATASETS & METRICS: Benchmarks across four domains — medical, natural images,
+   agriculture, remote sensing (segmentation). Compared vs VPT and plain LoRA;
+   segmentation metrics (IoU-based).
+
+6. IMPLEMENTATION NOTES: Key insight — plain LoRA already beats VPT on multi-class
+   segmentation because it revives SAM's high-level-semantics capacity; the conv +
+   MoE adds the multi-scale local prior on top. MoE is used here for dynamic SCALE
+   selection (experts differ, unlike standard same-structure FFN experts) and only
+   at fine-tuning time. Don't forget the expert-balancing auxiliary loss, else
+   experts collapse. See appendix A (gating) / B (decoder) for exact details.
+
+7. OFFICIAL CODE REPO:
+   https://github.com/autogluon/autogluon/tree/master/examples/automm/Conv-LoRA
+   (stated in paper).
+
+8. RELEVANCE TO THESIS: Shows how to (a) inject convolutional inductive bias into a
+   LoRA bottleneck and (b) add a loss-level regularizer (MoE balancing term) on a
+   PEFT module — a close structural parallel to layering your evidential/KL
+   regularization onto a LoRA/adapter in a CNN.
+
+
+================================================================================
+==== PAPER 7: Towards a Unified View of Parameter-Efficient Transfer Learning ====
+   [source PDF: Unified View.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "Towards a Unified View of Parameter-Efficient Transfer
+   Learning." Junxian He, Chunting Zhou, Xuezhe Ma, Taylor Berg-Kirkpatrick, Graham
+   Neubig (CMU / USC / UC San Diego). ICLR 2022. arXiv:2110.04366.
+
+2. CORE IDEA: Adapters, prefix tuning, and LoRA look different but are all learning
+   a modification vector Δh added to a hidden representation. The paper derives an
+   alt form of prefix tuning showing it's ≈ a parallel adapter, then defines a common
+   design space, uses it to find which choices matter, and transfers them to build
+   new variants (Scaled Parallel Adapter, MAM Adapter) that beat their prototypes.
+
+3. METHOD / ARCHITECTURE: Cast every method as h <- (composition of) h and Δh, with
+   Δh generally proj-down -> nonlinear -> proj-up (nonlinear degenerates to identity
+   in LoRA). Four DESIGN DIMENSIONS:
+     - Functional Form: the function computing Δh.
+     - Modified Representation: which hidden state is changed (e.g. attn vs FFN).
+     - Insertion Form: sequential (adapters) vs parallel (prefix, LoRA).
+     - Composition Function: additive (adapters), gated-additive (prefix), or
+       scaled-add Δh·s (LoRA).
+   New variants: Parallel Adapter; Multi-head Parallel Adapter; Scaled Parallel
+   Adapter (Scaled PA) = adapter + LoRA's scaling. MAM (Mix-And-Match) Adapter =
+   prefix tuning with small l=30 at ATTENTION + scaled parallel adapter with r=512
+   at FFN.
+
+4. HYPERPARAMETERS / TRAINING: HuggingFace Transformers. Base models: BART-large
+   (XSum), mBART-large (en-ro), RoBERTa-base (MNLI/SST2). Bottleneck dims swept over
+   {1,30,200,512,1024}. Scaling s: LoRA-style s=4 helps; s=1 removes the advantage
+   (a learned scalar didn't beat a fixed constant). MAM Adapter matches full-FT at
+   6.7% params (0.5% on MNLI/SST2); needs 100–150% of full-FT training time (more
+   epochs to converge) but ≈ same inference time.
+
+5. DATASETS & METRICS: XSum summarization (ROUGE-1/2/L), WMT16 en-ro translation
+   (BLEU), MNLI & SST2 (accuracy, median of 5 runs).
+
+6. IMPLEMENTATION NOTES: Three transferable findings — (1) Scaled PA is the best way
+   to modify FFN; (2) FFN benefits more from LARGER-capacity modification than
+   attention; (3) modifying head-attention like prefix tuning is very strong at tiny
+   (~0.1%) budgets. So: small budget -> attention; large budget -> FFN; scaling
+   composition > plain additive. Parse note: this PDF's figure captions contain
+   garbled base64/LaTeX blobs, but all body text, equations, and tables extracted
+   cleanly — no method detail was lost.
+
+7. OFFICIAL CODE REPO: https://github.com/jxhe/unify-parameter-efficient-tuning
+   (stated in paper).
+
+8. RELEVANCE TO THESIS: Gives you the precise vocabulary (insertion form, composition
+   function, scaling) to reason about serial-vs-parallel adapter placement in CNN
+   bottlenecks (RQ1) and to justify a scaled-additive composition for your modules.
+
+
+================================================================================
+==== PAPER 8: Parameter-Efficient Fine-Tuning for Large Models — A Survey ====
+   [source PDF: PEFT-LLM.pdf]
+================================================================================
+
+1. TITLE / AUTHORS / VENUE: "Parameter-Efficient Fine-Tuning for Large Models: A
+   Comprehensive Survey." Zeyu Han, Chao Gao, Jinyang Liu, Jeff (Jun) Zhang, Sai
+   Qian Zhang (Northeastern / UC Riverside / Arizona State / NYU). Survey, 2024
+   (arXiv; exact venue not printed in the PDF header beyond the arXiv listing).
+
+2. CORE IDEA: A broad taxonomy + system-cost survey of PEFT for large models. It
+   organizes algorithms by computational flow, then adds real-world system/efficiency
+   considerations (memory, quantization, distributed serving) that most method papers
+   omit. Use it as an orientation map, not as a single method.
+
+3. METHOD / ARCHITECTURE (taxonomy): Four algorithmic families —
+     - ADDITIVE: add new modules/params — adapters (serial/parallel), soft prompts
+       (prefix/prompt tuning), and others like (IA)^3, SSF, MoV.
+     - SELECTIVE: tune a subset of existing params — BitFit, diff pruning, masking.
+     - REPARAMETERIZED: low-rank reparameterization — LoRA and its family (DyLoRA,
+       AdaLoRA, SoRA, CapaBoost, AutoLoRA, …).
+     - HYBRID: combine the above — e.g. MAM Adapter, UniPELT.
+   Plus a SYSTEM/EFFICIENCY axis: quantization-aware PEFT (QLoRA, LoftQ, LQ-LoRA,
+   QA-LoRA, PEQA, …), pruning, and memory-efficient training.
+
+4. HYPERPARAMETERS / TRAINING: N/A (survey). It compares methods' trainable-param
+   fractions and compute/memory overheads rather than prescribing a single recipe.
+
+5. DATASETS & METRICS: Aggregates benchmarks across NLP and CV, incl. GLUE and
+   vision transfer suites (VTAB, FGVC) and generative tasks; no new experiments.
+
+6. IMPLEMENTATION NOTES: Best used to (a) place your three methods in the taxonomy
+   (adapters = additive, LoRA = reparameterized, BitFit = selective), and (b) mine
+   pointers to quantization + Bayesian/uncertainty-adjacent PEFT extensions and to
+   system-level deployment cost — relevant to your edge/Pareto analysis. Treat cited
+   numbers as secondary; go to the primary papers for exact configs.
+
+7. OFFICIAL CODE REPO: None of its own (it is a survey). It references the HuggingFace
+   PEFT library (https://github.com/huggingface/peft) as a general implementation
+   resource, not as accompanying code.
+
+8. RELEVANCE TO THESIS: The organizing framework for your related-work chapter and a
+   pointer set toward the quantization/efficiency and uncertainty-adjacent PEFT lines
+   your Bayesian, edge-deployed B-PEFT sits within.
+
+
+################################################################################
+END — 8 papers summarized / 8 PDFs in folder. None skipped.
+################################################################################

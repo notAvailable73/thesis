@@ -1,0 +1,149 @@
+================================================================================
+PAPER SUMMARIES — Calibration / Uncertainty sub-topic
+Reference notes for implementing the B-PEFT (Bayesian PEFT + Evidential
+Uncertainty + Few-Shot CNN) thesis framework.
+Generated: 2026-07-05
+Source folder: /Users/admin/Documents/Research/Calibration
+PDFs found in folder: 2   |   Papers processed: 2
+(The .txt file "Bayesian PEFT_ evidential uncertainty_few_shot CNN framework.txt"
+ is your own research proposal, not a paper — used only as the relevance anchor.)
+================================================================================
+
+
+==== PAPER: On Calibration of Modern Neural Networks ====
+
+1. TITLE / AUTHORS / VENUE
+   "On Calibration of Modern Neural Networks."
+   Chuan Guo*, Geoff Pleiss*, Yu Sun*, Kilian Q. Weinberger (*equal contribution),
+   Cornell University. ICML 2017 (Proc. 34th Int. Conf. on Machine Learning,
+   Sydney; PMLR 70). arXiv:1706.04599v2 (3 Aug 2017).
+
+2. CORE IDEA
+   Modern deep nets (e.g. a 110-layer ResNet) are far more accurate than older
+   nets (e.g. LeNet) but are badly *miscalibrated* — their confidence
+   systematically exceeds their accuracy. The paper diagnoses why this happens
+   and shows that a trivial post-hoc fix, temperature scaling (a single scalar),
+   restores calibration better than more complex methods on most vision datasets.
+
+3. METHOD / ARCHITECTURE
+   Calibration is measured, not trained. Key metrics:
+   - Reliability diagram: bin predictions by confidence, plot acc(B_m) vs
+     conf(B_m); identity line = perfect calibration.
+   - ECE = sum_m (|B_m|/n) * |acc(B_m) - conf(B_m)|  (weighted avg gap).
+   - MCE = max_m |acc(B_m) - conf(B_m)|  (worst-case gap).
+   Post-hoc calibrators (all fit on a held-out validation set, model frozen):
+   histogram binning, isotonic regression, BBQ (Bayesian binning), Platt scaling,
+   and the multiclass Platt variants — matrix scaling (W z + b), vector scaling
+   (diagonal W), and TEMPERATURE SCALING. Temperature scaling:
+       q_i = max_k  softmax(z_i / T)_k ,   T > 0 optimized by minimizing NLL on
+   the validation logits. Because dividing logits by T does not move the argmax,
+   accuracy is unchanged; T>1 softens/raises entropy, T->inf -> uniform (1/K).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - ECE/MCE reported with M = 15 bins.
+   - T fit against NLL on a validation set; solvable by 1-D convex optimization
+     (conjugate gradient, ~10 iterations) or even line search.
+   - Set T = 1 during training; find optimal T afterward on validation.
+   - No new network weights; T is the only learned calibration parameter.
+
+5. DATASETS & METRICS
+   Vision: CUB Birds, Stanford Cars, ImageNet, CIFAR-10, CIFAR-100, SVHN, with
+   ResNet, ResNet-Stochastic-Depth, Wide ResNet, DenseNet, LeNet.
+   NLP: 20 News, Reuters (DAN-3), SST binary/fine (TreeLSTM).
+   Metrics: ECE (primary), MCE, NLL, classification error.
+
+6. IMPLEMENTATION NOTES
+   - Root causes of miscalibration: increased depth/width (capacity), Batch
+     Normalization, and reduced weight decay; also NLL overfitting after the
+     LR drop (test error keeps dropping while NLL climbs).
+   - Vector scaling collapses to ~constant entries, i.e. it recovers temperature
+     scaling — "miscalibration is intrinsically low-dimensional."
+   - Matrix scaling has O(K^2) params, overfits on many-class sets (Birds, Cars,
+     CIFAR-100) and fails to converge on ImageNet. Avoid for large K.
+   - Binning methods can change the argmax and hurt accuracy; temperature scaling
+     never does. Requires a validation set drawn from the same distribution.
+
+7. OFFICIAL CODE REPO
+   http://github.com/gpleiss/temperature_scaling  (stated in the paper).
+
+8. RELEVANCE TO MY THESIS
+   Supplies the ECE/MCE calibration metrics and the temperature-scaling baseline
+   my B-PEFT evidential framework must beat (or complement) when demonstrating
+   that evidential uncertainty yields better-calibrated few-shot CNN predictions.
+
+
+==== PAPER: Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles ====
+
+1. TITLE / AUTHORS / VENUE
+   "Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles."
+   Balaji Lakshminarayanan, Alexander Pritzel, Charles Blundell (DeepMind).
+   NIPS 2017 (31st Conf. on Neural Information Processing Systems, Long Beach).
+   arXiv:1612.01474v3 (4 Nov 2017).
+
+2. CORE IDEA
+   Bayesian NNs give good uncertainty but are hard to implement and slow. The
+   paper proposes "deep ensembles" — a non-Bayesian yet probabilistic recipe that
+   is simple, parallelizable, needs almost no tuning, and matches or beats
+   approximate Bayesian methods (notably MC-dropout) on calibration and, crucially,
+   on out-of-distribution (dataset-shift) robustness.
+
+3. METHOD / ARCHITECTURE  (see Algorithm 1)
+   Three ingredients:
+   (a) Proper scoring rule as the loss. Classification: softmax cross-entropy
+       (= log-likelihood) or Brier score, both proper scoring rules. Regression:
+       the net outputs mean mu(x) AND variance sigma^2(x); minimize Gaussian NLL
+           -log p = 0.5*log sigma^2(x) + (y-mu(x))^2 / (2 sigma^2(x)) + const.
+       Positivity of variance enforced via softplus log(1+exp(.)) + a floor 1e-6.
+   (b) Adversarial training (optional smoothing). FGSM perturbation
+           x' = x + eps * sign( grad_x  loss(theta,x,y) )
+       add loss on (x',y) to the objective to smooth predictions locally.
+   (c) Ensemble of M nets, each randomly initialized and trained on the FULL
+       dataset with random shuffling (NO bagging). Combine as a uniform mixture:
+       classification -> average the softmax probabilities; regression -> mixture
+       of Gaussians approximated by a single Gaussian with mixture mean/variance:
+           mu*(x) = (1/M) sum_m mu_m(x)
+           sigma*^2(x) = (1/M) sum_m (sigma_m^2 + mu_m^2) - mu*^2.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - Recommended defaults: M = 5 networks; eps = 1% of the input range per
+     dimension (i.e. 0.01 * range; e.g. 2.55 for [0,255]).
+   - Optimizer Adam, fixed LR 0.1, batch size 100 (unless noted).
+   - UCI regression: 1 hidden layer, 50 units (100 for Protein / Year MSD), ReLU,
+     40 epochs. MNIST: MLP 3x200 units, ReLU, batch norm. MC-dropout baseline
+     used dropout rate 0.1 (0.5 was worse).
+
+5. DATASETS & METRICS
+   Regression: 1-D toy (y = x^3 + N(0,3^2)); UCI suite (Boston, Concrete, Energy,
+   Kin8nm, Naval, Power, Protein, Wine, Yacht, Year MSD).
+   Classification: MNIST, SVHN (VGG-style convnet), ImageNet (Inception).
+   OOD / shift: MNIST->NotMNIST, SVHN->CIFAR-10, ImageNet dogs vs non-dogs.
+   Metrics: NLL, classification error/accuracy, Brier score, RMSE (regression),
+   and predictive entropy / max-prob histograms for OOD; accuracy-vs-confidence.
+
+6. IMPLEMENTATION NOTES
+   - Do NOT bag: a bootstrap sample sees only ~63% unique points and hurts NN
+     ensembles; random init + shuffle alone gives diversity.
+   - For regression you MUST learn the variance: an ensemble of MSE-only nets
+     (using empirical variance of predictions) is badly under-dispersed — its 80%
+     interval covered only ~20% of points. Learning sigma^2 fixes calibration.
+   - Adversarial training helps most at M=1; the benefit shrinks as M grows and
+     it is "not strictly necessary."
+   - Deep ensembles give markedly higher entropy on unknown classes than
+     MC-dropout, which stays overconfident — the main OOD advantage.
+   - Captures two uncertainty sources: data ambiguity (proper scoring rule) and
+     model uncertainty (ensembling).
+
+7. OFFICIAL CODE REPO
+   None mentioned in the paper. (The text links only a Torch CIFAR blog post and
+   the NotMNIST dataset page — neither is an official code release. Do not
+   assume an author repo.)
+
+8. RELEVANCE TO MY THESIS
+   Deep ensembles are the canonical strong uncertainty/OOD baseline and a
+   conceptual foil to my evidential-Dirichlet head — both target epistemic
+   uncertainty, but evidential PEFT aims for single-forward-pass uncertainty
+   without the M-fold parameter/latency cost that is prohibitive on edge CNNs.
+
+================================================================================
+END OF SUMMARIES — 2 papers processed / 2 PDFs in folder.
+================================================================================

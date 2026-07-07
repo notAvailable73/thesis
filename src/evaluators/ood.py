@@ -48,12 +48,17 @@ def fpr_at_95_tpr(id_scores: np.ndarray, ood_scores: np.ndarray) -> float:
     return float(fpr[mask][0])
 
 
-def evidence_to_probs_and_vacuity(evidence: torch.Tensor, num_classes: int):
+def evidence_to_probs_and_vacuity(evidence: torch.Tensor, num_classes: int,
+                                  prior_per_class: float = 1.0):
     """Convert non-negative evidence (B, K) to Dirichlet mean probs and
     vacuity = K/S. `evidence` is the head's OWN output (Linear+softplus
     EvidentialHead) OR softplus(prototype_logits) — the math is the same.
+
+    `prior_per_class` is the R-EDL prior mass per class (alpha = evidence +
+    prior_per_class); it MUST match the value used in the training loss so
+    train-time and test-time Dirichlets agree. Default 1.0 = Sensoy "+1".
     """
-    alpha = evidence + 1.0
+    alpha = evidence + float(prior_per_class)
     S = alpha.sum(dim=-1, keepdim=True)
     probs = alpha / S
     vacuity = (num_classes / S).squeeze(-1)
@@ -64,3 +69,17 @@ def logits_to_probs_and_uncertainty(logits: torch.Tensor):
     """Softmax baseline: uncertainty = 1 - max_p."""
     probs = torch.softmax(logits, dim=-1)
     return probs, 1.0 - probs.max(dim=-1).values
+
+
+def energy_score(logits: torch.Tensor, T: float = 1.0) -> torch.Tensor:
+    """Energy-based ID-ness score (Liu et al. 2020, EBO). Returns
+    ``T * logsumexp(logits / T)`` per sample — the NEGATIVE of the paper's
+    energy E, so higher => more in-distribution (matches this module's
+    "higher score = more ID" convention). Parameter-free at T=1.
+
+    Reasoning (thesis instructions): strongest cheap logit-based OOD
+    baseline; conceptual parallel to Dirichlet strength S (both measure
+    "amount of support"). Added so the evidential vacuity signal is
+    compared against a strong softmax-side OOD score, not just MSP.
+    """
+    return float(T) * torch.logsumexp(logits / float(T), dim=-1)

@@ -1,0 +1,250 @@
+================================================================================
+PAPER SUMMARIES — Few-Shot Learning sub-topic
+Reference notes for implementing the B-PEFT (Bayesian PEFT + Evidential
+Uncertainty + Few-Shot CNN) thesis.
+Generated 2026-07-05. 4 papers processed / 4 PDFs in folder.
+Paraphrased from the PDFs; numbers/equations are taken directly from each paper.
+================================================================================
+
+
+==== PAPER: A Closer Look at Few-shot Classification ====
+
+1. TITLE / AUTHORS / VENUE
+   "A Closer Look at Few-shot Classification." Wei-Yu Chen (CMU), Yen-Cheng Liu
+   & Zsolt Kira (Georgia Tech), Yu-Chiang Frank Wang (National Taiwan Univ.),
+   Jia-Bin Huang (Virginia Tech). Published as a conference paper at ICLR 2019
+   (arXiv:1904.04232v2, dated 12 Jan 2020).
+
+2. CORE IDEA
+   A fair-comparison empirical study of few-shot classifiers under a single
+   consistent codebase. It shows (a) deeper backbones shrink the accuracy gap
+   between sophisticated methods, (b) a simple "Baseline++" (distance/cosine
+   classifier) is competitive with meta-learning SOTA, and (c) under domain
+   shift a plain fine-tuning Baseline beats meta-learners. The message: much of
+   the reported "progress" was an artifact of inconsistent evaluation.
+
+3. METHOD / ARCHITECTURE
+   Baseline: train feature extractor f_theta + linear classifier C(.|W_b) on
+   many base classes with cross-entropy; then FREEZE f_theta and train a fresh
+   linear classifier C(.|W_n) on the few novel-class support examples.
+   Baseline++: identical, but the classifier scores each class by cosine
+   similarity between feature and a learned per-class weight vector (prototype),
+   s_ij = f(x_i)^T w_j / (||f(x_i)|| ||w_j||), then softmax. This explicitly
+   reduces intra-class variation. The paper also re-implements MatchingNet,
+   ProtoNet, RelationNet (metric-based) and MAML (init-based) in the same
+   testbed via episodic meta-training M(.|S) conditioned on a support set S.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Optimizer Adam, initial LR 1e-3, cross-entropy loss, all trained from
+   scratch. Baseline/Baseline++: 400 epochs, batch 16; novel-class fine-tuning
+   = 100 iterations, batch 4. Meta-learners: 60,000 episodes (1-shot) /
+   40,000 (5-shot); 5-way, 16 query/class. Aug: random crop, L-R flip, color
+   jitter. Baseline++ multiplies cosine by a learnable per-class scalar;
+   RelationNet swaps L2 for softmax; MAML uses first-order approximation.
+   Backbones: Conv-4 (84x84) up to ResNet-10/18/34 (224x224).
+
+5. DATASETS & METRICS
+   mini-ImageNet (64/16/20 split), CUB-200-2011 (100/50/50), the new
+   cross-domain mini-ImageNet->CUB, plus Omniglot and Omniglot->EMNIST in the
+   appendix. Metric: 5-way 1-/5-shot Top-1 accuracy, mean over 600 test
+   episodes with 95% confidence intervals.
+
+6. IMPLEMENTATION NOTES
+   Data augmentation is critical — prior Baseline results were underestimated
+   because augmentation was omitted (overfitting). Reducing intra-class
+   variation matters with shallow backbones but less with deep ones (measured
+   via Davies-Bouldin index). Under domain shift, freeze-and-refit Baseline
+   wins; adding "further adaptation" (fix features, train a new softmax) rescues
+   MatchingNet/MAML but can hurt ProtoNet when domain gap is small.
+
+7. OFFICIAL CODE REPO
+   https://github.com/wyharveychen/CloserLookFewShot (stated in the paper).
+
+8. RELEVANCE TO MY THESIS
+   Its Baseline++ cosine/prototype classifier and freeze-backbone-then-refit
+   protocol are the natural non-PEFT reference point and evaluation harness for
+   my frozen-CNN few-shot adaptation experiments.
+
+
+==== PAPER: Model-Agnostic Meta-Learning (MAML) ====
+
+1. TITLE / AUTHORS / VENUE
+   "Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks."
+   Chelsea Finn, Pieter Abbeel, Sergey Levine (UC Berkeley; Abbeel also OpenAI).
+   ICML 2017, PMLR vol. 70 (arXiv:1703.03400v3).
+
+2. CORE IDEA
+   Learn a weight initialization theta such that a NEW task can be solved with
+   only a few gradient steps on a handful of examples. It is model-agnostic
+   (any gradient-trained model) and task-agnostic (classification, regression,
+   RL), adding NO extra meta-parameters — it simply optimizes for
+   "easy-to-fine-tune" parameters.
+
+3. METHOD / ARCHITECTURE
+   Bi-level optimization. Inner loop (task adaptation), one step:
+       theta'_i = theta - alpha * grad_theta L_Ti(f_theta)
+   Outer loop (meta-update) across sampled tasks T_i ~ p(T):
+       theta <- theta - beta * grad_theta  SUM_i L_Ti(f_theta'_i)
+   The meta-gradient differentiates THROUGH the inner update, so it needs
+   second-order terms (Hessian-vector products). Pseudocode: sample task batch;
+   for each task compute adapted theta'_i from K examples; evaluate the adapted
+   model's loss on fresh query points; sum and backprop into theta. A first-
+   order variant simply drops the second derivative.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Inner step alpha, meta step beta. Losses: cross-entropy (classification),
+   MSE (regression). Meta-optimizer Adam (supervised), TRPO (RL). Classifier
+   backbone: 4 modules of 3x3 conv, 64 filters (32 for MiniImagenet to curb
+   overfitting), batchnorm, ReLU, max/strided pooling, softmax.
+   Omniglot 5-way: alpha=0.4, 1 inner step (train) / 3 (eval), meta-batch 32;
+   20-way: alpha=0.1, 5 steps. MiniImagenet: 5 inner steps alpha=0.01 (train),
+   10 (eval), meta-batch 4 (1-shot) / 2 (5-shot), 15 query/class, 60,000 iters.
+
+5. DATASETS & METRICS
+   Omniglot and MiniImagenet (here split 64 train / 12 val / 24 test) for
+   classification; a sinusoid-regression toy task; RL (2D navigation,
+   MuJoCo half-cheetah & ant). Metric: 5-/20-way 1-/5-shot accuracy, 95% CI.
+
+6. IMPLEMENTATION NOTES
+   The first-order approximation reaches nearly identical accuracy (ReLU nets
+   are locally almost linear, so second derivatives ~ 0) while giving ~33%
+   speedup — practically important. The meta-learned model keeps improving with
+   MORE gradient steps at test time than it was trained for. Uses automatic
+   differentiation through the inner update; batchnorm throughout.
+
+7. OFFICIAL CODE REPO
+   github.com/cbfinn/maml (supervised/regression) and github.com/cbfinn/maml_rl
+   (RL), both stated in the paper.
+
+8. RELEVANCE TO MY THESIS
+   MAML is the gradient-based-adaptation counterpoint to my frozen-backbone
+   PEFT approach; its inner/outer episodic loop and first-order trick are useful
+   as a comparison baseline and as a template for how much few-shot adaptation
+   can be squeezed from a small parameter update.
+
+
+==== PAPER: Matching Networks for One Shot Learning ====
+
+1. TITLE / AUTHORS / VENUE
+   "Matching Networks for One Shot Learning." Oriol Vinyals, Charles Blundell,
+   Timothy Lillicrap, Koray Kavukcuoglu, Daan Wierstra (Google DeepMind).
+   NIPS 2016 (arXiv:1606.04080v2, 29 Dec 2017).
+
+2. CORE IDEA
+   A non-parametric one-shot classifier that maps a small labelled support set
+   plus an unlabelled query directly to a label via an attention mechanism over
+   learned embeddings — no fine-tuning needed for new classes. Its second
+   contribution is the training principle "test and train conditions must
+   match", i.e. episodic training that mimics the few-shot test task.
+
+3. METHOD / ARCHITECTURE
+   Prediction is a support-label-weighted sum:
+       y_hat = SUM_i a(x_hat, x_i) * y_i
+   with attention a = softmax over cosine similarity c(f(x_hat), g(x_i)) of two
+   embedding networks f (query) and g (support). This subsumes kernel density
+   estimation and k-NN. Full Context Embeddings (FCE): g becomes a bidirectional
+   LSTM over the whole support set, and f becomes an attLSTM performing K
+   read-attention steps over g(S) — so each embedding is conditioned on the
+   entire episode instead of being computed in isolation. Objective (episodic):
+       maximize  E_{L~T} E_{S,B~L} SUM_{(x,y) in B} log P_theta(y | x, S).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Cosine-similarity attention + softmax. Embedding CNN = 4 modules of 3x3 conv,
+   64 filters, batchnorm, ReLU, 2x2 max-pool; Omniglot images 28x28 (final
+   feature 1x1x64), miniImageNet 84x84. For full ImageNet, f/g are initialized
+   from a pretrained Inception classifier and then trained on 5-way 1-shot
+   episodes. FCE adds an LSTM with K processing/unrolling steps.
+
+5. DATASETS & METRICS
+   Omniglot; miniImageNet — INTRODUCED in this paper (100 classes, 600
+   images each, 84x84, 80 train / 20 test); full ImageNet with two held-out
+   splits (L_rand and the harder, fine-grained L_dogs); and a one-shot Penn
+   Treebank language task. Metric: N-way k-shot accuracy (5-/20-way, 1-/5-shot).
+
+6. IMPLEMENTATION NOTES
+   Episodic training is the core trick — "one-shot learning is easier if you
+   train for one-shot." FCE helps ~2% on miniImageNet but is negligible on
+   Omniglot. Optional support-set fine-tuning overfits massively but can still
+   add a little accuracy on heavily regularized nets. The model degrades on the
+   fine-grained L_dogs split because training samples classes uniformly rather
+   than from fine-grained groups. Cost grows with support-set size (non-
+   parametric memory).
+
+7. OFFICIAL CODE REPO
+   None mentioned in the paper. (Only auxiliary data-split URLs are given, e.g.
+   the miniImageNet image list at https://goo.gl/e3orz6 — not source code.)
+   Do not assume an official implementation from this PDF.
+
+8. RELEVANCE TO MY THESIS
+   Establishes the episodic N-way K-shot protocol and the cosine-attention /
+   embedding-comparison paradigm I evaluate against; miniImageNet (defined here)
+   is one of my in-distribution benchmarks.
+
+
+==== PAPER: Prototypical Networks for Few-shot Learning ====
+
+1. TITLE / AUTHORS / VENUE
+   "Prototypical Networks for Few-shot Learning." Jake Snell (Univ. of Toronto),
+   Kevin Swersky (Twitter), Richard S. Zemel (Univ. of Toronto / Vector
+   Institute). NIPS 2017 (arXiv:1703.05175v2, 19 Jun 2017).
+
+2. CORE IDEA
+   Represent each class by a single "prototype" = the mean of its support
+   examples in a learned embedding space, and classify a query by a softmax over
+   its (negative) distances to the prototypes. A deliberately simple inductive
+   bias that beats more complex meta-learners in the low-data regime; it also
+   extends cleanly to zero-shot learning.
+
+3. METHOD / ARCHITECTURE
+   Prototype:  c_k = (1/|S_k|) * SUM_{x_i in S_k} f_phi(x_i).
+   Query distribution:  p(y=k|x) = softmax_k( -d(f_phi(x), c_k) ).
+   Train by minimizing -log p(true class) with SGD over episodes. Pseudocode
+   (Algorithm 1): sample N_C classes; per class sample N_S support + N_Q query;
+   compute prototypes from support; accumulate loss d(f(x),c_k) + log SUM_k'
+   exp(-d(f(x),c_k')) over query points. KEY design choice: use SQUARED
+   EUCLIDEAN distance, not cosine. Justification: squared Euclidean is a Bregman
+   divergence, so the algorithm equals mixture-density estimation with an
+   exponential-family cluster model, and the class mean is the optimal prototype;
+   with Euclidean distance the model is provably a linear classifier in feature
+   space (w_k = 2 c_k, b_k = -c_k^T c_k). Zero-shot: c_k = g(v_k), an embedding
+   of class meta-data.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Loss = negative log-likelihood (softmax over distances). SGD with Adam.
+   Omniglot: LR 1e-3, halved every 2000 episodes; embedding = 4 conv blocks
+   (64 filters, 3x3, batchnorm, ReLU, 2x2 max-pool) -> 64-D (Omniglot) or
+   1600-D (miniImageNet); shared encoder for support & query; only batchnorm as
+   regularization. Train with HIGHER "way" than test (Omniglot 60-way;
+   miniImageNet 30-way for 1-shot, 20-way for 5-shot) and MATCH train-shot to
+   test-shot; 15 query/class (miniImageNet). CUB zero-shot: LR 1e-4, weight
+   decay 1e-5, 50 classes, 10 query/class, unit-normalized prototypes.
+
+5. DATASETS & METRICS
+   Omniglot and miniImageNet (Ravi & Larochelle 64/16/20 splits) for few-shot;
+   CUB-200-2011 for zero-shot (312-D attribute meta-data, GoogLeNet features).
+   Metric: 5-/20-way 1-/5-shot accuracy over 600–1000 episodes, 95% CI;
+   50-way 0-shot accuracy for CUB.
+
+6. IMPLEMENTATION NOTES
+   Euclidean distance >> cosine (cosine is not a Bregman divergence) — the
+   single most impactful choice. Higher training "way" improves generalization
+   by forcing finer decisions. One prototype per class suffices; learning a
+   per-dimension variance gave no gains. For zero-shot, unit-normalize the
+   meta-data prototypes since they live in a different domain from image
+   features. In the 1-shot case Prototypical and Matching Networks coincide.
+
+7. OFFICIAL CODE REPO
+   None stated in the paper. (It only cites a third-party repo,
+   github.com/reedscot/cvpr2016, as the source of pre-extracted CUB image
+   features — not the ProtoNet implementation.)
+
+8. RELEVANCE TO MY THESIS
+   Prototype = class-mean-in-embedding is the metric backbone my evidential head
+   sits on; its distance-based softmax and episodic training map directly onto
+   my few-shot setup, and its "distance-to-class-representation" scores are a
+   natural quantity to convert into Dirichlet evidence for calibrated,
+   uncertainty-aware classification.
+
+================================================================================
+END — 4 papers summarized, 4 PDFs present in the folder (none skipped).
+================================================================================

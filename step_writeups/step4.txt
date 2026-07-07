@@ -1,0 +1,359 @@
+================================================================================
+STEP 4 -- CIFAR-FS BERTINETTO SPLIT + EPISODIC META-TRAINING -- IMPL & RESULTS
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     2 (Real benchmark + episodic protocol)
+Scope:     Replace the Step 1-3 CIFAR-100-test stand-in with the proper
+           Bertinetto 64/16/20 CIFAR-FS split; replace single-episode
+           per-task fine-tuning with ProtoNet-style episodic meta-training
+           (parameter-free prototype head, per-epoch val, early stop); add
+           Macro-F1 and FPR@95; and produce the first VALID head-to-head
+           evidential-vs-softmax comparison on the real benchmark at N=600.
+Notebook:  notebooks/step4_episodic.ipynb
+Spec:      implementation.txt, Step 4 ; plan.txt, Phase 2
+Previous:  step_writeups/step1.txt, step2.txt, step3.txt
+Fix commit: 0e7d1b1  (evidential collapse fix -- see section 2)
+
+Artefacts: data/cifar_fs_split.json                 (Bertinetto split; see
+                                                      caveat in section 6)
+           src/datasets/cifar_fs.py                  (split-routing loader)
+           src/datasets/episode_sampler.py           (EpisodicIterableDataset)
+           src/heads/prototype_head.py               (param-free + to_evidence)
+           src/trainers/episodic_trainer.py          (outer-loop meta-trainer)
+           src/evaluators/episodic.py                (evaluate_episodic)
+           src/evaluators/accuracy.py                (f1_macro)
+           configs/exp_phase2_evidential.yaml        (cosine + evidence affine)
+           configs/exp_phase2_softmax.yaml           (cosine)
+           configs/val_episodes.yaml                 (100 frozen val seeds)
+           tests/test_cifar_fs_split.py, test_episodic_trainer.py,
+           tests/test_prototype_head.py
+           results/phase2_bottleneck_prototype-evidential_metrics.json (N=600)
+           results/phase2_bottleneck_prototype-softmax_metrics.json    (N=600)
+
+
+================================================================================
+1.  EXECUTIVE SUMMARY
+================================================================================
+
+Step 4 did two things: (a) it moved the project from a toy benchmark to the
+real one, and (b) it surfaced -- and then fixed -- a fatal bug that would
+otherwise have silently invalidated every evidential number downstream.
+
+The headline is split into an engineering result and a scientific result,
+and they point in opposite directions. Both are reported honestly here.
+
+ENGINEERING RESULT (success):
+  The episodic meta-training pipeline works end-to-end on the real
+  Bertinetto split. Both heads train to ~0.87 accuracy on 5-way 5-shot
+  CIFAR-FS; the 600-episode evaluation is byte-identical on rerun; the
+  prototype-head deviation from proposal.txt §5B behaves as intended.
+
+  Critically, the FIRST attempt collapsed: the evidential model scored
+  exactly 0.200 accuracy (= 1/5, random), 0.500 OOD AUROC (= chance), and
+  0.800 Brier (= the value a uniform 0.2-everywhere predictor scores). Root
+  cause (section 2): softplus was applied to raw L2 prototype logits, which
+  are O(-700) for ResNet-18 features -- softplus(-700) = 0, so evidence
+  vanished for every class, the Dirichlet went uniform, AND the gradient
+  died. Softmax was unaffected because it is shift/scale-invariant. The fix
+  (cosine similarity + a learnable evidence affine routed through one shared
+  PrototypeHead.to_evidence) restored the evidential model to 0.870.
+
+SCIENTIFIC RESULT (the R1 claim did NOT survive):
+  With both heads now training correctly, the thesis's central R1 prediction
+  -- "evidential beats softmax on OOD AUROC" -- does NOT hold on the real
+  benchmark. The OOD AUROC gap is +0.006 (evidential 0.843 vs softmax 0.838):
+  a statistical tie, not the +0.101 seen on the Step 3 stand-in. Worse,
+  evidential is now CLEARLY LESS well-calibrated (ECE 0.344 vs 0.119; Brier
+  0.353 vs 0.190). On this benchmark, softmax matches or beats evidential on
+  every metric. This triggers the Step 4 exit-criterion escalation clause
+  (gap <= 0.05 -> escalate to supervisor before Step 5).
+
+  This is a genuine finding, not a bug -- but see section 4 for one honest
+  caveat about how the evidential evidence-mapping was tuned, which inflates
+  the ECE gap and is partially recoverable.
+
+
+================================================================================
+2.  WHAT CHANGED RELATIVE TO STEP 3 (CODE-LEVEL)
+================================================================================
+
+Step 3 = single episode, 200 inner fine-tuning steps, trained Linear/
+Evidential head, CIFAR-100-test classes 0..19 as a stand-in. Step 4 changes
+the PROTOCOL and the DATA, and keeps the Sensoy 2018 evidential loss.
+
+----- New protocol: episodic meta-training ------------------------------------
+  src/trainers/episodic_trainer.py -- outer loop over epochs; one outer
+  gradient step per episode; per-epoch validation on the frozen val seeds;
+  early stop on val-accuracy plateau; KL anneal over OUTER steps. A collapse
+  guard raises EpisodicCollapse if epoch-1 val_acc <= 1/n_way + margin.
+
+----- New head: parameter-free prototype classifier ---------------------------
+  src/heads/prototype_head.py -- logits are similarity between query features
+  and per-class support prototypes. Documented deviation from proposal §5B's
+  trained linear head (a fixed K-slot head cannot transfer across disjoint
+  train/test classes; prototype similarity is the standard CIFAR-FS protocol).
+
+----- Real data: Bertinetto 64/16/20 split ------------------------------------
+  src/datasets/cifar_fs.py routes CIFAR-100 by CLASS into train/val/test;
+  disjointness asserted at import. data/cifar_fs_split.json holds the IDs.
+
+----- New metrics: Macro-F1 + FPR@95 ------------------------------------------
+  src/evaluators/accuracy.py:f1_macro and the FPR@95 path in episodic.py
+  close the proposal §7 metric gaps that were missing in Phase 1.
+
+----- THE FIX (commit 0e7d1b1): evidence mapping centralised + corrected -----
+  The bug: F.softplus(logits) was applied at THREE independent sites (trainer
+  loss, eval probs, eval OOD score) to prototype logits. With the L2 metric,
+  logits = -||q - p||^2 are large-negative (feature norm ~26 -> distances
+  O(700)), so softplus(logit) ~ 0 for every class:
+      evidence ~ 0 -> alpha ~ 1 -> uniform Dirichlet -> p_best = 0.2,
+      vacuity = 1.0, and d(softplus)/d(logit) ~ 0 -> no gradient.
+  Every collapsed number is reproduced exactly by this mechanism (acc 0.200,
+  AUROC 0.500, Brier 0.800, ECE 0.000, best_val_epoch=1).
+
+  The fix has three parts:
+    1. Centralisation. All three sites now call ONE method,
+       PrototypeHead.to_evidence(logits) = softplus(logits*scale + bias),
+       so the train-time and test-time evidence mapping can never drift.
+    2. Cosine metric for BOTH heads. Cosine logits are bounded ([-scale,
+       scale]); softplus no longer saturates. Using the SAME metric for both
+       heads keeps the comparison about softmax-vs-evidential, not l2-vs-
+       cosine. (Cosine ProtoNet is a standard few-shot baseline, Chen 2019.)
+    3. Learnable evidence affine (2 scalars, evidence_affine: true). For
+       ReLU/positive features cosine logits cluster high, so a fixed recentre
+       is fragile; the learnable scale/bias adapt per dataset/backbone.
+       Init scale=3, bias=-18 places the softplus knee at cosine ~= 0.6.
+
+  Backward compatible: evidence_affine defaults False -> softplus(logits)
+  exactly; the legacy single_episode path and Linear/Evidential heads are
+  untouched. Param count: evidential 16,914 (16,912 adapter + 2 affine);
+  softmax 16,912.
+
+
+================================================================================
+3.  WHAT STEP 4 ADDS OVER STEP 3
+================================================================================
+
+  1. The benchmark is now REAL. Step 3's AUROC 0.951 was on a CIFAR-100-test
+     stand-in with per-episode fine-tuning -- an easier, different setup. Any
+     comparison of Step 3 vs Step 4 numbers must account for BOTH the harder
+     benchmark and the protocol change.
+  2. The comparison is now VALID. The collapse fix means both heads actually
+     train; the Step-4 numbers are the first trustworthy evidential-vs-softmax
+     result on CIFAR-FS.
+  3. Reproducibility carried forward. The Step 3 byte-identical invariant
+     survives episodic training (verified in the notebook, cell 14).
+  4. Metric coverage completed (Macro-F1, FPR@95).
+
+
+================================================================================
+4.  RESULTS -- STEP 4 NUMBERS AT N=600 (real Bertinetto split, 5-way 5-shot)
+================================================================================
+
+----- Evidential (prototype, cosine, learnable affine, KL anneal 0->0.5) ------
+  accuracy   : 0.870 +/- 0.006   (95% CI)     best_val_epoch = 3
+  Macro-F1   : 0.868
+  ECE mean   : 0.344     ECE pooled : 0.341
+  Brier      : 0.353
+  OOD AUROC  : 0.843     (SVHN, far-OOD)
+  FPR @95    : 0.699
+
+----- Softmax (prototype, cosine) ---------------------------------------------
+  accuracy   : 0.875 +/- 0.006   (95% CI)     best_val_epoch = 2
+  Macro-F1   : 0.873
+  ECE mean   : 0.119     ECE pooled : 0.082
+  Brier      : 0.190
+  OOD AUROC  : 0.838     (SVHN, far-OOD)
+  FPR @95    : 0.661
+
+----- Paired comparison (evidential - softmax) --------------------------------
+  accuracy   : -0.005    (tie; CIs overlap)         -> RQ2 accuracy parity MET
+  OOD AUROC  : +0.006    (tie; < 0.05 threshold)    -> R1 win NOT met
+  ECE        : +0.225    (evidential WORSE)          -> R1 calibration cost
+  Brier      : +0.163    (evidential WORSE)
+  FPR @95    : +0.038    (evidential WORSE)
+
+INTERPRETATION (honest):
+  - Accuracy parity holds: evidential is statistically tied with softmax on
+    accuracy and Macro-F1. This is the one piece of the proposal's RQ2 framing
+    that is confirmed.
+  - The OOD AUROC win is gone. On far-OOD SVHN, softmax max-probability is
+    already a strong detector (0.838); the evidential vacuity signal does not
+    beat it. +0.006 is noise.
+  - Evidential is currently the WORSE-calibrated head. As it stands, softmax
+    dominates: equal accuracy, better ECE/Brier, equal AUROC.
+
+CAVEAT ON THE ECE GAP (partially self-inflicted, recoverable):
+  The evidence affine (scale=3, bias=-18) was selected on a val + Gaussian-
+  NOISE OOD proxy, which is far easier to separate than SVHN. That aggressive
+  recentre pushed the Dirichlet toward high vacuity (good for the noise proxy)
+  -> the model became UNDER-confident on ID (predicts ~0.5, correct ~0.87) ->
+  large ECE. On real SVHN it bought almost no AUROC (+0.006). A gentler affine
+  (scale ~1-2, bias ~0..-6) and/or lower kl_weight_max should recover much of
+  the ECE without losing the (already tiny) AUROC edge. The current numbers
+  therefore UNDER-state evidential's fair calibration. This is logged as the
+  first action for any Step 4 re-open, before the result is treated as final.
+
+
+================================================================================
+5.  COMPARISON WITH STEP 3 (why the gap moved +0.101 -> +0.006)
+================================================================================
+
+  metric          Step 3 stand-in        Step 4 real Bertinetto
+  -------------   --------------------    -----------------------
+  protocol        single-episode FT       episodic meta-training
+  head            trained Linear/Evid.    parameter-free prototype
+  ID benchmark    CIFAR-100-test 0..19    Bertinetto 20 test classes
+  evid. acc       0.849                   0.870
+  soft.  acc      0.823                   0.875
+  evid. AUROC     0.951                   0.843
+  soft.  AUROC    0.850                   0.838
+  AUROC gap       +0.101                  +0.006
+
+  The collapse of the AUROC gap is NOT explained by the bug (the bug was
+  fixed before these numbers were produced). It is explained by the move to
+  a harder, more realistic setting: under episodic prototype evaluation on
+  unseen classes, softmax max-prob is a much stronger OOD baseline than it
+  was in the stand-in, and the evidential advantage does not survive. This is
+  exactly the risk plan.txt R1 flagged ("the calibration claim remains a
+  trade-off, not a win") -- now realised in the strong form (no win at all
+  on far-OOD, plus a calibration cost).
+
+
+================================================================================
+6.  EXIT-CRITERIA CHECK (FROM implementation.txt STEP 4)
+================================================================================
+
+  [x] Both phase2 configs run end-to-end on Colab T4.
+  [x] Byte-identical metrics.json on rerun (notebook cell 14: "byte-
+      identical OK").
+  [x] results/phase2_bottleneck_prototype-{evidential,softmax}_metrics.json
+      exist with the full schema (accuracy, ci95, f1_macro, ece mean+pooled,
+      brier, ood_auroc, fpr_at_95, num_episodes=600, best_val_epoch).
+  [~] pytest: 45 passed, 1 FAILED. The failure
+      (test_prototype_head_raises_on_missing_class) is PRE-EXISTING and
+      unrelated -- it fails on the pre-fix commit too; the test itself is
+      buggy (it drops the class-2 label, so n_way infers to 2 and nothing is
+      missing). Tracked for a one-line fix.
+  [ ] R1 trade-off (evidential AUROC - softmax AUROC > 0.05): FAILED (+0.006).
+      -> Escalation clause triggered. See section 11.
+  [~] data/cifar_fs_split.json committed + frozen: the run USED the canonical
+      Bertinetto split (fetched at runtime by the notebook), but the version
+      committed to the repo is the SYNTHETIC FALLBACK. The real split must be
+      committed to satisfy R-SPLIT-DRIFT before these numbers are reproducible
+      from a clean clone. OPEN.
+
+STATUS: Step 4 is NOT closed. The pipeline and code are done and correct;
+        the experiment ran and produced trustworthy numbers; but (a) the R1
+        exit criterion failed -> escalation required, (b) the real split is
+        not yet frozen in the repo, (c) the one buggy test needs a one-line
+        fix. The OOD plots generated on Colab are not yet persisted to results/.
+
+
+================================================================================
+7.  HOOKS LEFT FOR STEP 5 / STEP 7
+================================================================================
+
+  - The decisive RQ3 test is NEAR-OOD (TinyImageNet, Step 7), NOT far-OOD
+    SVHN. A tie on far-OOD does not settle RQ3; evidential methods are most
+    likely to differentiate on near-OOD, where softmax max-prob degrades.
+  - A calibration retune of the evidential affine / KL weight is the first
+    thing to try if Step 4 is re-opened (section 4 caveat).
+  - The shared PrototypeHead.to_evidence is the single place to change the
+    evidence mapping for every future PEFT method, backbone, and dataset --
+    LoRA/BitFit (Step 5) inherit it for free.
+  - If the calibration story stays negative across near-OOD too, the thesis
+    narrative shifts from "evidential is better" to an honest, defensible
+    "evidential achieves parity at a calibration cost; its reliability edge is
+    setup-dependent" -- a valid Master's finding.
+
+
+================================================================================
+8.  RISK CHECK (FROM plan.txt / implementation.txt)
+================================================================================
+
+  R1  CALIBRATION TRADE-OFF -> REALISED IN STRONG FORM. Not just "no ECE win"
+      but "ECE loss + no AUROC win" on far-OOD. Do NOT cherry-pick; reported
+      in full. Escalation is the planned response.
+  R-EPISODIC-COLLAPSE -> OCCURRED and was caught (the first run collapsed).
+      The guard's accuracy check did fire conceptually; root cause was the
+      head<->evidence interface, a failure mode the guard did not attribute
+      correctly. Now fixed at source.
+  R-SPLIT-DRIFT -> ACTIVE: the real Bertinetto split is not yet committed.
+  R4  600 test seeds frozen -> respected (configs/test_episodes.yaml unchanged).
+
+
+================================================================================
+9.  CONCLUSION
+================================================================================
+
+Step 4 succeeded as engineering and disappointed as science, and both halves
+are real. The episodic pipeline is built, the collapse bug is understood and
+fixed at its source, and the project now has its first valid evidential-vs-
+softmax comparison on a real few-shot benchmark. That comparison says: on
+CIFAR-FS 5-way 5-shot with far-OOD SVHN, evidential PEFT reaches accuracy
+parity with softmax but does NOT improve -- and currently worsens --
+calibration and OOD detection. The thesis's central reliability claim is not
+supported by this run. Per the exit criterion, this escalates to the
+supervisor before Step 5. The thesis remains completable: the result is a
+legitimate finding, the decisive near-OOD test is still ahead, and part of
+the calibration gap is a recoverable artefact of how the evidence mapping was
+tuned.
+
+
+================================================================================
+10. FILES PRODUCED OR MODIFIED BY THIS STEP
+================================================================================
+
+  Code (fix commit 0e7d1b1):
+    src/heads/prototype_head.py        to_evidence() + evidence affine
+    src/heads/__init__.py              build_head passes affine knobs
+    src/trainers/episodic_trainer.py   evidential loss via head.to_evidence
+    src/evaluators/episodic.py         eval evidence via head.to_evidence
+    configs/base.yaml                  evidence_affine/scale/bias defaults
+    configs/exp_phase2_evidential.yaml cosine + affine (scale 3, bias -18)
+    configs/exp_phase2_softmax.yaml    cosine
+
+  Results (extracted from the notebook run, this step):
+    results/phase2_bottleneck_prototype-evidential_metrics.json   (N=600)
+    results/phase2_bottleneck_prototype-softmax_metrics.json      (N=600)
+
+  Pending persistence (generated on Colab, not yet in repo):
+    results/phase2_*_reliability.png, *_ood_histogram.png,
+    *_confusion_matrix.png ; the real data/cifar_fs_split.json.
+
+
+================================================================================
+11. KEY TAKEAWAYS (FOR THE SUPERVISOR MEETING)
+================================================================================
+
+  1. We found and fixed a fatal bug. The evidential model had been scoring at
+     random (acc 0.200) because softplus was applied to large-negative L2
+     prototype logits, zeroing all evidence and all gradients. Fixed via
+     cosine similarity + a learnable evidence mapping. Evidential now trains
+     to 0.870 -- parity with softmax (0.875).
+
+  2. The central R1 claim did NOT survive the move to the real benchmark.
+     On CIFAR-FS with far-OOD SVHN, evidential vs softmax is: equal accuracy,
+     TIED OOD AUROC (+0.006), and WORSE calibration (ECE 0.344 vs 0.119). As
+     it stands, softmax is at least as good on every metric. This is reported
+     honestly and is the reason for this escalation.
+
+  3. What we recommend, and want your steer on:
+     (a) a quick calibration retune of the evidential head (the current ECE is
+         partly inflated by an evidence-mapping tuned against an easy noise
+         OOD proxy);
+     (b) treating NEAR-OOD (TinyImageNet, Step 7) as the real RQ3 test rather
+         than far-OOD SVHN;
+     (c) if the negative result holds, reframing the thesis story to an honest
+         "parity-with-a-calibration-cost; reliability is setup-dependent"
+         finding rather than "evidential wins".
+
+  4. The engineering spine (episodic trainer, prototype head, reproducible
+     600-episode eval, full metric coverage) is done and reusable for every
+     downstream step, so the negative result does NOT cost us the rest of the
+     plan -- it changes the narrative, not the build.
+
+================================================================================
+END OF STEP 4 WRITEUP
+================================================================================

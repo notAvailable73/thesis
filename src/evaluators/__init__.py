@@ -5,7 +5,9 @@ from .ood import (
     fpr_at_95_tpr,
     evidence_to_probs_and_vacuity,
     logits_to_probs_and_uncertainty,
+    energy_score,
 )
+from .temperature import fit_temperature, apply_temperature
 from .episodic import evaluate_episodic
 
 __all__ = [
@@ -17,5 +19,8 @@ __all__ = [
     "fpr_at_95_tpr",
     "evidence_to_probs_and_vacuity",
     "logits_to_probs_and_uncertainty",
+    "energy_score",
+    "fit_temperature",
+    "apply_temperature",
     "evaluate_episodic",
 ]

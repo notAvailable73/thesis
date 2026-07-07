@@ -1,9 +1,11 @@
 from .cifar_fs import (
     get_cifar_fs,
+    get_cifar_fs_heldout_ood,
     load_cifar_fs_split,
     CIFAR100_CLASS_NAMES,
 )
 from .svhn_ood import get_svhn_ood
+from .tinyimagenet_ood import get_tinyimagenet_ood
 from .episode_sampler import sample_episode, EpisodicIterableDataset
 
 
@@ -29,9 +31,11 @@ def build_dataset(spec: dict):
 __all__ = [
     "build_dataset",
     "get_cifar_fs",
+    "get_cifar_fs_heldout_ood",
     "load_cifar_fs_split",
     "CIFAR100_CLASS_NAMES",
     "get_svhn_ood",
+    "get_tinyimagenet_ood",
     "sample_episode",
     "EpisodicIterableDataset",
 ]

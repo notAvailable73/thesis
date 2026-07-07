@@ -1,0 +1,26 @@
+# Step 4.5 / W2 — evidential retuned at the LOSS, not the affine.
+#
+# Story: Step 4's evidential head was worse-calibrated than softmax (ECE 0.344
+# vs 0.119). The diagnosis (docs/superpowers/specs/2026-07-06-...): the
+# aggressive evidence-affine (scale 4, bias -24) + KL-to-uniform (0.5) drove ID
+# UNDER-confidence. R-EDL (Survey EDL summary) says the rigid "+1" prior and the
+# variance-minimising regulariser can induce miscalibration and are droppable.
+#
+# These values are a STARTING POINT. The exact kl_weight_max / prior_per_class /
+# use_variance are chosen by a VAL-only sweep (seeds 10000-10099) in
+# notebooks/step4_5_settle.ipynb; they must NEVER be tuned on the 600 test seeds.
+extends: exp_phase2_evidential.yaml
+
+loss:
+  kl_weight_max: 0.1       # lowered from 0.5 — less push toward the uniform prior
+  kl_anneal_steps: 1000
+  prior_per_class: 1.0     # R-EDL knob; sweep {1.0, 0.5} on val if ECE stays high
+  use_variance: false      # R-EDL relaxation: drop the variance-minimising term
+
+head:
+  # Gentler affine than the (4, -24) sharpening; let the loss carry calibration.
+  evidence_scale_init: 2.0
+  evidence_bias_init: -6.0
+
+wandb:
+  tags: [phase2, step4_5, evidential, prototype, cifar_fs_bertinetto, redl]

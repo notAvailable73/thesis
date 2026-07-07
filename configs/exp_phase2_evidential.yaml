@@ -38,15 +38,20 @@ head:
   cosine_scale: 10.0
   interpretation: evidential
   # Learnable evidence affine: evidence = softplus(scale*logit + bias).
-  # Init places the softplus "knee" at cosine ~= 0.6 (logit = 10*0.6 = 6,
-  # since -bias/scale = 18/3 = 6) so evidence switches ON for in-class
-  # similarities and stays ~0 for OOD. Chosen by a val + noise-OOD-proxy
-  # sweep (see step4 writeup): vs the naive (1.0,0.0) init this lifts the
-  # ID-vs-OOD vacuity gap from +0.06 to +0.62 with no accuracy cost
-  # (softplus is monotonic -> argmax/accuracy are unchanged by scale/bias).
+  # Init keeps the softplus "knee" at cosine ~= 0.6 (-bias/scale = 24/4 = 6,
+  # logit = 10*0.6) so evidence switches ON for in-class similarities and
+  # stays ~0 for OOD -- this preserves the absolute-similarity signal that
+  # drives OOD detection (unlike per-query standardization, which erases it).
+  # Sharper than the first pass (3,-18): a larger scale widens the evidence
+  # gap between the correct class and the rest, raising p_best toward the
+  # accuracy and cutting the under-confidence that inflated ECE. scale is the
+  # calibration knob (higher = more confident); if a Colab run shows ECE still
+  # high, raise it; if OOD AUROC drops, lower it. Both scale/bias are LEARNABLE
+  # so the optimiser fine-tunes from here. Accuracy is unchanged either way
+  # (softplus is monotonic -> argmax is invariant to scale/bias).
   evidence_affine: true
-  evidence_scale_init: 3.0
-  evidence_bias_init: -18.0
+  evidence_scale_init: 4.0
+  evidence_bias_init: -24.0
 
 loss:
   # Number of OUTER steps to anneal over. With episodes_per_epoch=100,

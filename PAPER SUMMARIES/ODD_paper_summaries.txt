@@ -1,0 +1,408 @@
+################################################################################
+PAPER SUMMARIES — Out-of-Distribution (OOD) Detection sub-topic
+Reference notes for implementing the B-PEFT thesis
+(Bayesian Parameter-Efficient Fine-Tuning + Evidential Uncertainty + Few-Shot CNN)
+Compiled: 2026-07-05
+################################################################################
+
+SCOPE NOTE
+  - 6 PDFs found in this folder; all 6 processed (parsed cleanly via PyMuPDF).
+  - All papers paraphrased from the PDF text. Numbers/equations below are taken
+    directly from the papers; nothing is invented. Where a detail was not stated
+    in the PDF it is flagged explicitly.
+  - Papers are ordered chronologically (foundational scores first, benchmarks
+    last). Source PDF filename is given in each header so you can cross-check.
+  - The 4 method papers below are exactly the classic OOD baselines that the
+    OpenOOD benchmark papers (#5, #6) re-implement and compare, so they form a
+    self-consistent reading set for the thesis' OOD-detection evaluation axis.
+
+
+==== PAPER: A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks  [source: Baseline.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "A Baseline for Detecting Misclassified and Out-of-Distribution Examples in
+   Neural Networks." Dan Hendrycks (UC Berkeley), Kevin Gimpel (TTI-Chicago).
+   Published as a conference paper at ICLR 2017 (arXiv:1610.02136v3). Commonly
+   called the "MSP baseline."
+
+2. CORE IDEA
+   Deep classifiers fail silently, giving high softmax confidence on wrong or
+   out-of-distribution (OOD) inputs. The paper shows that, despite this, the
+   *maximum softmax probability* (MSP) of correctly-classified in-distribution
+   inputs is statistically higher than that of misclassified/OOD inputs, so MSP
+   is a surprisingly effective, no-cost detector. It also standardizes the
+   evaluation tasks/metrics for this problem, and offers one method that beats
+   the baseline.
+
+3. METHOD / ARCHITECTURE
+   - Score: for input x, s(x) = max_k softmax(f(x))_k. Threshold the score:
+     inputs with low MSP are flagged as error/OOD. (KL divergence of the softmax
+     from uniform was also tried and gave near-identical AUROC/AUPR to MSP.)
+   - "Abnormality module" (the method that beats MSP): attach an auxiliary
+     decoder that reconstructs the input to a normally-trained classifier; freeze
+     the classifier+decoder, then train a small red-layer "abnormality" branch on
+     clean (normal) vs. noised/blurred/rotated (abnormal) examples with a sigmoid
+     output that scores how abnormal x is. It uses the reconstruction residual
+     (subtract + elementwise-square) plus the softmax vector as features.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - MNIST classifier: 3-layer, 256-wide fully-connected, GELU nonlinearity,
+     Adam, 30 epochs.
+   - CIFAR-10/100: 40-4 Wide ResNet, 50 epochs, SGD with warm restarts (SGDR),
+     GELU, standard mirroring + cropping augmentation.
+   - No special loss beyond standard training; the detector is post-hoc.
+
+5. DATASETS & METRICS
+   - ID: MNIST, CIFAR-10, CIFAR-100 (plus NLP: IMDB, 20 Newsgroups, Reuters;
+     speech: TIMIT). OOD: SUN scenes, Gaussian/Uniform noise, Omniglot, notMNIST,
+     CIFAR-10bw, etc.
+   - Metrics introduced here and reused everywhere after: AUROC, AUPR (reported
+     separately with "In"/success and "Out"/error as the positive class), plus
+     a random-detector "Base" rate.
+
+6. IMPLEMENTATION NOTES
+   - Key demonstration: mean softmax prob of *wrong* CIFAR-100 predictions is
+     still ~66%, and random Gaussian noise into an MNIST net gives ~91% "confidence"
+     — so MSP as an absolute confidence is misleading, but its *relative*
+     separation still enables detection.
+   - For CTC speech, they compute softmax while ignoring the blank-symbol logit.
+   - Guidance for future work: always report the base classifier's accuracy
+     alongside AUROC/AUPR, and test on multiple modalities/architectures.
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/hendrycks/error-detection
+
+8. RELEVANCE TO THESIS
+   This is the softmax-overconfidence problem and the MSP OOD score that your
+   evidential/Dirichlet uncertainty head is meant to outperform — MSP is the
+   mandatory first baseline for the thesis' AUROC / FPR@95 OOD experiments.
+
+
+==== PAPER: Enhancing the Reliability of Out-of-distribution Image Detection in Neural Networks (ODIN)  [source: Enhance.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "Enhancing the Reliability of Out-of-distribution Image Detection in Neural
+   Networks." Shiyu Liang (UIUC), Yixuan Li (UW-Madison), R. Srikant (UIUC).
+   ICLR 2018 (arXiv:1706.02690v5). Method name: ODIN.
+
+2. CORE IDEA
+   A purely post-hoc OOD detector for a pre-trained network (no retraining). Two
+   cheap tricks — temperature scaling of the softmax and a small adversarial-style
+   input perturbation — widen the softmax-score gap between ID and OOD, greatly
+   improving on the MSP baseline (e.g., FPR@95 on DenseNet CIFAR-10 vs
+   TinyImageNet(crop) drops from 34.7% to 4.3%).
+
+3. METHOD / ARCHITECTURE
+   - Temperature-scaled softmax: S_i(x;T) = exp(f_i(x)/T) / Σ_j exp(f_j(x)/T).
+     Score = max_i S_i(x;T). Large T flattens logits and separates ID/OOD.
+   - Input preprocessing (perturb to *increase* the top score, opposite of an
+     adversarial attack):
+         x_tilde = x - ε · sign( -∇_x log S_yhat(x;T) )
+     Perturbation has a stronger effect on ID than OOD inputs.
+   - Detector: feed x_tilde back through the net, compute S(x_tilde;T), compare to
+     threshold δ (δ chosen so ID TPR = 95%).
+   - Intuition (Taylor expansion): S ∝ (U1 − U2/2T)/T where U1 = mean logit gap of
+     the top class vs the rest, U2 = spread of the remaining logits. Large T makes
+     the score dominated by U1 (larger for ID); the perturbation exploits that ID
+     images have a larger ‖∇_x log S‖.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - Backbones: DenseNet-BC (L=100, growth k=12, dropout 0) and Wide ResNet
+     WRN-28-10 (dropout 0), trained with SGD + Nesterov momentum 0.9.
+     DenseNet: 300 epochs, batch 64; WRN: 200 epochs, batch 128. LR starts 0.1,
+     ÷10 at 50% and 75% of training.
+   - Detector hyperparameters: T searched over {1,2,5,10,20,50,100,200,500,1000}
+     (they use T=1000 for all reported runs); ε over 21 evenly spaced values in
+     [0, 0.004] (ε=0.0014 for CIFAR-10 models, 0.002 for CIFAR-100). Tuned to
+     minimize FPR@95 on a *separate* OOD validation set (iSUN).
+
+5. DATASETS & METRICS
+   - ID: CIFAR-10, CIFAR-100. OOD: TinyImageNet (crop/resize), LSUN (crop/resize),
+     iSUN, Gaussian noise, Uniform noise.
+   - Metrics: FPR@95%TPR, Detection Error, AUROC, AUPR-In, AUPR-Out.
+
+6. IMPLEMENTATION NOTES
+   - Perturbation requires one extra forward+backward pass through the input
+     (gradient of log-softmax w.r.t. x) — a real inference-latency cost, relevant
+     if you benchmark edge latency.
+   - Hyperparameters transfer well across OOD validation sets (low sensitivity).
+   - Detection gets harder as ID/OOD get closer (they quantify this with MMD):
+     resized crops (global structure) are near-OOD and harder than random crops.
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/facebookresearch/odin
+
+8. RELEVANCE TO THESIS
+   ODIN is the canonical post-hoc temperature+perturbation OOD baseline; its
+   gradient-based input cost is a concrete point of comparison for your "latency
+   vs. uncertainty quality" Pareto analysis on edge hardware.
+
+
+==== PAPER: A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks (Mahalanobis)  [source: Simple Unified.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "A Simple Unified Framework for Detecting Out-of-Distribution Samples and
+   Adversarial Attacks." Kimin Lee (KAIST), Kibok Lee (U. Michigan), Honglak Lee
+   (Google Brain / U. Michigan), Jinwoo Shin (KAIST/AItrics). NeurIPS (NIPS) 2018
+   (arXiv:1807.03888v2). Method name: Mahalanobis / MDS.
+
+2. CORE IDEA
+   Instead of scoring in the "label-overfitted" softmax output space, score in the
+   feature space. Fit class-conditional Gaussians with a shared (tied) covariance
+   to a pre-trained network's features (Gaussian Discriminant Analysis, which is
+   equivalent to the softmax classifier), and use the Mahalanobis distance to the
+   nearest class centroid as the confidence score. One score handles BOTH OOD and
+   adversarial inputs, and is unusually robust in small-data / noisy-label regimes.
+
+3. METHOD / ARCHITECTURE
+   - Fit per class c: empirical mean μ_c = (1/N_c) Σ f(x_i), and tied covariance
+     Σ = (1/N) Σ_c Σ_{i:y_i=c} (f(x_i)−μ_c)(f(x_i)−μ_c)^T.
+   - Confidence score: M(x) = max_c −(f(x)−μ_c)^T Σ^{-1} (f(x)−μ_c)  (log of the
+     class-conditional Gaussian density at the closest class).
+   - Two calibration techniques:
+       (a) Input pre-processing: x_hat = x + ε·sign(∇_x M(x)) — perturb to
+           increase the Mahalanobis score (analogous to ODIN but on M, not softmax).
+       (b) Feature ensemble: compute M_ℓ(x) at the end of every dense/residual
+           block (spatial dims average-pooled: F×H×W → F×1), then combine as a
+           weighted sum Σ_ℓ α_ℓ M_ℓ(x); the weights α_ℓ are learned by a logistic-
+           regression detector on validation data (ineffective layers get ~0 weight).
+   - Class-incremental use: accommodate a new class by just computing its mean and
+     updating the tied covariance — no backbone retraining.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - Backbones: DenseNet-100 and ResNet-34; hidden feature dim 512 (ResNet).
+   - The score itself is post-hoc (no retraining of the classifier). Only the
+     logistic-regression layer weights + ε are tuned, via nested cross-validation
+     on a validation set (1,000 images per ID/OOD pair).
+   - Notably, hyperparameters can be tuned using ONLY in-distribution samples +
+     FGSM adversarial samples (no real OOD data needed) and still beat ODIN.
+
+5. DATASETS & METRICS
+   - ID: CIFAR-10, CIFAR-100, SVHN. OOD: TinyImageNet, LSUN, SVHN/CIFAR-10.
+     Adversarial: FGSM, BIM, DeepFool, CW. Also class-incremental on CIFAR-100 /
+     downsampled ImageNet.
+   - Metrics: TNR@95%TPR, AUROC, Detection accuracy, AUPR.
+   - Example: on ResNet CIFAR-100 vs LSUN, TNR@95 improves 45.6% (ODIN) → 90.9%.
+
+6. IMPLEMENTATION NOTES
+   - Low-level features often calibrate better than final features (see their
+     per-block AUROC curves) — the feature ensemble is what closes the gap; using
+     only the penultimate layer is materially weaker on some OOD sets.
+   - Strongly robust when the training set is small or has random labels, where
+     MSP and ODIN collapse — this is the key property for a few-shot setting.
+   - A detector tuned on the *simple* FGSM attack generalizes to detect BIM,
+     DeepFool, CW.
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/pokaxpoka/deep_Mahalanobis_detector
+
+8. RELEVANCE TO THESIS
+   The most directly relevant classic baseline for your few-shot regime: a
+   feature-space, class-conditional-Gaussian score that stays reliable with few
+   or noisy samples, and could be combined with (or contrasted against) your
+   evidential Dirichlet vacuity score for near-OOD detection.
+
+
+==== PAPER: Energy-based Out-of-distribution Detection  [source: Energy Based.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "Energy-based Out-of-distribution Detection." Weitang Liu (UC San Diego),
+   Xiaoyun Wang (UC Davis), John D. Owens (UC Davis), Yixuan Li (UW-Madison).
+   NeurIPS 2020 (arXiv:2010.03759v4). Method name: Energy score / EBO.
+
+2. CORE IDEA
+   Replace the softmax confidence score with an energy score derived from the
+   logits. The energy is theoretically aligned with the input density p(x) (low
+   energy ↔ high likelihood), whereas softmax confidence is a *shifted* biased
+   version of it and thus poor for OOD. Energy works both as a parameter-free
+   post-hoc score AND as a trainable objective to sharpen the ID/OOD energy gap.
+
+3. METHOD / ARCHITECTURE
+   - Free-energy score over logits f(x): E(x;f) = −T · log Σ_i exp(f_i(x)/T).
+     Use the negative energy −E(x;f) as the ID-ness score (higher → ID); threshold
+     it. Computed via a single logsumexp over logits; parameter-free at T=1.
+   - Connection to softmax: log max_y p(y|x) = −E(x;f) + f_max(x) at T=1, i.e.
+     the softmax score equals the energy shifted by the max logit — the shift is
+     what biases softmax and hurts OOD separation.
+   - Optional energy-bounded fine-tuning (needs auxiliary OOD data):
+         min_θ  E_{Dtrain_in}[−log F_y(x)]  +  λ · L_energy
+         L_energy = E_{in}[ (max(0, E(x_in) − m_in))^2 ]
+                  + E_{out}[ (max(0, m_out − E(x_out)))^2 ]
+     i.e. cross-entropy + two squared-hinge penalties that push ID energy below
+     m_in and OOD energy above m_out (a two-margin loss; a single-margin variant
+     was less stable).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - Backbone: WideResNet. Fine-tuning: λ = 0.1, 10 epochs, initial LR 0.001 with
+     cosine decay, batch 128 (ID) / 256 (auxiliary OOD).
+   - Margins tuned on a validation set: m_in ∈ {−3,−5,−7}, m_out ∈ {−15,−19,−23,−27}.
+     Optimal reported: m_in = −23 (CIFAR-10) / −27 (CIFAR-100); m_out = −5 (both).
+   - Temperature: T=1 is best; larger T monotonically worsens FPR95 (opposite of
+     ODIN's finding, because here energy is used directly, not the softmax).
+   - Auxiliary outlier data = 80 Million Tiny Images (with CIFAR overlaps removed).
+
+5. DATASETS & METRICS
+   - ID: CIFAR-10, CIFAR-100, SVHN. OOD (six): Textures, SVHN, Places365,
+     LSUN-Crop, LSUN-Resize, iSUN.
+   - Metrics: FPR@95, AUROC, AUPR.
+   - Headline: post-hoc energy cuts average FPR95 by 18.03% vs MSP on CIFAR-10;
+     energy fine-tuning beats Outlier Exposure by ~5.2% (CIFAR-10) and ~10.55%
+     (CIFAR-100) FPR95, while keeping ID accuracy roughly unchanged.
+
+6. IMPLEMENTATION NOTES
+   - Post-hoc energy needs no extra data, no perturbation, no retraining — just
+     logsumexp on existing logits; cheapest strong baseline to add.
+   - Energy histograms are smooth (softmax histograms are spiky at ~1.0), which is
+     why energy separates ID/OOD better.
+   - Two separate margins matter: the paper found E(x_in)−E(x_out) can be stable
+     while the absolute values drift, so tune m_in and m_out independently.
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/wetliu/energy_ood
+
+8. RELEVANCE TO THESIS
+   The energy score is the strongest cheap logit-based OOD baseline to compare
+   against your evidential Dirichlet-strength (S) uncertainty; note the conceptual
+   parallel — evidential total evidence S and negative energy both measure
+   "amount of support" and both avoid softmax's overconfidence.
+
+
+==== PAPER: OpenOOD: Benchmarking Generalized Out-of-Distribution Detection  [source: Open ODD.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "OpenOOD: Benchmarking Generalized Out-of-Distribution Detection." Jingkang
+   Yang, Pengyun Wang, Dejian Zou, ... Dan Hendrycks, Yixuan Li, Ziwei Liu (NTU
+   S-Lab et al.). NeurIPS 2022, Datasets & Benchmarks Track (arXiv:2210.07242v1).
+   This is OpenOOD v1.
+
+2. CORE IDEA
+   The field lacked a unified, fair benchmark, so methods cherry-picked datasets.
+   OpenOOD is a single well-structured codebase that re-implements 35 methods
+   spanning four neighboring fields — anomaly detection (AD), open-set recognition
+   (OSR), OOD detection, and model-uncertainty/data-augmentation — and evaluates
+   them under one "generalized OOD detection" framework across 9 benchmarks with
+   careful data cleaning and a near-OOD / far-OOD split.
+
+3. METHOD / ARCHITECTURE (of the benchmark)
+   - Taxonomy of methods: classification-based (post-hoc + training-time),
+     density-based, distance-based, reconstruction-based.
+   - Post-hoc scores included: MSP, ODIN, MDS (Mahalanobis), EBO (energy), GRAM,
+     DICE, GradNorm, ReAct, MLS (max-logit), KL-Matching, VIM, KNN.
+   - Training-time: ConfBranch, G-ODIN, CSI, MOS, VOS, LogitNorm; with outlier
+     data: OE, MCD, UDG. Uncertainty/aug: MC-Dropout, DeepEnsemble, TempScaling,
+     Mixup, CutMix, PixMix.
+   - Near-OOD = semantic shift only; Far-OOD = additional covariate/domain shift.
+     Benchmarks carefully remove ID-overlapping images from OOD sets (e.g. 1,207
+     TinyImageNet images removed for CIFAR-10).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - Unified backbones: LeNet (MNIST-ID benchmarks), ResNet-18 (CIFAR & TIN-ID),
+     ResNet-50 (ImageNet-ID).
+   - Training methods use a common recipe: SGD, LR 0.1, momentum 0.9, weight decay
+     0.0005, 100 epochs (to avoid over-tuning).
+   - Post-hoc hyperparameters: try only the 5 most common values, pick by AUROC on
+     a validation set (ID val + an OOD val set, e.g. OpenImage-O for ImageNet).
+
+5. DATASETS & METRICS
+   - 9 benchmarks: 1 AD (MVTec-AD), 4 OSR (MNIST-6/4, CIFAR-6/4, CIFAR-50/50,
+     TinyImageNet-20/180), 4 OOD (ID = MNIST, CIFAR-10, CIFAR-100, ImageNet-1K,
+     each with near- & far-OOD sets — e.g. ImageNet near-OOD Species/ImageNet-O/
+     OpenImage-O, far-OOD Texture/MNIST/SVHN).
+   - Metrics: FPR@95, AUROC (main), AUPR (reported as "FPR@95 / AUROC / AUPR").
+
+6. IMPLEMENTATION NOTES / KEY FINDINGS
+   - Data-augmentation methods (esp. PixMix, also CutMix/Mixup/Ensemble) were the
+     single most effective category (PixMix hit 93.1% near-OOD AUROC on CIFAR-10).
+   - Extra outlier data "seems not necessary" — its advantage was narrow.
+   - Post-hoc methods make strong progress and generally are no worse than
+     training-based methods; MDS is good on MNIST but weak on CIFAR, whereas KNN
+     stays strong from MNIST to ImageNet.
+   - CIFAR benchmarks are NOT easier than ImageNet ones. OSR benchmarks align with
+     near-OOD. Pitfall noted: each method was run only once (no seed averaging).
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/Jingkang50/OpenOOD
+
+8. RELEVANCE TO THESIS
+   This is the evaluation harness and near-/far-OOD protocol your thesis should
+   adopt for fair AUROC/FPR@95 comparison, and it already implements MSP/ODIN/
+   Mahalanobis/Energy so you can plug your evidential PEFT model in beside them.
+
+
+==== PAPER: OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection  [source: OpenOdd V1.5.pdf] ====
+
+1. TITLE / AUTHORS / VENUE
+   "OpenOOD v1.5: Enhanced Benchmark for Out-of-Distribution Detection." Jingyang
+   Zhang, Jingkang Yang, Pengyun Wang, ... Yixuan Li, Ziwei Liu, Yiran Chen, Hai Li
+   (Duke, NTU S-Lab, UW-Madison, et al.). Journal of Data-centric Machine Learning
+   Research (JDMLR) 2024 (arXiv:2306.09301v5).
+
+2. CORE IDEA
+   A stricter, larger-scale successor to OpenOOD v1. It fixes evaluation pitfalls
+   (confusing terminology, inconsistent datasets, test-set leakage in
+   hyperparameter tuning), scales to ImageNet-1K and foundation models (CLIP,
+   DINOv2), and adds "full-spectrum" OOD detection that must simultaneously handle
+   semantic shift (detect) and covariate shift (still classify correctly).
+
+3. METHOD / ARCHITECTURE (of the benchmark)
+   - Formal definitions: (Def 1) D_OOD is OOD w.r.t. D_ID if every region with
+     significant OOD probability mass has arbitrarily small ID mass; (Def 2) the
+     objective is to minimize open-space risk R_O(f).
+   - Detector form: G(x;f) = 1[S(x;f) ≥ λ] where S is any OOD score and λ a
+     threshold. OOD is the positive class, ID the negative.
+   - Full-spectrum: add covariate-shifted ID (csID) images to the ID test set;
+     the detector must keep csID as ID while flagging semantic OOD.
+   - Rigor: strictly disjoint OOD train / val / test category sets
+     (Y_train ∩ Y_test = ∅); hyperparameters tuned on held-out ID+OOD *validation*
+     data (never test), unlike ODIN/MDS/G-ODIN originals.
+   - ~40 methods supported (5 more post-hoc, 4 more training, 5 more augmentations
+     than v1), grouped: post-hoc inference / training w/o outliers / training w/
+     outliers / data augmentation.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   - CIFAR-10/100 & ImageNet-200: ResNet-18, 100 epochs, SGD momentum 0.9,
+     LR 0.1 with cosine annealing, weight decay 0.0005, batch 128 (CIFAR) / 256
+     (ImageNet-200). 3 independent training runs (v1 used 1).
+   - ImageNet-1K: post-hoc evaluated on torchvision pre-trained ResNet-50, ViT,
+     Swin; training methods on ResNet-50 (fine-tune 30 epochs, LR 0.001, batch 256,
+     wd 0.0005). Foundation models share a ViT-Base backbone (CLIP zero-shot with
+     prompt ensemble; DINOv2 via linear probe).
+   - Post-hoc hyperparameter search is automated using ID+OOD validation, pick by
+     AUROC.
+
+5. DATASETS & METRICS
+   - 4 standard benchmarks: CIFAR-10, CIFAR-100, ImageNet-200, ImageNet-1K.
+     CIFAR near-OOD = CIFAR-100/CIFAR-10 + TIN; far-OOD = MNIST/SVHN/Textures/
+     Places365. ImageNet near-OOD = SSB-hard + NINCO; far-OOD = iNaturalist/
+     Textures/OpenImage-O. OOD train sets: TIN-597 (CIFAR), ImageNet-800 (IN-200).
+   - Full-spectrum csID sets: ImageNet-C (corruptions), ImageNet-R (style),
+     ImageNet-V2 (resampling). Metrics: AUROC (main), AUPR, FPR@95, plus ID Acc.
+
+6. IMPLEMENTATION NOTES / KEY FINDINGS
+   - No single winner across benchmarks; per-dataset ranking varies a lot. Strong
+     post-hoc scores in their tables include KNN, VIM, RMDS, ASH, ReAct (and MDS
+     is weak on CIFAR/ImageNet but the RMDS "relative Mahalanobis" fix helps a lot,
+     esp. near-OOD). RotPred and G-ODIN lead among training-w/o-outlier methods.
+   - "Data augmentation + strong post-processor" is the most effective combo (e.g.
+     AugMix + SHE is best for full-spectrum near-OOD on ImageNet-1K). Augmentations
+     help less clearly on full-spectrum far-OOD.
+   - Full-spectrum detection is hard for ALL current methods (covariate-shifted ID
+     gets wrongly flagged as OOD).
+   - DINOv2 linear-probe beats a supervised ImageNet model on every OOD case and
+     on ID accuracy; zero-shot CLIP mainly helps far-OOD; most existing detectors
+     aren't yet compatible with CLIP, so its potential is likely under-tapped.
+   - Limitation: all methods considered are discriminative (assume a classifier).
+
+7. OFFICIAL CODE REPO
+   Stated in the paper: github.com/Jingkang50/OpenOOD
+   Leaderboard: zjysteven.github.io/OpenOOD
+
+8. RELEVANCE TO THESIS
+   This is the current gold-standard, leakage-free evaluation protocol to report
+   your B-PEFT results under: its ResNet-18 recipe and near/far + full-spectrum
+   (covariate-shift, cf. your CIFAR-10-C robustness goal) splits map almost
+   one-to-one onto your planned OOD/calibration experiments.
+
+################################################################################
+END — 6 papers summarized from 6 PDFs in this folder.
+################################################################################

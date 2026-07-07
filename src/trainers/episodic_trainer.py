@@ -59,6 +59,13 @@ class EpisodicHistory:
     val_acc:          List[float]          = field(default_factory=list)
     val_loss:         List[float]          = field(default_factory=list)
     kl_weight_at_end: List[float]          = field(default_factory=list)
+    # Instrumentation (adopted from the step4_reform diagnostics): per-epoch
+    # mean Dirichlet evidence and adapter gradient norm. mean_evidence ~ 0 is
+    # the fingerprint of the evidential collapse (softplus starved to zero);
+    # adapter_grad_norm ~ 0 confirms no learning signal is reaching the PEFT
+    # module. For softmax runs mean_evidence is logged as 0.0 (not applicable).
+    mean_evidence:    List[float]          = field(default_factory=list)
+    adapter_grad_norm: List[float]         = field(default_factory=list)
 
 
 class EpisodicTrainer:
@@ -86,6 +93,8 @@ class EpisodicTrainer:
         wandb_run=None,
         device: torch.device | str = "cpu",
         collapse_threshold: float = 0.25,
+        evid_prior_per_class: float = 1.0,
+        evid_use_variance: bool = True,
     ):
         if interpretation not in ("softmax", "evidential"):
             raise ValueError(
@@ -117,6 +126,11 @@ class EpisodicTrainer:
         self.wandb_run = wandb_run
         self.device = device
         self.collapse_threshold = float(collapse_threshold)
+        # R-EDL knobs (Survey EDL): tunable prior mass + optional variance drop.
+        # Defaults reproduce the Sensoy loss exactly; the retuned Phase-2 config
+        # sweeps these on VAL to lower ID under-confidence / ECE.
+        self.evid_prior_per_class = float(evid_prior_per_class)
+        self.evid_use_variance = bool(evid_use_variance)
 
         self.history = EpisodicHistory()
         self.best_val_acc: float = -1.0
@@ -144,6 +158,8 @@ class EpisodicTrainer:
         from ..losses.evidential import evidential_mse_loss
         return evidential_mse_loss(
             evidence, target_oh, num_classes=self.num_classes, kl_weight=kl_w,
+            prior_per_class=self.evid_prior_per_class,
+            use_variance=self.evid_use_variance,
         )
 
     def _kl_weight_at_step(self, step: int) -> float:
@@ -168,8 +184,19 @@ class EpisodicTrainer:
     # ------------------------------------------------------------------
     # Train / validate loops
     # ------------------------------------------------------------------
+    def _adapter_grad_norm(self) -> float:
+        """L2 norm over the adapter's gradients after backward(). A value
+        of ~0 means no learning signal is reaching the PEFT module (the
+        evidential-collapse fingerprint on the gradient side)."""
+        sq = 0.0
+        for p in self.model.adapter.parameters():
+            if p.grad is not None:
+                sq += float(p.grad.detach().pow(2).sum().item())
+        return sq ** 0.5
+
     def _run_train_epoch(self, train_iter: Iterable,
-                         global_step_start: int) -> tuple[float, float, int]:
+                         global_step_start: int
+                         ) -> tuple[float, float, float, float, int]:
         self.model.train()
         # Make sure frozen-BatchNorm in the backbone stays in eval mode
         # (same invariant as Step 1's FewShotTrainer.fit_episode).
@@ -179,6 +206,8 @@ class EpisodicTrainer:
 
         total_loss = 0.0
         total_acc = 0.0
+        total_evidence = 0.0
+        total_grad_norm = 0.0
         n_eps = 0
         gs = global_step_start
 
@@ -187,14 +216,26 @@ class EpisodicTrainer:
             q_logits = self._forward_episode(sx, sy, qx)
             loss = self._episode_loss(q_logits, qy.to(q_logits.device), gs)
             loss.backward()
+            total_grad_norm += self._adapter_grad_norm()  # after backward, pre-step
             self.optimizer.step()
+
+            # Mean Dirichlet evidence this episode (evidential only). Uses the
+            # SAME head.to_evidence as the loss, so it tracks exactly what the
+            # model trains on. softmax runs have no evidence -> log 0.0.
+            if self.interpretation == "evidential":
+                with torch.no_grad():
+                    total_evidence += float(
+                        self.model.head.to_evidence(q_logits).mean().item()
+                    )
 
             total_loss += float(loss.item())
             total_acc  += self._query_acc_from_logits(q_logits, qy)
             n_eps += 1
             gs += 1
 
-        return total_loss / max(1, n_eps), total_acc / max(1, n_eps), gs
+        d = max(1, n_eps)
+        return (total_loss / d, total_acc / d,
+                total_evidence / d, total_grad_norm / d, gs)
 
     @torch.no_grad()
     def _run_val_epoch(self, val_iter: Iterable) -> tuple[float, float]:
@@ -250,9 +291,10 @@ class EpisodicTrainer:
         global_step = 0
         no_improve = 0
         for epoch in range(1, self.num_epochs + 1):
-            tr_loss, tr_acc, global_step = self._run_train_epoch(
-                train_iterable_factory(epoch), global_step,
-            )
+            tr_loss, tr_acc, tr_evidence, tr_grad_norm, global_step = \
+                self._run_train_epoch(
+                    train_iterable_factory(epoch), global_step,
+                )
             val_loss, val_acc = self._run_val_epoch(
                 val_iterable_factory(epoch),
             )
@@ -264,13 +306,16 @@ class EpisodicTrainer:
             self.history.val_loss.append(val_loss)
             self.history.val_acc.append(val_acc)
             self.history.kl_weight_at_end.append(kl_end)
+            self.history.mean_evidence.append(tr_evidence)
+            self.history.adapter_grad_norm.append(tr_grad_norm)
 
             if self.logger is not None:
                 self.logger.info(
                     f"epoch {epoch:3d}/{self.num_epochs}  "
                     f"train_loss={tr_loss:.4f}  train_acc={tr_acc:.3f}  "
                     f"val_loss={val_loss:.4f}  val_acc={val_acc:.3f}  "
-                    f"kl_w={kl_end:.3f}  global_step={global_step}"
+                    f"kl_w={kl_end:.3f}  mean_ev={tr_evidence:.4f}  "
+                    f"grad_norm={tr_grad_norm:.4f}  global_step={global_step}"
                 )
             if self.wandb_run is not None:
                 self.wandb_run.log({
@@ -280,18 +325,36 @@ class EpisodicTrainer:
                     "val/loss":         val_loss,
                     "val/acc":          val_acc,
                     "train/kl_weight":  kl_end,
+                    "train/mean_evidence":  tr_evidence,
+                    "train/adapter_grad_norm": tr_grad_norm,
                     "train/global_step": global_step,
                 }, step=epoch)
 
-            # Collapse guard (R-EPISODIC-COLLAPSE).
-            if epoch == 1 and val_acc <= self.collapse_threshold:
-                raise EpisodicCollapse(
-                    f"validation accuracy after epoch 1 was {val_acc:.3f}, "
-                    f"<= collapse_threshold ({self.collapse_threshold}). "
-                    f"Likely causes: KL anneal too aggressive, LR too "
-                    f"high, or sampler / dataset mis-wired. Abort before "
-                    f"burning more compute."
-                )
+            # Collapse guard (R-EPISODIC-COLLAPSE), now two-sided:
+            #   1. val accuracy at/below chance after epoch 1, OR
+            #   2. evidential mean evidence ~ 0 after epoch 1 (the softplus-
+            #      starvation fingerprint) -> the model cannot express
+            #      confidence and no gradient flows. Abort before Colab burns
+            #      a full session on a doomed run.
+            if epoch == 1:
+                if val_acc <= self.collapse_threshold:
+                    raise EpisodicCollapse(
+                        f"validation accuracy after epoch 1 was {val_acc:.3f}, "
+                        f"<= collapse_threshold ({self.collapse_threshold}). "
+                        f"Likely causes: KL anneal too aggressive, LR too "
+                        f"high, or sampler / dataset mis-wired. Abort before "
+                        f"burning more compute."
+                    )
+                if self.interpretation == "evidential" and tr_evidence <= 1e-3:
+                    raise EpisodicCollapse(
+                        f"mean Dirichlet evidence after epoch 1 was "
+                        f"{tr_evidence:.2e} (~0): the evidence mapping is "
+                        f"starved (softplus saturated to zero) so the model is "
+                        f"a uniform-Dirichlet 'I don't know' for every input "
+                        f"and no gradient reaches the adapter "
+                        f"(grad_norm={tr_grad_norm:.2e}). Check head.metric / "
+                        f"evidence_scale_init / evidence_bias_init."
+                    )
 
             # Early stop on val acc plateau.
             if val_acc > self.best_val_acc + 1e-6:
