@@ -1,0 +1,123 @@
+THESIS IMPLEMENTATION GUIDE — B-PEFT (Bayesian Parameter-Efficient Fine-Tuning
+for Reliable Few-Shot Vision with Lightweight CNN Backbones)
+================================================================================
+Read this file in full before implementing, modifying, or debugging ANY part of
+this thesis codebase. This file governs how you use the paper summaries.
+
+------------------------------------------------------------------------------
+1. WHAT TO READ FIRST
+------------------------------------------------------------------------------
+Before writing or changing any code, locate and read the "paper_summaries.txt"
+file in every category folder relevant to the current task, e.g.:
+  - peft/paper_summaries.txt
+  - evidential_dl/paper_summaries.txt
+  - few_shot/paper_summaries.txt
+  - ood_detection/paper_summaries.txt
+  - calibration/paper_summaries.txt
+  - backbones/paper_summaries.txt
+  (folder names may differ — search for any file named paper_summaries.txt)
+
+Do not implement anything based only on general/pretrained knowledge of these
+methods if a paper_summaries.txt entry exists for it. The summary reflects what
+is actually in the PDFs I read, which may differ in details (hyperparameters,
+exact formulation, ablation findings) from the "textbook" version of the
+method. When the summary and your general knowledge conflict, defer to the
+summary, but flag the conflict to me rather than silently picking one.
+
+------------------------------------------------------------------------------
+2. HOW TO USE THE PAPERS — INSPIRATION, NOT A TEMPLATE
+------------------------------------------------------------------------------
+These papers are reference material for ORIGINAL implementation, not a source
+to copy from line-by-line. For every implementation decision:
+
+  a) Identify which paper(s) the approach is drawn from.
+  b) State briefly WHY it's being adapted this way for THIS thesis (B-PEFT is
+     a novel combination — CNNs, not ViTs; evidential uncertainty, not
+     standard softmax; few-shot, not full-data fine-tuning). A method that
+     worked in a paper's original setting may need modification to fit ours.
+  c) Do not reproduce any paper's code or text verbatim. Reimplement from the
+     described method/algorithm, in your own code and structure.
+
+------------------------------------------------------------------------------
+3. NOT EVERY PAPER AGREES WITH OUR THESIS — EVALUATE, DON'T JUST ADOPT
+------------------------------------------------------------------------------
+The paper set was gathered broadly across PEFT, evidential DL, Bayesian
+methods, few-shot learning, and OOD detection. Some of these papers are
+foundational/contextual and were never meant to be implemented wholesale.
+Others may propose choices that conflict with our specific design (e.g. a
+paper that assumes full fine-tuning, or a ViT-only adapter placement, or a
+softmax-based loss where we need an evidential one).
+
+Every time you're about to implement an idea from a paper, explicitly reason
+through:
+
+  PROS  — what this paper's approach gives us (accuracy, efficiency,
+          calibration, theoretical justification, simplicity, etc.)
+  CONS  — where it conflicts with our setup (architecture mismatch, data
+          regime mismatch, added complexity, untested assumptions, higher
+          compute cost, etc.)
+  FIT   — does this genuinely serve the thesis's actual goals (few-shot
+          CNN adaptation + parameter efficiency + calibrated uncertainty +
+          OOD robustness), or does it just seem superficially related?
+
+If a paper's method doesn't fit, say so plainly and don't force it in. Do not
+implement a technique just because it's "in the reading list."
+
+------------------------------------------------------------------------------
+4. WATCH FOR COUNTERINTUITIVE OR EASY-TO-DISMISS PAPERS
+------------------------------------------------------------------------------
+Some papers in these folders may look tangential, minor, or even contradictory
+to our main approach at first glance — do not discard them without genuine
+consideration. Examples of what to watch for:
+  - A paper showing a "simpler" baseline actually outperforms a more complex
+    method in certain regimes (e.g. linear probing beating PEFT in very
+    low-shot settings) — this is directly relevant to justifying our design
+    choices or exposing a weakness we should address.
+  - A paper reporting a technique fails or underperforms under conditions
+    similar to ours (e.g. evidential losses being unstable with very few
+    classes, or adapters interacting badly with certain normalization layers)
+    — this is a warning sign to design around, not an obscure footnote.
+  - A dataset or metric paper that seems purely "background" but actually
+    defines the exact evaluation protocol we must follow to be comparable to
+    prior work.
+Flag these findings explicitly when relevant to a design decision, even if
+they complicate or slow down the implementation.
+
+------------------------------------------------------------------------------
+5. WHEN IMPLEMENTING, ALWAYS OUTPUT YOUR REASONING FIRST
+------------------------------------------------------------------------------
+Before writing code for any new component, briefly state:
+  1. Which paper(s)/summaries inform this component
+  2. The pros/cons/fit reasoning from Section 3
+  3. Any deviation from the paper's original method, and why
+  4. Any known limitation or untested assumption being carried into the code
+
+Keep this reasoning concise (a short paragraph or bullet list) — this is a
+working note for me, not a full report.
+
+------------------------------------------------------------------------------
+6. HONESTY AND ACCURACY RULES (apply at all times)
+------------------------------------------------------------------------------
+  - If a paper_summaries.txt entry is incomplete, ambiguous, or you're unsure
+    it correctly reflects the original paper, say so — do not fill gaps with
+    invented details, hyperparameters, or results.
+  - Never state an assumed hyperparameter or result as if it were confirmed by
+    a paper. If a paper doesn't specify something (e.g. exact LR, exact rank),
+    say "the paper does not specify this — using a reasonable default of X,
+    please verify if this matters for your results."
+  - Do not fabricate citations, equations, or claims not present in the
+    paper_summaries.txt files or the original PDFs.
+  - If two papers in the folders conflict with each other, point out the
+    conflict rather than silently choosing one interpretation.
+  - If you are not fully certain a design choice is correct, say so plainly
+    (e.g. "I'm not certain this matches the original Conv-Adapter placement —
+    worth double-checking against the PDF directly").
+
+------------------------------------------------------------------------------
+7. SCOPE REMINDER
+------------------------------------------------------------------------------
+This file governs implementation reasoning only. It does not override my
+explicit instructions in a given session — if I ask for something that
+contradicts a paper's recommendation, implement what I asked, but note the
+discrepancy with the literature so I can make an informed decision.
+================================================================================

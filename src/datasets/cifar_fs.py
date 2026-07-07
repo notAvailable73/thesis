@@ -210,6 +210,26 @@ def get_cifar_fs(data_root: str = "data", image_size: int = 224,
     return _RelabelledCIFAR100(base, split_map[split])
 
 
+def get_cifar_fs_heldout_ood(data_root: str = "data", image_size: int = 224,
+                             num_samples: int = 500, seed: int = 42,
+                             heldout_split: str = "val") -> torch.Tensor:
+    """Zero-download near-OOD pool for the episodic evaluator.
+
+    Samples ``num_samples`` images from the CIFAR-FS ``heldout_split`` classes
+    (default "val" — the 16 val classes, disjoint from the 20 test-episode
+    classes). Same visual domain as the ID data but novel classes → a clean,
+    free near-OOD (OpenOOD near-OOD is "semantic shift only"). Returns
+    (N, 3, image_size, image_size) ImageNet-normalized tensors, matching
+    ``get_svhn_ood`` so the evaluator treats every OOD pool identically.
+    """
+    import random
+    ds = get_cifar_fs(data_root=data_root, image_size=image_size,
+                      split=heldout_split)
+    rng = random.Random(seed)
+    idx = rng.sample(range(len(ds)), min(num_samples, len(ds)))
+    return torch.stack([ds[i][0] for i in idx])
+
+
 # Canonical CIFAR-100 class names in integer-ID order.
 # Source: torchvision.datasets.CIFAR100.classes (alphabetical).
 # Frozen here so the loader does not require an instantiated CIFAR100

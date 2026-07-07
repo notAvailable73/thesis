@@ -1,0 +1,413 @@
+################################################################################
+PAPER SUMMARIES — Bayesian PEFT / Uncertainty sub-topic
+Reference notes for implementing the B-PEFT thesis
+(Bayesian PEFT + evidential uncertainty + few-shot + lightweight CNN framework)
+
+Generated: 2026-07-05
+PDFs in folder: 5   |   Papers processed: 5
+Source files (folder name -> paper):
+  B-Lora.pdf        -> Bayesian-LoRA (quantization + rank via Bayesian gates)
+  B-Lora LLM.pdf    -> Laplace-LoRA (Bayesian LoRA for LLMs)
+  B-Hybrid.pdf      -> BH-PEFT (Bayesian Hybrid PEFT)
+  Blob.pdf          -> BLoB (Bayesian LoRA by Backpropagation)
+  Training Free.pdf -> TFB (Training-Free Bayesianization)
+
+NOTE ON EXTRACTION: All PDFs parsed cleanly via PyMuPDF text extraction (image
+rendering was unavailable, so figures were not read — only text/equations/tables).
+Where a specific number lives only in an appendix that did not extract cleanly,
+this is flagged explicitly in that paper's section rather than guessed.
+
+IMPORTANT CONCEPTUAL NOTE: "Bayesian" means DIFFERENT things across these papers.
+  - B-Lora.pdf uses Bayesian *gates* to search quantization bit-width + rank
+    (NOT predictive uncertainty).
+  - Laplace-LoRA / BLoB / TFB / BH-PEFT model a *weight posterior* (Gaussian VI
+    or Laplace) to get predictive uncertainty & calibration.
+  - NONE of these five uses the *evidential Dirichlet* uncertainty that your
+    thesis proposes — that comes from your separate EDL reference. These papers
+    give you the PEFT-Bayesianization machinery; your novelty is swapping their
+    Gaussian-weight-posterior view for an evidential-output-distribution view on
+    CNNs. Keep that distinction sharp when writing related work.
+################################################################################
+
+
+==== PAPER: Bayesian-LoRA (B-LoRA) — Optimal Quantization + Rank via Bayesian Gates ====
+
+1. TITLE / AUTHORS / VENUE
+   "Bayesian-LoRA: LoRA based Parameter Efficient Fine-Tuning using Optimal
+   Quantization levels and Rank Values through Differentiable Bayesian Gates."
+   Cristian Meo*, Ksenia Sycheva*, Anirudh Goyal, Justin Dauwels (TU Delft; Mila).
+   Workshop on Advancing Neural Network Training (WANT) @ ICML 2024. arXiv:2406.13046.
+
+2. CORE IDEA
+   Standard LoRA fixes one rank for every weight matrix and does no quantization.
+   B-LoRA jointly and automatically learns, per LoRA block, (a) the optimal rank
+   and (b) the optimal quantization bit-width, by placing Bayesian priors on
+   discrete "gates." Result: ~70% fewer bit-operations (BOPs, an energy proxy)
+   with GLUE accuracy on par with LoRA/DyLoRA/AdaLoRA, and no per-dataset tuning.
+   WARNING: this is efficiency/compression, NOT calibration/uncertainty.
+
+3. METHOD / ARCHITECTURE
+   - Builds on "Bayesian Bits" (Van Baalen 2020). A quantized value is a residual
+     sum over bit-widths {2,4,8,16,32}: xq = x2 + z4(e4 + z8(e8 + z16(e16 + z32*e32))),
+     where each e is the residual error refining precision and z_i in {0,1} are
+     gating variables. Turning a gate off forces all higher gates off.
+   - Bayesian priors on gates: p(z_m | z_n=1) = Bernoulli(e^-lambda) between
+     consecutive active levels; posterior q(z_m|z_n=1) = Bernoulli(sigmoid(phi)).
+   - SVD-structured LoRA (as in AdaLoRA): W = W0 + B E A, with diagonal vector
+     E in R^r. Rank gates g_i multiply the diagonal entries so ranks can be pruned:
+     Ê_i = (prod_{j<=i} g_j) * e_i. Prior p(g_{n+1}|g_n=1)=Bern(e^-lambda), p(g_1)=1.
+   - Training objective (Eq.15): LoRA log-likelihood MINUS a quantization
+     regularizer MINUS a rank regularizer (both are expected #active gates),
+     weighted by lambda_q and lambda_r. Straight-through estimator (STE) for rounding.
+   - Pseudocode (Algorithm 1, per block): quantize W,A,E,B; compute rank gates
+     g_i from sigmoid(xi_j); apply gates to diagonal E; return
+     Q_out( W̄x + B̄ · Q_E( Ē · Q_A( Āx ))). Separate quantizer per matrix.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Backbone DeBERTaV3-base. Optimizer AdamW; LR 5e-4; batch 8; warmup 0; linear
+   scheduler; weight decay 0; max seq len 256; seeds {0,1,2}. LoRA r_q=r_k=r_v=8,
+   alpha=16. Regularizer weights lambda_q = lambda_r = 1. Quantizer constants
+   zeta1=-0.1, zeta2=1.1, inference threshold t=0.34. Applied ONLY to W_q,W_k,W_v
+   (W_o, W_f1, W_f2 frozen). Trainable-param count: #params = 6·l·r·d
+   (l layers, d hidden). Only # epochs is tuned per dataset (7–50); everything else
+   is shared across GLUE.
+
+5. DATASETS & METRICS
+   GLUE: MNLI, SST-2, CoLA, QQP, QNLI, RTE, MRPC, STS-B. Metrics: task metric
+   (acc / F1 / Matthews / Pearson-Spearman), trainable #params, and BOPs
+   (multiplications × operand bit-widths — a hardware-agnostic energy proxy).
+
+6. IMPLEMENTATION NOTES
+   - Task-specific head stays at full 32-bit precision (quantizing it hurts a lot).
+   - Learned pattern: value matrices W_v get higher rank AND higher precision than
+     W_k/W_q; later layers get larger ranks; many LoRA blocks collapse to rank 1.
+   - LoRA blocks themselves are pushed to low precision (2–4 bits); pre-trained
+     weights need more bits when the fine-tuning dataset is small (<10k).
+   - Evaluated ablations: full B-LoRA (q+ra) vs quantization-only B-LoRA (q).
+   - Only validated on GLUE (classification) — no generation tasks.
+
+7. OFFICIAL CODE REPO
+   No dedicated B-LoRA repo is given. The paper says it is built on the public
+   BayesianBits repo (github.com/Qualcomm-AI-research/BayesianBits) and the
+   AdaLoRA repo (github.com/QingruZhang/AdaLoRA). State this as "no own repo."
+
+8. RELEVANCE TO MY THESIS
+   Directly informs the efficiency/Pareto axis (RQ4) and adaptive-rank question
+   (RQ1): its Bayesian gates could pick per-conv-block rank/precision on the edge,
+   but it gives no uncertainty output, so it complements rather than replaces your
+   evidential head.
+
+
+==== PAPER: Laplace-LoRA — Bayesian Low-Rank Adaptation for Large Language Models ====
+
+1. TITLE / AUTHORS / VENUE
+   "Bayesian Low-Rank Adaptation for Large Language Models."
+   Adam X. Yang*, Maxime Robeyns*, Xi Wang, Laurence Aitchison
+   (Univ. of Bristol; UMass Amherst). ICLR 2024. arXiv:2308.13111.
+   (This is the paper your proposal calls "BayesLoRA" — its real name is Laplace-LoRA.)
+
+2. CORE IDEA
+   Fine-tuned LLMs are badly overconfident, especially on small datasets. Laplace-
+   LoRA adds calibration by applying a POST-HOC Laplace approximation over ONLY the
+   LoRA parameters of an already-fine-tuned model. Because it changes nothing about
+   the training pipeline and reasons over ~6M LoRA params instead of 7B weights,
+   it is cheap; it "dramatically" reduces ECE/NLL while keeping accuracy.
+
+3. METHOD / ARCHITECTURE
+   - Start from a normally MAP-fine-tuned LoRA checkpoint theta_MAP.
+   - Laplace = 2nd-order Taylor expansion of the log-joint around theta_MAP =>
+     Gaussian posterior N(theta_MAP, Sigma), Sigma = (Hessian + lambda·I)^-1.
+     Isotropic Gaussian prior N(0, lambda^-1 I).
+   - Hessian is approximated by the Fisher information / Generalized Gauss-Newton,
+     with Kronecker-factored (KFAC) structure per linear layer:
+     F_l = sum_n E[(a_{l-1} a_{l-1}^T) ⊗ (g_l g_l^T)].
+   - The two LoRA factors A (r×d) and B (d×r) are treated as two separate linear
+     layers. One KFAC factor is small (r×r), the other is d×d (~4096) — too big,
+     so it is stored via a LOW-RANK approx of rank n_kfac (done incrementally so
+     the full factor is never formed).
+   - Prediction: linearized Laplace — push posterior through the network linearized
+     at theta_MAP to get a Gaussian over logits, N(f_MAP, Lambda),
+     Lambda = (grad f)^T Sigma (grad f); then Monte-Carlo sample logits, softmax,
+     average = Bayesian model average.
+   - Prior precision lambda tuned by the closed-form Laplace marginal likelihood on
+     the TRAIN set (no validation set needed) — a key selling point for low-data.
+   - Two variants: LA = Laplace over ALL LoRA weights (best); LLLA = last-layer only.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Backbone LlaMA2-7B (also RoBERTa-base/large, Mistral-7B in appendices).
+   LoRA r=8, alpha=16, dropout 0.1, weight decay 0, LR 5e-5, linear scheduler.
+   Batch size 4 (Llama) / 32 (RoBERTa); max seq len 300 (Llama) / 256 (RoBERTa).
+   Fine-tune 10,000 iterations, checkpoint every 1000. LoRA applied to queries,
+   values, and the output layer. Loss = standard next-token / class likelihood
+   (Laplace is post-hoc, so training loss is unchanged).
+
+5. DATASETS & METRICS
+   In-distribution: 6 common-sense reasoning tasks — WG-S, WG-M (Winogrande),
+   ARC-C, ARC-E, OBQA, BoolQ (multiple-choice / True-False, all <10k train).
+   OOD (from OBQA checkpoint): ARC-C/ARC-E (near) and MMLU CS/Eng/Law/Health (far).
+   Metrics: Accuracy, ECE, NLL. Baselines: MAP, MC-Dropout (10), checkpoint
+   ensemble (3), deep/LoRA ensemble (3), temperature scaling.
+
+6. IMPLEMENTATION NOTES
+   - Full LA >> last-layer LLLA; LLLA helps on only some datasets, LA helps on all.
+   - Naive Monte-Carlo sampling of the logit Gaussian BEATS the probit approximation
+     and the Laplace bridge (which ignore covariance) — just sample.
+   - Benefit persists even under optimal early stopping (accuracy peak).
+   - The d×d Kronecker factor is the memory bottleneck — the low-rank n_kfac trick
+     (incremental, never materialize full factor) is what makes it feasible.
+   - Post-hoc, so it can wrap ANY good set of fine-tuned weights (e.g. Mixout).
+
+7. OFFICIAL CODE REPO
+   github.com/adamxyang/laplace-lora  and  github.com/MaximeRobeyns/bayesian_lora
+   (built on the `laplace` and ASDL libraries).
+
+8. RELEVANCE TO MY THESIS
+   The canonical "post-hoc Bayesian PEFT for calibration" baseline: you can port
+   last-layer/KFAC Laplace onto CNN adapters as a non-evidential uncertainty
+   comparator, and its "tune prior on train set, no val set" idea is gold for your
+   few-shot (1–10 shot) regime where a validation split is a luxury.
+
+
+==== PAPER: BH-PEFT — Bayesian Hybrid Parameter-Efficient Fine-Tuning ====
+
+1. TITLE / AUTHORS / VENUE
+   "A Bayesian Hybrid Parameter-Efficient Fine-Tuning Method for Large Language
+   Models." Yidong Chai, Yang Liu, Yonghang Zhou (Hefei Univ. of Technology);
+   Jiaheng Xie (Univ. of Delaware); Daniel Dajun Zeng (Chinese Academy of Sciences).
+   Business-analytics / IS venue (year not explicitly printed on the extracted
+   pages; references cite works up to 2025, so treat as ~2024–2025).
+
+2. CORE IDEA
+   Hybrid PEFT (combining Adapter + LoRA + Prefix-tuning, as in He 2022's MAM/UniPELT)
+   gives the best accuracy but (1) uses point estimates => no uncertainty and (2)
+   forgets old data when re-tuned. BH-PEFT makes the hybrid PEFT modules Bayesian
+   (variational Gaussian weights) to quantify uncertainty, and adds a "Bayesian
+   dynamic fine-tuning" scheme where last round's posterior becomes next round's
+   prior — mitigating catastrophic forgetting on streaming data.
+
+3. METHOD / ARCHITECTURE
+   - Two Bayesian PEFT modules on a Transformer block:
+     (a) Bayesian Prefix-tuning on attention: prefix vectors P_k,P_v generated by a
+         prefix encoder (down W_d^P in R^{d×r_P}, tanh, up W_u^P in R^{r_P×d});
+         P_k,P_v concatenated to keys/values. W_d^P, W_u^P are Gaussian random vars.
+     (b) Bayesian scaled parallel adapter on the feedforward layer:
+         x_out = LayerNorm(x_rc + x_ffn + s · W_u^A f(W_d^A x_rc)), ReLU f, scale s;
+         W_d^A in R^{d×r_A}, W_u^A in R^{r_A×d} are Gaussian random vars.
+   - All four projection matrices get fully-factorized (mean-field) Gaussian
+     posteriors q(W)=N(mu, diag(sigma^2)); original weights kept as delta/fixed.
+   - Train by maximizing the ELBO = E_q[log p(D|W)] − sum KL(q(W)||p(W)).
+     Prior p(W)=N(0, 0.1^2 I). First term via Monte-Carlo + reparameterization
+     trick W = mu + sigma ⊙ eps, eps~N(0,I); log-likelihood is neg-cross-entropy
+     (classification) or neg-MSE (regression). KL has closed form for the two
+     Gaussians. Optimizer Adam; std parameterized as sigma_ij = g_ij^2.
+     Init mu ~ U(-sqrt(6/d), sqrt(6/d)), g ~ U(delta/sqrt2, delta).
+   - Uncertainty = variance of the (sampled) output distribution.
+   - Bayesian dynamic FT: at round t, prior p_t(W) <- posterior q_{t-1}(W); re-run
+     VI on the new dataset. KL-to-prior acts as principled regularization vs forgetting.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Backbone RoBERTa-base (HF Transformers). Bottleneck r_A = 8, r_P = 8; adapter
+   scaling s = 4. Prior mean 0, prior std 0.1 (per Blundell 2015). Mean-field VI +
+   reparameterization; S Monte-Carlo samples (count not given in extracted text).
+   FLAGGED MISSING: exact learning rate, #epochs, batch size, S, and delta live in
+   Appendix E, which did not extract into the readable text — get these from the
+   repo / appendix before reimplementing. Baselines' bottleneck sizes were tuned so
+   total trainable params are comparable.
+
+5. DATASETS & METRICS
+   Five business tasks: Drug Reviews (regression, satisfaction 1–10), IMDB (binary
+   sentiment), AG's News (4-class), SST2 (sentiment), CSQA (commonsense MCQ).
+   Metrics: Acc/Precision/Recall/F1 for classification; MSE/MAE for regression;
+   mean±std over 5 runs. Uncertainty evaluated via a REJECTION CURVE (reject most-
+   uncertain predictions => accuracy should rise; ~+3% after rejecting top-10%).
+   Dynamic-FT experiment starts from 10 samples on SST-2 and grows the set.
+   Baselines: Adapter, LoRA, Prefix, APT, COMPACTER, RandLoRA (single-aspect);
+   MAM Adapter, UniPELT (hybrid).
+
+6. IMPLEMENTATION NOTES
+   - Asymmetric roles: prefix-tuning for attention, scaled-parallel-adapter for FFN
+     (mirrors He 2022's MAM design, just Bayesianized).
+   - The g^2 std-parameterization + specific init are stated to accelerate ELBO
+     convergence (follows Wang 2025) — don't use raw sigma.
+   - Negative correlation between quantified uncertainty and correctness is the
+     paper's core validation that the variance is meaningful.
+   - Dynamic scheme's advantage is the KL-to-previous-posterior term, NOT mere
+     weight re-initialization.
+
+7. OFFICIAL CODE REPO
+   github.com/s22s2s/BH-PEFT (stated in the paper).
+
+8. RELEVANCE TO MY THESIS
+   Closest architectural match to your "Bayesian PEFT" umbrella — a hybrid
+   Adapter/LoRA/Prefix module made Bayesian by VI, with adapter serial/parallel
+   placement decisions (RQ1) and uncertainty via output variance. Your thesis
+   differs by (i) targeting CNNs not Transformers and (ii) using evidential/Dirichlet
+   uncertainty instead of Gaussian-weight VI; its posterior-as-prior dynamic scheme
+   is a nice extension idea for few-shot continual adaptation.
+
+
+==== PAPER: BLoB — Bayesian Low-Rank Adaptation by Backpropagation ====
+
+1. TITLE / AUTHORS / VENUE
+   "BLoB: Bayesian Low-Rank Adaptation by Backpropagation for Large Language Models."
+   Yibin Wang*, Haizhou Shi*, Ligong Han, Dimitris Metaxas, Hao Wang
+   (Rutgers; MIT-IBM Watson AI Lab). NeurIPS 2024. arXiv:2406.11675.
+
+2. CORE IDEA
+   Post-hoc Bayesianization (e.g. Laplace-LoRA) splits posterior estimation into two
+   stages and is capped by the point-estimate weights it inherits. BLoB instead
+   learns the LoRA posterior's MEAN and COVARIANCE JOINTLY, in a single fine-tuning
+   run, via Bayes-by-Backprop. Sampling during training even improves the mean.
+   Better accuracy AND calibration (ECE/NLL) on in-dist and OOD than MAP/MCD/ENS/BBB/Laplace.
+
+3. METHOD / ARCHITECTURE
+   - ASYMMETRIC Bayesianization (key trick): in LoRA (W0 + B A), Bayesianize ONLY A
+     with a diagonal Gaussian q(A)=N(M, Omega^2); keep B deterministic (Omega_B=0,
+     B init 0). This equals a Gaussian posterior over the FULL weight with a
+     singular/low-rank covariance Sigma_q = [I⊗B] diag(vec(Omega)^2) [I⊗B^T]
+     (Theorem 3.1) — captures weight correlations, ~50% less memory than
+     Bayesianizing both A and B, and avoids huge early-training sampling noise.
+   - Low-rank Gaussian PRIOR centered at W0; Theorem 3.2 shows the full-weight KL
+     reduces to KL over the small matrix A alone:
+     KL = (1/2 sigma_p^2)(||M||^2 + ||Omega||^2) − sum log Omega_ij. Efficient.
+   - Std parameterization Omega_ij = G_ij^2 (NOT softplus) — gives large gradients
+     near zero-variance init => faster KL convergence (their analysis, App A.2).
+   - LoRA-Flipout: apply Flipout to A only, so each example in a mini-batch gets
+     independent weight noise (Eq.12) — big sample-efficiency win; lets K=1 sample
+     per step in training.
+   - KL RE-WEIGHTING schedule lambda_i = 2^i / (2^M − 1) over M mini-batches:
+     fit data early, tighten complexity/KL late. Plus a "pseudo-rescaling" of dataset
+     size (coeff gamma) so KL warm-up is consistent across datasets of different sizes.
+   - Inference: draw N samples of W, average softmax probs. N=10 default (N=0 = use
+     mean only).
+   - Full training loop = Algorithm 1.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Backbone LlaMA2-7B (also RoBERTa-base). LoRA r=8 on queries, values, output layer
+   (follows Laplace-LoRA). BLoB-specific (Table 3/4): prior std sigma_p = 0.2;
+   init hyperparam epsilon = 0.05 (G ~ U(eps/sqrt2, eps), M ~ U(-sqrt(6/n), sqrt(6/n)));
+   pseudo-rescale gamma = 8; KL optimized by SGD with LR 0.01 (Llama) / 0.002 (RoBERTa).
+   Training K = 1 sample/step; 5000 gradient steps (or 5 epochs; max LR raised
+   1e-4->2e-4 in the 5-epoch setting). Baseline MAP uses weight decay 1e-5; MCD
+   dropout p=0.1 (ensemble 10); ENS = 3 LoRAs. Follows PEFT-library defaults otherwise.
+
+5. DATASETS & METRICS
+   In-dist: WG-S, WG-M, ARC-C, ARC-E, OBQA, BoolQ (six common-sense reasoning).
+   OOD from OBQA checkpoint: ARC-C/ARC-E (small shift), MMLU college Chemistry &
+   Physics (large shift). Metrics: ACC, ECE, NLL. Baselines: MLE, MAP, MCD, BBB,
+   ENS, Laplace-LoRA (LAP). Shared hyperparameters across datasets; no extra val set.
+
+6. IMPLEMENTATION NOTES
+   - Do NOT naively combine BBB + LoRA — it diverges early; the asymmetric-A design,
+     the G^2 std param, and Flipout are ALL needed for fast, stable convergence.
+   - N (inference samples) trades accuracy vs calibration: N=0 highest ACC, larger N
+     lowers ECE/NLL — pick per your accuracy-vs-uncertainty priority.
+   - Laplace-LoRA can outright fail under a shared (non-per-dataset) hyperparameter
+     setting (e.g. ARC-C) — a fairness caveat BLoB highlights.
+   - Only A is Bayesian, so the extra memory over plain LoRA is small.
+
+7. OFFICIAL CODE REPO
+   github.com/Wang-ML-Lab/bayesian-peft  (shared repo with TFB below).
+
+8. RELEVANCE TO MY THESIS
+   The strongest "train-time Bayesian LoRA" template: asymmetric Bayesianization +
+   Flipout + KL-reweighting port cleanly to LoRA on 1x1/3x3 conv kernels in your CNN
+   backbones, and its ECE/NLL/OOD (MMLU) protocol is a ready-made calibration &
+   near/far-OOD evaluation blueprint. Your evidential-Dirichlet head is the intended
+   contrast to its Gaussian-weight posterior.
+
+
+==== PAPER: TFB — Training-Free Bayesianization for Low-Rank Adapters ====
+
+1. TITLE / AUTHORS / VENUE
+   "Training-Free Bayesianization for Low-Rank Adapters of Large Language Models."
+   Haizhou Shi*, Yibin Wang*, Ligong Han, Huan Zhang, Hao Wang
+   (Rutgers; UIUC; Red Hat AI). NeurIPS 2025. arXiv:2412.05723.
+   (Same group as BLoB; TFB is its training-free successor.)
+
+2. CORE IDEA
+   Existing Bayesian LoRA needs training (BLoB) or post-training Hessian work
+   (Laplace-LoRA). TFB turns ANY already-trained LoRA into a Bayesian one with NO
+   gradient steps: it searches for the largest weight-posterior variance (within a
+   low-rank isotropic Gaussian family) that keeps performance within a tolerance
+   eps. This search is proven equivalent to (generalized) variational inference.
+   Simple, cheap, and beats prior Bayesian-LoRA methods on uncertainty.
+
+3. METHOD / ARCHITECTURE
+   - Restrict the full-weight posterior to a LOW-RANK ISOTROPIC Gaussian:
+     q(vec(W)) = N(mu_q, proj(sigma_q^2 I)) — one scalar sigma_q controls all noise.
+   - Practical construction from a trained LoRA {B, A}:
+       1. Compact SVD:  B = U diag(d) V^T.
+       2. Regroup:  B' = U diag(d),  A' = V^T A  (so B'A' = BA, unchanged).
+       3. Set mean M = A', and standard deviations Omega_ij = sigma_q / d_i
+          (i.e. Omega = [sigma_q/d, ..., sigma_q/d]) — projecting isotropic full-space
+          noise onto the low-rank space. Only A' is randomized (asymmetric, like BLoB).
+     => storage for std drops from O(r n) to O(r); one shared sigma_q across layers.
+   - Choosing sigma_q = VARIANCE MAXIMIZATION (Eq.8): on an in-distribution "anchor"
+     dataset D with metric l and tolerance eps,
+         max sigma_q  s.t.  |l(D | Bayesianized) − l(D | original)| <= eps.
+     Solved by BINARY SEARCH over [sigma_q_min, sigma_q_max] (Algorithm 1); an
+     8-point parallel grid-search + interpolation variant is given in App F.10.
+   - Metric l: NLL for supervised anchor data (theoretically the right choice);
+     accuracy/F1 also work; for unsupervised data, pseudo-label with the pre-Bayes
+     model or use expected embedding norm. Anchor data can be the original training
+     subset (no separate calibration set needed).
+   - Theory (Thm 4.1/4.2): the construction yields Sigma_q = sigma_q^2 (I_n ⊗ [I_r;0]);
+     under local convexity of NLL and prior std sigma_p > eps0, variance maximization
+     == generalized VI (min lD + lambda·KL). With lambda=1/|D| it reduces to standard VI.
+     TFB never has to specify sigma_p explicitly.
+   - Inference: average N=10 posterior samples (BLoB protocol).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   No training of adapter weights. Tolerance: fixed RELATIVE change eps/p0 = 0.3%
+   for NLL, 1% for accuracy (adaptive eps can do better). Single shared sigma_q found
+   by binary search (explicit numeric [sigma_q_min, sigma_q_max] range not printed in
+   main text). N = 10 test-time samples. LoRA rank follows BLoB (r=8). Backbones:
+   Meta-Llama-3.1-8B (primary), plus Llama-2-7B, Meta-Llama-3-8B, Mistral-7B-v0.3.
+   TFB is applied on top of various trained means: MLE-LoRA, MAP-LoRA, BLoB-mean.
+
+5. DATASETS & METRICS
+   In-dist: WG-S, WG-M, ARC-C, ARC-E, OBQA, BoolQ. OOD from OBQA: ARC-C/E (small
+   shift), MMLU college Chemistry & Physics (large shift). Metrics: ACC, ECE, NLL,
+   N=10 samples for all sampling methods. Baselines: MC-Dropout, Ensemble,
+   Laplace-LoRA (LAP), MonteCLoRA, BLoB. Fine-tuning done for 5 epochs.
+
+6. IMPLEMENTATION NOTES
+   - The SVD regrouping (B'=U diag(d)) is essential: it makes noise on A' isotropic
+     in the full-weight space; naive Omega breaks the theory.
+   - Binary search only needs near-optimal sigma_q (strict monotonicity not required)
+     — a few forward passes on the anchor set; very cheap in time & memory.
+   - Overfitted checkpoints tolerate larger eps (more injectable variance).
+   - Because it wraps a fixed mean, TFB improvements are additive on MLE/MAP/BLoB
+     means (shaded/BLUE cells in their Table 1) — good as a plug-in calibrator.
+   - Implementation deliberately matches BLoB's codebase for compatibility.
+
+7. OFFICIAL CODE REPO
+   github.com/Wang-ML-Lab/bayesian-peft  (same repo as BLoB).
+
+8. RELEVANCE TO MY THESIS
+   Highest edge-AI value: after your few-shot CNN adapter/LoRA is trained, TFB could
+   inject calibrated uncertainty with ZERO extra training and O(r) memory — ideal for
+   the latency/Pareto goal (RQ4) and 1–10-shot regime — giving you a training-free
+   Gaussian-posterior baseline to compare against your evidential-Dirichlet approach.
+
+
+################################################################################
+CROSS-PAPER TAKEAWAYS FOR THE THESIS
+--------------------------------------------------------------------------------
+* Lineage: Laplace-LoRA (post-hoc, ICLR'24) -> BLoB (in-training, NeurIPS'24) ->
+  TFB (training-free, NeurIPS'25). BLoB & TFB share the github.com/Wang-ML-Lab/
+  bayesian-peft codebase — the most reusable starting point for your CNN port.
+* Shared eval recipe you can copy: ACC + ECE + NLL; in-dist common-sense tasks;
+  OOD = fine-tune on one dataset, test on near (ARC) + far (MMLU) shifts. Your
+  thesis already mirrors this with AUROC / FPR@95 + CIFAR-10-C corruptions.
+* "Asymmetric Bayesianize A, keep B deterministic" (BLoB/TFB) is the practical trick
+  that makes LoRA-on-conv-kernels stable — worth adopting even with an evidential head.
+* GAP your thesis fills: all five model a GAUSSIAN posterior over WEIGHTS (VI or
+  Laplace) on TRANSFORMER/LLM backbones. None uses EVIDENTIAL/DIRICHLET output
+  uncertainty, none targets lightweight CNNs, and none operates in the true few-shot
+  (1–10 shot) vision regime — that intersection is your contribution.
+* Terminology caution for related work: cite B-Lora.pdf (Meo et al.) as
+  quantization/rank compression, NOT as an uncertainty method; cite "BayesLoRA" in
+  your proposal as Laplace-LoRA (Yang et al., ICLR 2024) — that is the paper meant.
+################################################################################

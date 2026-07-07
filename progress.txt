@@ -13,19 +13,45 @@ Updated:   2026-05-19
 CURRENT STATUS  (read this first)
 --------------------------------------------------------------------------------
 
-Done:        Steps 1, 2, 3   (all of Phase 1 — Foundation)
-In progress: (none)
-Next:        Step 4          (Phase 2 — CIFAR-FS Bertinetto split + episodic
-                              meta-training)
-Blocker:     (none — Step 4 can begin as soon as you decide to)
-Last commit: 2026-05-16 (Step 3 closure)
-Today:       2026-05-19
+Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result);
+             Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
+             fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
+             config, no open caveats; see below)
+Next:        Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines)
+Blocker:     none
+Today:       2026-07-07
 
-Headline numbers from the closed work (Step 3, N=600 episodes, byte-identical):
+Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
+  evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
+  softmax:     acc 0.875   far-OOD SVHN AUROC 0.838   ECE 0.119   Brier 0.190
+  AUROC gap +0.006 (< 0.05 bar); evidential WORSE calibrated. Escalation fired.
+
+Step 4.5 FINAL headline (same split/protocol, N=600, R-EDL loss retune
+VAL-selected via a real sweep, TS/energy baselines, near-OOD = REAL
+TinyImageNet + CIFAR-100-heldout) — TIER 3, but evidential decisively beats
+BOTH probability-based softmax scores (MSP, TS-MSP) on EVERY OOD pool tested:
+  evidential:  acc 0.884 (+0.014 vs Step 4)   ECE 0.285 (-0.056)   Brier 0.285 (-0.068)
+               far-OOD(SVHN) AUROC 0.914   near-OOD(CIFAR100) 0.878   near-OOD(TinyImageNet) 0.913
+  softmax:     acc 0.875 (byte-identical across all 3 runs)   ECE 0.082 / TS 0.041
+               far-OOD:  msp 0.838, ts_msp 0.828, energy 0.905
+               near-OOD(TIN): msp 0.790, ts_msp 0.782, energy 0.925
+  vs MSP/TS-MSP: evidential wins EVERY pool by +0.076 to +0.141 AUROC (decisive).
+  vs ENERGY: evidential wins far-OOD (+0.009) and CIFAR100-near (+0.015), but
+  LOSES TinyImageNet-near by -0.013 — the one near-miss keeping this at Tier 3.
+  VAL sweep (real, in-process, 3 combos) found the ECE surface FLAT (~0.285-
+  0.296) across kl_weight_max ∈ {0.05,0.1,0.25} — calibration ceiling confirmed,
+  not assumed. Recommended narrative: evidential has a genuine, repeated
+  OOD-detection edge over every confidence-based score, is competitive with
+  (not clearly better than) the strongest non-probabilistic baseline (energy),
+  and calibration remains the open problem even after a real search. See
+  step_writeups/step4_5.txt §4, §4.1, §6, §7 for full numbers/story — this
+  writeup is FINAL, no caveats remain open (§5, §8).
+  Perf note: TinyImageNet loader initially hung 1h+ on Google Drive (120k-file
+  extraction over FUSE) — fixed to read straight from the zip, no extraction.
+
+Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
   softmax baseline:           acc 0.823 ± 0.006   AUROC 0.850
-  OOD AUROC gap (E - S):                  +0.101
-  R1 calibration trade-off story intact at the Phase 1 stand-in benchmark.
 
 
 ================================================================================
@@ -220,6 +246,71 @@ Risks (re-read before starting):
   [ ] R-FALLBACK: if meta-training fails, fall back to per-episode-
       fine-tune on the new Bertinetto split (uses evaluate_finetune)
   [ ] R-SPLIT-DRIFT: do NOT regenerate the split file
+
+
+--------------------------------------------------------------------------------
+STEP 4.5 — SETTLE THE SCIENCE (fair baselines + near-OOD verdict)   [x] CLOSED
+--------------------------------------------------------------------------------
+Phase: 2.5   RQ: RQ2 + RQ3 (decisive re-test)   Writeup: step_writeups/step4_5.txt
+Spec/plan: docs/superpowers/{specs,plans}/2026-07-06-step4-5-settle-the-science*
+
+Motivation: Step 4's negative result was measured on the WRONG axis (far-OOD)
+without the baseline that most threatens the thesis (temperature scaling). This
+sub-step adds the fair test before reframing.
+
+Actions:
+  [x] W0  real Bertinetto split materialized (scripts/build_cifar_fs_split.py;
+          _status=canonical_bertinetto_via_torchmeta). R-SPLIT-DRIFT: reproducible via the
+          regenerator script (data/ is gitignored so the file isn't tracked;
+          `git add -f` it if you want it versioned)
+  [x] W0  fixed buggy test_prototype_head_raises_on_missing_class
+  [x] W1  temperature scaling (Guo) — src/evaluators/temperature.py + tests
+  [x] W1  energy score (Liu) — src/evaluators/ood.py:energy_score + tests
+  [x] W2  R-EDL loss knobs (prior_per_class, use_variance) threaded through
+          loss/vacuity/trainer/train.py; configs/exp_phase2_evidential_retuned
+  [x] W3  near-OOD loaders (TinyImageNet + CIFAR-100-heldout) + tests
+  [x] W3  evaluate_episodic refactored to a score x OOD-pool matrix + tests
+  [x] W3  scripts/evaluate.py wired (val-T fit, OOD pools, wider JSON)
+  [x] W4  scripts/step45_verdict.py (master table + tiered rule) + tests
+  [x] W4  notebooks/step4_5_settle.ipynb (Colab runner)
+  [x] RUN step4_5_settle.ipynb on Colab -> results/step45_*_metrics.json
+      (FIRST run 2026-07-06 with hand-picked evidential config + CIFAR-100-
+      heldout near-OOD only; FINAL run 2026-07-07 with a real in-process
+      VAL-only R-EDL sweep + real TinyImageNet near-OOD — this is the one the
+      numbers below reflect)
+  [x] apply the tiered verdict; fill step_writeups/step4_5.txt §4; decide narrative
+  [x] W2-followup  scripts/step45_val_sweep.py (in-process VAL sweep; ran
+      cleanly, kl_weight_max=0.05 won, calibration surface confirmed FLAT)
+  [x] W3-followup  scripts/evaluate.py --use-tinyimagenet (eval-only, no
+      retrain; ran cleanly after fixing a Drive-extraction perf bug — see below)
+
+Exit criteria:
+  [x] both step45 metrics JSONs exist with the matrix keys + temperature/ece_ts
+      + tin_near columns
+  [x] tier decided (1/2/3) via scripts/step45_verdict.py -> TIER 3 (final)
+  [x] pytest green locally (66 passed, 0 skipped — TinyImageNet zip-read test
+      now runs for real, no more skip-guard)
+  [x] no open caveats (both follow-ups executed successfully; see step_writeups/
+      step4_5.txt §5, §8)
+
+Decision rule (step_writeups/step4_5.txt §3): T1 evidential beats MSP AND
+TS-softmax on near-OOD by >=0.03 and isn't worse-calibrated; T2 ties near-OOD
+but wins ID calibration; T3 reframe to parity.
+
+RESULT (FINAL): Tier 3, but NOT a flat loss — evidential vacuity beats BOTH
+softmax-MSP and TS-softmax on EVERY OOD pool (far-OOD SVHN + two independent
+near-OOD sets: CIFAR-100-heldout AND real TinyImageNet), by +0.076 to +0.141
+AUROC — decisive and repeated. Against the strong non-probabilistic ENERGY
+score specifically, evidential wins far-OOD (+0.009) and CIFAR100-near
+(+0.015) but LOSES TinyImageNet-near by -0.013 — the real near-miss that keeps
+this at Tier 3 (short of the 0.03 "decisive win" bar). Calibration improved
+over Step 4 (ECE -0.056, Brier -0.068) but a REAL VAL-only sweep confirmed the
+surface is flat around ECE~0.285 — still ~7x worse than TS-softmax (0.041).
+See step_writeups/step4_5.txt §4/§4.1/§6/§7 for the full table and narrative.
+Both follow-ups (TinyImageNet near-OOD, VAL sweep) were built AND executed
+successfully — no caveats remain open. One perf bug found+fixed en route:
+TinyImageNet's ~120k-file archive extracted onto Google Drive hung 1h+ (FUSE
+per-file round-trip); fixed to read images straight out of the zip.
 
 
 ================================================================================

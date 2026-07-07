@@ -41,6 +41,7 @@ from src.utils import (
 )
 from src.datasets import (
     build_dataset, sample_episode, get_svhn_ood, get_cifar_fs,
+    get_cifar_fs_heldout_ood, get_tinyimagenet_ood,
     EpisodicIterableDataset,
 )
 from src.models import build_model
@@ -48,7 +49,7 @@ from src.losses import build_loss
 from src.trainers import train_one_episode
 from src.evaluators import (
     accuracy, f1_macro, expected_calibration_error, brier_score,
-    ood_auroc, fpr_at_95_tpr,
+    ood_auroc, fpr_at_95_tpr, energy_score, fit_temperature,
     evidence_to_probs_and_vacuity, logits_to_probs_and_uncertainty,
     evaluate_episodic,
 )
@@ -262,6 +263,39 @@ def _evaluate_finetune(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
 # =====================================================================
 # Step 4 / Phase 2 path (prototype head, frozen meta-trained adapter)
 # =====================================================================
+def _fit_val_temperature(model, cfg, device, repo_root, logger) -> float:
+    """Fit one global temperature T on the FROZEN val episodes (seeds from
+    configs/val_episodes.yaml), Guo et al. 2017. Softmax interpretation only.
+    The val seeds ([10000..10099]) are disjoint from the 600 test seeds
+    ([0..599]) -> no test leakage. T is then applied unchanged to every test
+    episode to produce the ts_msp OOD score + ece_ts/brier_ts calibration."""
+    with open(repo_root / "configs" / "val_episodes.yaml") as f:
+        val_spec = yaml.safe_load(f)
+    val_seeds = list(val_spec["seeds"])
+    val_split = get_cifar_fs(
+        data_root=cfg.dataset.data_root,
+        image_size=int(cfg.dataset.image_size), split="val",
+    )
+    val_iter = EpisodicIterableDataset(
+        val_split, n_way=int(cfg.dataset.n_way), k_shot=int(cfg.dataset.k_shot),
+        q_query=int(cfg.dataset.q_query), num_episodes=len(val_seeds),
+        seed_offset=int(val_seeds[0]),
+    )
+    backbone = model.backbone
+    logits_all, targets_all = [], []
+    model.eval()
+    with torch.no_grad():
+        for sx, sy, qx, qy in val_iter:
+            sf = backbone(sx.to(device))
+            qf = backbone(qx.to(device))
+            ql = model.forward_proto_from_features(sf, sy.to(device), qf)
+            logits_all.append(ql.cpu())
+            targets_all.append(qy.cpu())
+    T = fit_temperature(torch.cat(logits_all), torch.cat(targets_all))
+    logger.info(f"fit temperature on {len(val_seeds)} val episodes: T={T:.4f}")
+    return T
+
+
 def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
     """Phase 2 evaluation: load the meta-trained adapter, freeze it, run
     prototype-head over the 600 test episodes."""
@@ -313,24 +347,49 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
         f"best_val_acc={ckpt.get('best_val_acc', float('nan')):.3f}"
     )
 
-    # --- OOD features (SVHN, frozen-backbone forward) -----------------
-    svhn_x = get_svhn_ood(
-        data_root=cfg.ood.data_root,
-        image_size=int(cfg.dataset.image_size),
-        num_samples=int(cfg.ood.num_samples),
-        seed=int(cfg.ood.seed),
-    )
-    svhn_feats = _extract_features(model.backbone, svhn_x, device)
-    logger.info(f"cached SVHN features: {tuple(svhn_feats.shape)}")
+    # --- OOD pools (Step 4.5 / W3): far SVHN + near CIFAR-100-heldout
+    #     + optional near TinyImageNet. Each is precomputed backbone features. -
+    img_size = int(cfg.dataset.image_size)
+    n_ood = int(cfg.ood.num_samples)
+    ood_seed = int(cfg.ood.seed)
+    pools = {}
+    svhn_x = get_svhn_ood(data_root=cfg.ood.data_root, image_size=img_size,
+                          num_samples=n_ood, seed=ood_seed)
+    pools["svhn_far"] = _extract_features(model.backbone, svhn_x, device)
+    heldout_x = get_cifar_fs_heldout_ood(
+        data_root=cfg.dataset.data_root, image_size=img_size,
+        num_samples=n_ood, seed=ood_seed, heldout_split="val")
+    pools["cifar100_near"] = _extract_features(model.backbone, heldout_x, device)
+    # TinyImageNet near-OOD: from the config OR the --use-tinyimagenet CLI flag
+    # (the flag lets us add it to an ALREADY-TRAINED checkpoint, eval-only, with
+    # no retrain).
+    use_tin = bool(cfg.ood.get("use_tinyimagenet", False)) or bool(
+        getattr(args, "use_tinyimagenet", False))
+    if use_tin:
+        tin_x = get_tinyimagenet_ood(data_root=cfg.dataset.data_root,
+                                     image_size=img_size, num_samples=n_ood,
+                                     seed=ood_seed)
+        pools["tin_near"] = _extract_features(model.backbone, tin_x, device)
+    logger.info("OOD pools: " + ", ".join(
+        f"{k}={tuple(v.shape)}" for k, v in pools.items()))
 
-    # --- Run the episodic evaluator -----------------------------------
+    # Temperature scaling baseline (softmax only), fit on the val episodes.
+    T = None
+    if interp == "softmax":
+        T = _fit_val_temperature(model, cfg, device, repo_root, logger)
+
+    prior_pc = float(cfg.loss.get("prior_per_class", 1.0))
+
+    # --- Run the episodic evaluator (score x OOD-pool matrix) ---------
     result = evaluate_episodic(
         model=model,
         test_iterable=test_iter,
-        ood_features=svhn_feats,
+        ood_pools=pools,
         num_classes=K,
         interpretation=interp,
         ece_bins=int(cfg.eval.ece_bins),
+        temperature=T,
+        prior_per_class=prior_pc,
         device=device,
         logger=logger,
         wandb_run=wb,
@@ -351,6 +410,8 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
         "seeds_last10":  [int(s) for s in seeds[-10:]],
         "trainer_type": "episodic",
         "best_val_epoch": int(best_val_epoch),
+        "temperature": (float(T) if T is not None else 0.0),
+        "prior_per_class": prior_pc,
     })
     return {
         "summary": base_summary,
@@ -378,6 +439,9 @@ def main() -> None:
     parser.add_argument("--results-suffix", default="step3",
                         help="Prefix for output JSON / PNG files in "
                              "results_dir.")
+    parser.add_argument("--use-tinyimagenet", action="store_true",
+                        help="Add the TinyImageNet near-OOD pool at eval time "
+                             "(no retrain needed); ORs with cfg.ood.use_tinyimagenet.")
     args = parser.parse_args()
 
     cfg = load_config(args.config)

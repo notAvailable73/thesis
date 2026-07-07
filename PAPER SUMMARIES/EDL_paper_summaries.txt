@@ -1,0 +1,320 @@
+================================================================================
+PAPER SUMMARIES — Evidential Deep Learning (EDL) reading set
+Reference notes for thesis: "Bayesian PEFT / Evidential Uncertainty / Few-Shot CNN"
+Generated: 2026-07-05
+Files processed: 5 PDFs (DER, EDL, Predictive Uncertainity, Prior Posterior, Survey EDL)
+Paraphrased from the PDFs; equations restated in simplified notation. No numbers
+or claims are invented — where a detail was absent it is marked "not stated".
+================================================================================
+
+
+==== PAPER: Deep Evidential Regression (DER.pdf) ====
+
+1. TITLE / AUTHORS / VENUE
+   "Deep Evidential Regression." Alexander Amini, Wilko Schwarting, Ava
+   Soleimany, Daniela Rus (MIT CSAIL / Harvard). NeurIPS 2020 (arXiv:1910.02600v2).
+
+2. CORE IDEA
+   Trains a *deterministic* (non-Bayesian) regression network to output, in a
+   single forward pass, both aleatoric (data) and epistemic (model) uncertainty.
+   Instead of a Bayesian prior over weights, it places an evidential prior over
+   the Gaussian likelihood parameters and learns the hyperparameters of that
+   higher-order distribution. Needs no sampling at inference and no OOD data
+   during training.
+
+3. METHOD / ARCHITECTURE
+   Assume targets y ~ N(mu, sigma^2) with unknown mu, sigma^2. Place a
+   Normal-Inverse-Gamma (NIG) prior on (mu, sigma^2): mu ~ N(gamma, sigma^2/nu),
+   sigma^2 ~ Inv-Gamma(alpha, beta). The network emits 4 outputs per target:
+   m = (gamma, nu, alpha, beta).
+     - Prediction:  E[mu] = gamma
+     - Aleatoric:   E[sigma^2] = beta/(alpha-1)
+     - Epistemic:   Var[mu] = beta/(nu*(alpha-1))
+     - Total evidence Phi = 2*nu + alpha
+   Loss = maximize model fit + regularize wrong evidence:
+     L_NLL: negative log of the analytic marginal likelihood, which is a
+            Student-t: p(y|m) = St(y; gamma, beta(1+nu)/(nu*alpha), 2*alpha)
+            (this is the "Type II Maximum Likelihood" evidential loss).
+     L_R  = |y - gamma| * (2*nu + alpha)   (error-scaled evidence penalty)
+     L = L_NLL + lambda * L_R
+   Pseudocode: for each x -> (gamma,nu,alpha,beta) via a shared trunk with a
+   4-neuron head; softplus on nu,alpha,beta (with +1 on alpha since alpha>1),
+   linear on gamma; compute L_NLL and L_R; backprop.
+
+4. KEY HYPERPARAMETERS / TRAINING
+   Optimizer Adam. Cubic-toy setup: lr=5e-3, 5000 iters, batch=128, lambda=0.01,
+   3 hidden layers x 100 units. Depth task: U-Net trunk emitting four HxW maps.
+   lambda is the critical knob: 0 -> overconfident, too high -> over-inflated.
+
+5. DATASETS & METRICS
+   1-D cubic toy (y=x^3+eps); UCI regression (Boston, Concrete, Energy, Kin8nm,
+   Naval, Power, Protein, Wine, Yacht); monocular depth on NYU Depth v2; OOD test
+   on ApolloScape; FGSM adversarial perturbations. Metrics: RMSE, NLL, inference
+   speed, calibration error, AUC-ROC for OOD detection.
+
+6. IMPLEMENTATION NOTES
+   The classification-style KL-to-a-zero-evidence prior is *undefined* for NIG
+   (Gamma(0) / divide-by-zero), so they deliberately use the direct error-scaled
+   evidence regularizer L_R instead of a KL term. A soft epsilon-evidence KL was
+   tried and found hyper-sensitive to epsilon. Regularizer inflates uncertainty
+   only where predictions err; large evidence near correct targets is not
+   penalized. Ablations show OOD uncertainty collapses as lambda -> 0.
+
+7. OFFICIAL CODE REPO
+   https://github.com/aamini/evidential-deep-learning (stated in the paper).
+
+8. RELEVANCE TO MY THESIS
+   The regression counterpart of the evidential head — supplies the "evidence
+   regularizer scaled by prediction error" idea and single-pass epistemic
+   uncertainty that the Bayesian-PEFT evidential framework can reuse if extended
+   beyond classification.
+
+
+==== PAPER: Evidential Deep Learning to Quantify Classification Uncertainty (EDL.pdf) ====
+
+1. TITLE / AUTHORS / VENUE
+   "Evidential Deep Learning to Quantify Classification Uncertainty."
+   Murat Sensoy (Ozyegin U.), Lance Kaplan (US Army Research Lab), Melih Kandemir
+   (Bosch CAI). NIPS 2018 (arXiv:1806.01768v3). *This is the foundational EDL paper.*
+
+2. CORE IDEA
+   Reinterprets the classifier output through Dempster-Shafer / Subjective-Logic
+   theory: replace softmax with a non-negative "evidence" output and place a
+   Dirichlet distribution over class probabilities. Predictions become subjective
+   opinions with an explicit "I don't know" (uncertainty) mass. Single
+   deterministic net; strong OOD and adversarial robustness vs Bayesian baselines.
+
+3. METHOD / ARCHITECTURE
+   Replace softmax with ReLU (or similar) so outputs are non-negative evidence
+   e_k = ReLU(f(x)). Dirichlet params alpha_k = e_k + 1; Dirichlet strength
+   S = sum_k alpha_k. Belief b_k = e_k/S, uncertainty u = K/S, expected class
+   prob p_hat_k = alpha_k/S. Three candidate losses are derived by integrating a
+   base loss over the Dirichlet:
+     (Eq3) Type II MLE (marginal likelihood),
+     (Eq4) Bayes risk of cross-entropy (uses digamma psi),
+     (Eq5) Bayes risk of sum-of-squares:
+           L_i = sum_k (y_k - alpha_k/S)^2 + alpha_k(S-alpha_k)/(S^2 (S+1))
+                 = error term + variance term.
+   They CHOOSE Eq5 (most stable). Add KL regularizer toward a uniform Dirichlet
+   on evidence-stripped params alpha_tilde = y + (1-y) ⊙ alpha, weighted by an
+   annealing coefficient lambda_t = min(1.0, t/10) with t = epoch index.
+
+4. KEY HYPERPARAMETERS / TRAINING
+   Backbone: LeNet with ReLU. Optimizer Adam (default settings), TensorFlow.
+   MNIST LeNet: 20 & 50 filters (5x5), 500 FC units. CIFAR5 "large" LeNet: 192
+   filters/conv layer, 1000 FC units. KL annealed over first ~10 epochs.
+
+5. DATASETS & METRICS
+   MNIST (+ rotated-digit test), notMNIST as OOD; CIFAR-10 split into CIFAR5
+   (train on 5 classes {dog,frog,horse,ship,truck}, treat other 5 as OOD); FGSM
+   adversarial (Cleverhans). Metrics: test accuracy, empirical CDF of predictive
+   entropy, and accuracy-vs-uncertainty-threshold curves.
+
+6. IMPLEMENTATION NOTES
+   Eq3/Eq4 losses generate excessive belief mass and are less stable -> Eq5 (SSE)
+   preferred. Three propositions guarantee the loss favors data fit over variance
+   and removes misleading evidence. KL annealing prevents premature collapse to
+   the uniform "don't know" state so misclassified samples can recover in later
+   epochs. Note: fully-uncertain predictions (u=1) count as failures in raw
+   accuracy, so accuracy tables understate the model.
+
+7. OFFICIAL CODE REPO
+   https://muratsensoy.github.io/uncertainty.html (implementation + demo, stated).
+
+8. RELEVANCE TO MY THESIS
+   Directly the mechanism my proposal encodes (evidence_k = ReLU(f), alpha=e+1,
+   S=sum alpha, u=K/S, Type-II/SSE evidential loss + annealed KL). This is the
+   primary reference for the evidential head and loss.
+
+
+==== PAPER: Predictive Uncertainty Estimation via Prior Networks (Predictive Uncertainity.pdf) ====
+
+1. TITLE / AUTHORS / VENUE
+   "Predictive Uncertainty Estimation via Prior Networks." Andrey Malinin,
+   Mark Gales (Cambridge). NeurIPS 2018 (arXiv:1802.10501v4).
+
+2. CORE IDEA
+   Separates predictive uncertainty into THREE sources — data (aleatoric), model
+   (epistemic), and *distributional* (train/test mismatch). Prior Networks (PNs)
+   explicitly parameterize a distribution over categorical distributions (a
+   Dirichlet over the simplex) so distributional uncertainty can be measured
+   distinctly, unlike methods that conflate it with data/model uncertainty.
+
+3. METHOD / ARCHITECTURE
+   A Dirichlet Prior Network (DPN) outputs concentration params alpha = f(x),
+   commonly alpha_c = exp(z_c); the predicted categorical is the Dirichlet mean
+   alpha_c/alpha_0 (alpha_0 = sum alpha_c = "precision" -> sharpness). Under plain
+   cross-entropy the precision is degenerate, so a bespoke loss is required.
+   Training is multi-task KL:
+     L = E_pin[ KL(Dir(alpha_hat) || p(mu|x)) ] + E_pout[ KL(Dir(alpha_tilde) || p(mu|x)) ]
+   In-distribution target: sharp Dirichlet (target precision alpha_hat_0 as a
+   hyperparameter; 1-hot means smoothed via Eq13 with epsilon). Out-of-dist
+   target: flat Dirichlet (all alpha_tilde_c = 1). *Requires OOD training data*
+   (synthesized, e.g. Factor Analysis / generative model, or a different real
+   dataset). Uncertainty measures: max prob & entropy (total), mutual information
+   (model), differential entropy of the Dirichlet (distributional).
+
+4. KEY HYPERPARAMETERS / TRAINING
+   Architectures: VGG-6 (MNIST), VGG-16 with Leaky-ReLU (SVHN, CIFAR-10).
+   Optimizer NADAM. Target precision alpha_hat_0 = 1e3 (MNIST/SVHN), 1e2 (CIFAR).
+   CE auxiliary-loss weight 0.0 (MNIST) / 1.0 (SVHN,CIFAR). 1-cycle LR for
+   SVHN/CIFAR (peak 10x base, floor 1e-6), exp-decay for MNIST; ~10-100 epochs.
+   OOD sources: MNIST uses a 50-dim Factor-Analysis model (inflate latent
+   variance to push samples to the in-domain boundary); SVHN uses CIFAR-10 as
+   OOD; CIFAR-10 uses CIFAR-100 as OOD. DPN needs *less* dropout than a plain DNN.
+
+5. DATASETS & METRICS
+   Synthetic 3-Gaussian; MNIST, SVHN, CIFAR-10/100. OOD sets: OMNIGLOT, SEMEION,
+   LSUN, TinyImageNet. Metrics: AUROC and AUPR for misclassification detection
+   and OOD detection.
+
+6. IMPLEMENTATION NOTES
+   Precision alpha_0 is degenerate under cross-entropy alone -> the KL loss is
+   essential. Learning sparse "1-hot" Dirichlet targets is ill-conditioned, so
+   smooth the target means (or use teacher-student). Differential entropy is the
+   best OOD measure, and its advantage over entropy/MI is decisive when classes
+   overlap or inputs are noise-corrupted (entropy/MI collapse, diff-entropy holds
+   up). The reliance on OOD training data is the main practical limitation.
+
+7. OFFICIAL CODE REPO
+   None mentioned in the paper (no code URL is given — do not assume one).
+
+8. RELEVANCE TO MY THESIS
+   Supplies the distributional-uncertainty framing and the closed-form Dirichlet
+   uncertainty measures (differential entropy, mutual information) useful for the
+   near-OOD detection goal (RQ3) — but it needs OOD data at training time, which
+   contrasts with the OOD-free evidential regularization my framework targets.
+
+
+==== PAPER: Prior and Posterior Networks — A Survey on EDL Methods for Uncertainty Estimation (Prior Posterior.pdf) ====
+
+1. TITLE / AUTHORS / VENUE
+   "Prior and Posterior Networks: A Survey on Evidential Deep Learning Methods
+   For Uncertainty Estimation." Dennis Ulmer, Christian Hardmeier, Jes Frellsen
+   (IT University of Copenhagen / DTU / Pioneer Centre for AI). Under review,
+   uses TMLR notation. arXiv:2110.03051v3, 7 Mar 2023. (This is a SURVEY, not a
+   single method.)
+
+2. CORE IDEA
+   Unifies the EDL family under one notation and splits it into networks that
+   parameterize a Dirichlet *prior* vs a Dirichlet *posterior*, for both
+   classification and regression. Central factorization:
+   p(y|x,D) = ∫∫ P(y|pi) p(pi|x,theta) p(theta|D) dpi dtheta, with a point
+   estimate theta_hat -> uncertainty in a single forward pass. Aims to be an
+   accessible intro plus a derivations reference for the Dirichlet.
+
+3. METHOD / ARCHITECTURE (as surveyed)
+   Dirichlet conjugacy: posterior beta_k = alpha_k + N_k (class counts). Closed-
+   form uncertainty: expected entropy (data/aleatoric), mutual information
+   (distributional), max alpha_k or alpha_0 (epistemic spread). Two families:
+     PRIOR NETWORKS (predict alpha): Malinin & Gales KL / reverse-KL (reverse-KL
+       gives a unimodal target); Tsiligkaridis (lp + Renyi divergence);
+       Nandy et al. "representation gap"; ensemble/self distribution distillation;
+       PAC-regularized PN; RNN/GNN variants. Many need OOD data or distillation.
+     POSTERIOR NETWORKS (predict pseudo-counts N_k, OOD-free): Sensoy EDL (l2 +
+       KL); Charpentier Posterior Network — encoder z=f(x) + per-class
+       normalizing flow, beta_k = alpha_k + N_k * p(z|y=k,phi), trained with
+       uncertainty-aware CE (UCE = psi(alpha_y) - psi(alpha_0)) + entropy
+       regularizer; Natural Posterior Network (exponential-family generalization,
+       single flow, Bayesian update chi_post = (n_prior*chi_prior + n_i*chi_i)/
+       (n_prior+n_i)); Belief Matching / Variational Dirichlet (ELBO).
+     REGRESSION: Deep Evidential Regression (NIG prior), Regression Prior Network
+       (Normal-Wishart, reverse-KL), Natural Posterior Network (Inverse-chi^2).
+
+4. KEY HYPERPARAMETERS / TRAINING
+   N/A (survey). It catalogs loss designs (l2 + KL-to-uniform, reverse-KL, UCE +
+   entropy regularizer, Renyi, PAC bound) rather than a single training recipe.
+
+5. DATASETS & METRICS
+   N/A directly (survey). References the standard OOD-detection / calibration
+   benchmarks used by the surveyed works.
+
+6. IMPLEMENTATION NOTES
+   Key caution: the "idealized" Dirichlet shapes (sharp corner = confident,
+   center = aleatoric, flat = OOD) are NOT produced automatically by empirical
+   risk minimization — they must be forced by loss design. Reverse-KL yields a
+   cleaner unimodal target than forward-KL. "Representation gap" (density on
+   simplex edges) helps separate epistemic vs distributional uncertainty.
+   Posterior/density-based methods (PostNet) avoid OOD data via normalizing-flow
+   density estimation. The additive MI decomposition into data+distributional
+   uncertainty has been criticized (unreliable early in training).
+
+7. OFFICIAL CODE REPO
+   The survey itself lists code repositories for each surveyed method in its
+   Appendix A.2 (per-work links); it does not ship a single unified codebase.
+   (No standalone repo URL for the survey is given in the extracted text.)
+
+8. RELEVANCE TO MY THESIS
+   The design-space map: it tells me exactly which evidential loss/regularizer
+   and prior-vs-posterior variants exist (and which are OOD-free, e.g. PostNet)
+   so I can choose the right evidential head + loss for the Bayesian-PEFT CNN.
+
+
+==== PAPER: A Comprehensive Survey on Evidential Deep Learning and Its Applications (Survey EDL.pdf) ====
+
+1. TITLE / AUTHORS / VENUE
+   "A Comprehensive Survey on Evidential Deep Learning and Its Applications."
+   Junyu Gao, Mengyuan Chen, Liangyu Xiang, Changsheng Xu (Institute of
+   Automation, Chinese Academy of Sciences). arXiv:2409.04720v1, 7 Sep 2024.
+   (SURVEY.)
+
+2. CORE IDEA
+   A method-centric survey of EDL grounded in Subjective Logic theory. It places
+   EDL within the broader uncertainty-quantification landscape (single-
+   deterministic / Bayesian / ensemble / post-hoc) and organizes recent EDL
+   advances into four themes: reformulating evidence collection, using OOD
+   samples, training strategies, and evidential regression, plus applications.
+
+3. METHOD / ARCHITECTURE (as surveyed)
+   Subjective opinion tau = (b, u, a): belief b, uncertainty mass u, base rate a,
+   with sum(b)+u = 1, bijective to a Dirichlet via alpha_i = b_i*W/u + a_i*W,
+   W = prior weight. Vanilla EDL: e = Softplus(f(x)) (evidence function; ReLU
+   also usable), b_i = e_i/(sum e + W), u = W/(sum e + W), alpha_i = e_i + a_i*W.
+   Setting a_i = 1/C and W = C recovers the familiar alpha_i = e_i + 1. Losses
+   (base loss integrated over the Dirichlet):
+     MSE-EDL: sum_i (y_i - alpha_i/S)^2 + alpha_i(S-alpha_i)/(alpha_i^2(alpha_i+1))
+              [note: as printed; matches Sensoy's variance-decomposed SSE loss]
+     CE-EDL:  sum_i y_i (psi(S) - psi(alpha_i))
+     NLL-EDL: sum_i y_i (log S - log alpha_i)
+   plus annealed KL regularizer, weight mu_t = min(1.0, t/10). Inference:
+   projected prob P_i = alpha_i/S, uncertainty u = C/S. R-EDL relaxation: treat
+   prior weight W as a tunable hyperparameter (drop the rigid "+1") and drop the
+   variance-minimizing regularizer to reduce overconfidence.
+
+4. KEY HYPERPARAMETERS / TRAINING
+   N/A (survey). Highlights the KL annealing coefficient, the prior weight W, the
+   evidence-function choice (Softplus vs ReLU vs exp), and the R-EDL relaxations
+   as the main tunable design decisions.
+
+5. DATASETS & METRICS
+   N/A (survey) — it reviews EDL applications across paradigms/downstream tasks
+   rather than running its own benchmarks.
+
+6. IMPLEMENTATION NOTES
+   Terminology caution: EDL "evidence" is NOT Bayesian model evidence (marginal
+   likelihood); "observation" is a cleaner reading. Distinguishes vacuity (lack
+   of evidence ~ epistemic) from dissonance (conflicting evidence). Vanilla-EDL
+   uncertainty is generally interpreted as epistemic. R-EDL evidence that the
+   standard "+1" prior and the variance regularizer are non-essential and can
+   induce overconfidence — a useful ablation direction. Choice of evidence
+   activation (Softplus vs ReLU) matters for stability.
+
+7. OFFICIAL CODE REPO
+   https://github.com/MengyuanChen21/Awesome-Evidential-Deep-Learning
+   (curated list of EDL methods/applications, stated in the paper).
+
+8. RELEVANCE TO MY THESIS
+   The most current (2024) catalog of EDL variants and practical caveats
+   (R-EDL's tunable W, dropping the variance regularizer, evidence-function
+   choice) directly informing the evidential-head design and the loss/ablation
+   choices for my few-shot PEFT CNN.
+
+
+================================================================================
+COVERAGE CHECK
+   PDFs in folder: 5   |   Papers processed: 5   |   Skipped: 0
+   (DER.pdf, EDL.pdf, Predictive Uncertainity.pdf, Prior Posterior.pdf, Survey EDL.pdf)
+   All 5 parsed cleanly via PyMuPDF; benign color-space warnings only, no text loss.
+   Note: "Prior Posterior.pdf" and "Survey EDL.pdf" are both SURVEYS (Ulmer et al.
+   2023 and Gao et al. 2024), so sections 4-5 for them are marked N/A by nature.
+================================================================================

@@ -273,6 +273,9 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
         wandb_run=wb,
         device=device,
         collapse_threshold=float(cfg.trainer.collapse_threshold),
+        # R-EDL knobs (Step 4.5 / W2); defaults reproduce the Sensoy loss.
+        evid_prior_per_class=float(cfg.loss.get("prior_per_class", 1.0)),
+        evid_use_variance=bool(cfg.loss.get("use_variance", True)),
     )
     result = trainer.fit(train_iter_factory, val_iter_factory)
 

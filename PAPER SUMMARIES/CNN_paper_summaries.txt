@@ -1,0 +1,185 @@
+################################################################################
+CONSOLIDATED PAPER SUMMARIES
+Reference notes for: "Bayesian PEFT / Evidential Uncertainty / Few-Shot CNN" thesis
+Generated: 2026-07-05
+PDFs in folder: 2  |  Papers processed: 2
+Text extracted with PyMuPDF (the Read tool's PDF renderer was unavailable);
+extraction was clean for both files.
+
+NOTE ON SCOPE: Both PDFs in this folder are CNN *backbone architecture* papers,
+not PEFT / Bayesian / evidential papers. The thesis proposal's own "Papers Read"
+list (B-PEFT, Conv-Adapter, Evidential Deep Learning, BayesLoRA) does NOT include
+either of these two. So treat these as references for the *frozen backbones* the
+framework adapts, not for the adapter/uncertainty methods themselves.
+################################################################################
+
+
+==== PAPER: A ConvNet for the 2020s (ConvNeXt) ====
+
+1. TITLE / AUTHORS / VENUE
+   Title: "A ConvNet for the 2020s"
+   Authors: Zhuang Liu, Hanzi Mao, Chao-Yuan Wu, Christoph Feichtenhofer,
+            Trevor Darrell, Saining Xie (Facebook AI Research / UC Berkeley).
+   Venue as printed: arXiv:2201.03545v2 [cs.CV], 2 Mar 2022. (This is the
+   preprint of the CVPR 2022 paper; the PDF itself only prints the arXiv line.)
+
+2. CORE IDEA
+   Vision Transformers (esp. hierarchical ones like Swin) had overtaken ConvNets
+   on image classification/detection/segmentation, and the gains were widely
+   attributed to self-attention. This paper argues the gap is largely due to
+   training recipes and macro/micro architecture choices, not attention itself.
+   Starting from a plain ResNet-50, the authors incrementally "modernize" it
+   using design ideas borrowed from Transformers, yielding a pure-ConvNet family
+   (ConvNeXt) that matches or beats Swin at equal FLOPs (up to 87.8% ImageNet
+   top-1) while staying simple and fully-convolutional.
+
+3. METHOD / ARCHITECTURE
+   A step-by-step "roadmap" of modifications, each measured on ImageNet-1K:
+   - Macro: change stage block ratio from (3,4,6,3) to (3,3,9,3) (~1:1:3:1);
+     replace the ResNet stem with a "patchify" stem = 4x4 conv, stride 4.
+   - ResNeXt-ify: use depthwise conv for spatial mixing, widen channels 64->96.
+   - Inverted bottleneck: expansion ratio 4 (MobileNetV2-style), then move the
+     depthwise conv up (before the 1x1 expansion).
+   - Large kernel: depthwise kernel 7x7 (benefit saturates past 7x7).
+   - Micro: ReLU->GELU; use only ONE activation per block (between the two 1x1
+     convs); fewer norms (one norm per block); BatchNorm->LayerNorm; add separate
+     2x2 stride-2 downsampling layers, each preceded by an LN (needed for stable
+     training).
+   ConvNeXt block (pseudocode):
+     x_in = x
+     x = DWConv7x7(x)          # depthwise, spatial mixing
+     x = LayerNorm(x)
+     x = Conv1x1(x, dim*4)     # pointwise expand (channel mixing)
+     x = GELU(x)
+     x = Conv1x1(x, dim)       # pointwise project
+     x = LayerScale * x        # learnable per-channel scale, init 1e-6
+     x = x_in + StochasticDepth(x)   # residual
+   Variants (channels C / blocks B per stage):
+     T: C=(96,192,384,768), B=(3,3,9,3)
+     S: same C, B=(3,3,27,3);  B: C=(128,256,512,1024), B=(3,3,27,3)
+     L: C=(192,384,768,1536);  XL: C=(256,512,1024,2048)
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   ImageNet-1K (300 epochs): optimizer AdamW (beta1/beta2 = 0.9/0.999), base LR
+   4e-3, batch size 4096, weight decay 0.05, cosine LR decay, 20-epoch linear
+   warmup. Augmentation: Mixup 0.8, CutMix 1.0, RandAugment (9,0.5), Random
+   Erasing 0.25, Label Smoothing 0.1. Regularization: Stochastic Depth (rate
+   0.1/0.4/0.5/0.5 for T/S/B/L), Layer Scale init 1e-6, EMA 0.9999, trunc-normal
+   init (0.2). ImageNet-22K pretrain: 90 epochs, no EMA. Fine-tuning on IN-1K:
+   AdamW, LR 5e-5, 30 epochs, weight decay 1e-8, layer-wise LR decay (0.7-0.8),
+   no warmup, batch 512, no Mixup/CutMix. Loss = standard cross-entropy (softmax).
+
+5. DATASETS & METRICS
+   ImageNet-1K and ImageNet-22K (top-1 accuracy); COCO detection/segmentation via
+   Mask R-CNN & Cascade Mask R-CNN (box/mask AP); ADE20K semantic segmentation via
+   UperNet (mIoU); robustness on ImageNet-A/R/Sketch and ImageNet-C/C-bar
+   (accuracy and mean corruption error).
+
+6. IMPLEMENTATION NOTES
+   - EMA severely hurts models with BatchNorm; disabled during the modernization
+     runs. Substituting LN for BN in a *vanilla* ResNet is suboptimal — LN only
+     works well once the other modernizations are in place.
+   - Naive 2x2 downsampling diverges; adding LN wherever spatial resolution
+     changes (after stem, before each downsample, after final GAP) stabilizes it.
+   - Depthwise-conv models can be slower/more memory-hungry per FLOP; the paper
+     recommends PyTorch "channels-last" memory layout for speed on A100.
+   - The smallest official variant is ConvNeXt-T (~29M params, 4.5 GFLOPs). The
+     "ConvNeXt-Nano" named in the thesis proposal is NOT defined in this paper —
+     it is a later community/timm variant; verify its exact config from timm.
+
+7. OFFICIAL CODE REPO
+   Yes, printed in the paper: https://github.com/facebookresearch/ConvNeXt
+
+8. RELEVANCE TO THESIS
+   Defines one of the candidate frozen backbones (ConvNeXt) and its block
+   internals (7x7 depthwise + LN + two 1x1 convs with LayerScale) — exactly the
+   sites where the framework would insert serial/parallel bottleneck adapters or
+   LoRA on the 1x1 and depthwise kernels.
+
+
+==== PAPER: Searching for MobileNetV3 ====
+
+1. TITLE / AUTHORS / VENUE
+   Title: "Searching for MobileNetV3"
+   Authors: Andrew Howard, Mark Sandler, Grace Chu, Liang-Chieh Chen, Bo Chen,
+            Mingxing Tan, Weijun Wang, Yukun Zhu, Ruoming Pang, Vijay Vasudevan,
+            Quoc V. Le, Hartwig Adam (Google AI / Google Brain).
+   Venue as printed: arXiv:1905.02244v5 [cs.CV], 20 Nov 2019. (Preprint of the
+   ICCV 2019 paper; the PDF prints only the arXiv line.)
+
+2. CORE IDEA
+   Deliver the next generation of on-device (mobile-CPU) vision backbones that
+   optimize the accuracy-vs-latency trade-off. The method combines automated
+   architecture search (hardware-aware NAS + NetAdapt) with hand-designed
+   improvements (redesigned expensive layers, a cheap h-swish nonlinearity,
+   larger squeeze-and-excite). Two models are released: MobileNetV3-Large and
+   -Small, plus a lightweight segmentation decoder (LR-ASPP).
+
+3. METHOD / ARCHITECTURE
+   Building block = MobileNetV2 inverted residual + linear bottleneck, with a
+   squeeze-and-excite (SE) module placed on the expanded (depthwise) features,
+   and h-swish activations in the deeper layers. Block flow:
+     1x1 expand (NL) -> DWConv KxK (NL) -> [SE: Pool->FC-ReLU->FC-hardSigmoid->scale]
+     -> 1x1 project (linear) -> residual add (if in/out channels match)
+   Nonlinearities (author's notation preserved):
+     h-sigmoid(x) = ReLU6(x + 3) / 6
+     h-swish(x)   = x * ReLU6(x + 3) / 6      # cheap, quantization-friendly swish
+   Search pipeline:
+     (a) Platform-aware NAS (MnasNet-style RNN controller, factorized
+         hierarchical search space) finds the global structure. For SMALL models
+         the multi-objective reward exponent is retuned to w = -0.15 (vs -0.07 in
+         MnasNet) because accuracy changes faster with latency at small scale.
+     (b) NetAdapt refines per-layer filter counts:
+         - start from NAS seed
+         - each step: propose modifications giving >= delta latency reduction
+           (shrink an expansion layer, or shrink a shared bottleneck size),
+           fine-tune T steps, pick proposal maximizing  deltaAcc / |deltaLatency|
+         - iterate until target latency, then retrain from scratch.
+   Hand designs: (i) move the final 1x1 feature-expansion conv AFTER global
+   average pooling so it runs at 1x1 spatial resolution (near-free), and drop the
+   now-redundant projection layer -> saves ~7ms/30M MAdds; (ii) cut the first
+   conv from 32 to 16 filters using h-swish -> ~2ms/10M MAdds; (iii) fix SE
+   bottleneck to 1/4 of expansion channels.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Training: 4x4 TPU Pod, RMSProp (momentum 0.9), initial LR 0.1, batch 4096
+   (128/chip), LR decay 0.01 every 3 epochs, dropout 0.8, L2 weight decay 1e-5,
+   Inception-style preprocessing, EMA decay 0.9999, BatchNorm momentum 0.99.
+   Loss = standard softmax cross-entropy (classification). NetAdapt: T = 10000,
+   delta = 0.01 * |L| (L = seed-model latency). SE ratio = 1/4 of expansion
+   channels; h-swish only in the second half of the network.
+
+5. DATASETS & METRICS
+   ImageNet (top-1 accuracy); COCO detection with SSDLite (mAP); Cityscapes
+   semantic segmentation with LR-ASPP (mIOU, 'fine' annotations only, trained
+   from scratch). Efficiency measured as MAdds, params, and real latency on
+   Pixel 1/2/3 phones (single large core, TFLite), including int8-quantized runs.
+
+6. IMPLEMENTATION NOTES
+   - h-swish gives most of swish's benefit only in deeper/lower-resolution layers,
+     where activation memory is small, so restrict it there; an optimized
+     piece-wise TFLite kernel is needed or the latency win largely disappears.
+   - The full V3-Large / V3-Small layer tables (Tables 1 & 2) are the ground
+     truth for reimplementation: they list per-block kernel size (3x3 or 5x5),
+     expansion size, output channels, SE on/off, nonlinearity (RE=ReLU / HS=
+     h-swish), and stride. The last two 1x1 convs are "NBN" (no BatchNorm).
+   - For transfer to detection/segmentation, halving channels in the last block
+     (between C4 and C5) cuts ~15% latency with negligible mAP/mIoU loss, since
+     the 1000-class-tuned tail is redundant for smaller label sets.
+   - Reference numbers: V3-Large 1.0 = 75.2% top-1, 219 MAdds, 5.4M params;
+     V3-Small 1.0 = ~67.4-67.5% top-1, ~56-57 MAdds, 2.5M params.
+
+7. OFFICIAL CODE REPO
+   No explicit repository URL is printed in the PDF. The authors state they
+   contributed an atomic h-swish operator to TensorFlow Lite (ref [1] is
+   TensorFlow). Do not assume a specific repo from this paper alone.
+
+8. RELEVANCE TO THESIS
+   MobileNetV3-Small is a named backbone in the proposal; its inverted-residual
+   bottlenecks (1x1 expand / depthwise / SE / 1x1 project) are the precise
+   convolutional sites for adapter/LoRA insertion, and its on-device latency
+   methodology directly feeds the thesis's efficiency/Pareto (RQ4) analysis.
+
+################################################################################
+SUMMARY: 2 PDFs found in folder, 2 papers processed (0 skipped, 0 parse failures).
+################################################################################

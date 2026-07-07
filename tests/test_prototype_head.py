@@ -69,15 +69,13 @@ def test_prototype_cosine_perfect_prototype_wins():
 
 
 def test_prototype_head_raises_on_missing_class():
-    """If a class is missing from the support set, the head must raise
-    (not silently emit garbage)."""
+    """If a class in [0, n_way) is missing from the support set, the head
+    must raise (not silently emit garbage). Here labels are {0, 2} so
+    n_way infers to 3 and class 1 has no support example."""
     head = PrototypeHead()
-    support_features = torch.randn(4, 8)
-    # support has labels {0, 1} but we claim n_way=3 via the highest label.
-    support_labels = torch.tensor([0, 0, 1, 2], dtype=torch.long)
-    # Drop the class-2 sample so class 2 has no support.
-    support_features = support_features[:3]
-    support_labels = support_labels[:3]
+    support_features = torch.randn(3, 8)
+    # labels {0, 2} -> n_way = max+1 = 3, so class 1 is genuinely missing.
+    support_labels = torch.tensor([0, 0, 2], dtype=torch.long)
     query_features = torch.randn(2, 8)
     with pytest.raises(ValueError):
         head(support_features, support_labels, query_features)

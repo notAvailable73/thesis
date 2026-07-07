@@ -93,6 +93,8 @@ class EpisodicTrainer:
         wandb_run=None,
         device: torch.device | str = "cpu",
         collapse_threshold: float = 0.25,
+        evid_prior_per_class: float = 1.0,
+        evid_use_variance: bool = True,
     ):
         if interpretation not in ("softmax", "evidential"):
             raise ValueError(
@@ -124,6 +126,11 @@ class EpisodicTrainer:
         self.wandb_run = wandb_run
         self.device = device
         self.collapse_threshold = float(collapse_threshold)
+        # R-EDL knobs (Survey EDL): tunable prior mass + optional variance drop.
+        # Defaults reproduce the Sensoy loss exactly; the retuned Phase-2 config
+        # sweeps these on VAL to lower ID under-confidence / ECE.
+        self.evid_prior_per_class = float(evid_prior_per_class)
+        self.evid_use_variance = bool(evid_use_variance)
 
         self.history = EpisodicHistory()
         self.best_val_acc: float = -1.0
@@ -151,6 +158,8 @@ class EpisodicTrainer:
         from ..losses.evidential import evidential_mse_loss
         return evidential_mse_loss(
             evidence, target_oh, num_classes=self.num_classes, kl_weight=kl_w,
+            prior_per_class=self.evid_prior_per_class,
+            use_variance=self.evid_use_variance,
         )
 
     def _kl_weight_at_step(self, step: int) -> float:
