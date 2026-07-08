@@ -12,6 +12,7 @@ into `data/` manually (the function is a no-op once the file is present).
 from __future__ import annotations
 import os
 import shutil
+import time
 import urllib.request
 
 _BROWSER_UA = (
@@ -19,9 +20,19 @@ _BROWSER_UA = (
     "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
 )
 
+# Per-chunk `resp.read()` calls already have a 180s idle timeout (below), but
+# that only fires if the connection goes fully silent. A connection that
+# dribbles in a few bytes just before each 180s window resets the idle clock
+# forever -- against an overloaded/rate-limited host (cs.toronto.edu is known
+# for this) that can silently "run" for hours. This wall-clock cap bounds the
+# total time spent on any one mirror regardless of whether bytes are still
+# trickling in.
+_DEFAULT_TOTAL_TIMEOUT = 600.0  # 10 minutes per mirror
+
 
 def ensure_archive(data_root: str, filename: str, urls: list[str],
-                   extracted_dirname: str | None = None) -> str:
+                   extracted_dirname: str | None = None,
+                   total_timeout: float = _DEFAULT_TOTAL_TIMEOUT) -> str:
     """Make sure `data_root/filename` exists, fetching it with a browser UA.
 
     Args:
@@ -30,6 +41,10 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
         urls:      candidate URLs, tried in order.
         extracted_dirname: if torchvision already extracted the archive to
             `data_root/<extracted_dirname>`, skip entirely.
+        total_timeout: hard wall-clock cap (seconds) per mirror attempt, on
+            top of the per-chunk idle timeout. A mirror that is technically
+            alive but too slow to finish in time is abandoned in favor of
+            the next one, instead of hanging indefinitely.
 
     Returns the archive path. Raises RuntimeError if all mirrors fail and the
     file is absent.
@@ -62,7 +77,16 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
                       f"({total_mb} MB)", flush=True)
                 read = 0
                 next_report = 16 * 1024 * 1024  # every ~16 MB
+                deadline = time.monotonic() + total_timeout
                 while True:
+                    if time.monotonic() > deadline:
+                        pct = f" ({100 * read / total:.0f}%)" if total else ""
+                        raise TimeoutError(
+                            f"download exceeded total_timeout={total_timeout:.0f}s "
+                            f"after {read / 1e6:.0f} MB{pct} -- host is alive but "
+                            f"too slow (likely overloaded/rate-limited), abandoning "
+                            f"this mirror"
+                        )
                     chunk = resp.read(1024 * 1024)
                     if not chunk:
                         break
