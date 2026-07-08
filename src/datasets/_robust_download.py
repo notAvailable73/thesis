@@ -52,11 +52,42 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
             )
             with urllib.request.urlopen(req, timeout=180) as resp, \
                     open(dst, "wb") as fh:
-                shutil.copyfileobj(resp, fh)
+                total = resp.getheader("Content-Length")
+                total = int(total) if total else None
+                # Chunked copy with periodic progress so a slow/stalled
+                # download is VISIBLE (silent copyfileobj on Colab's slow
+                # link to the Toronto host looks identical to a hang).
+                total_mb = f"{total / 1e6:.0f}" if total else "?"
+                print(f"[download] {filename} <- {url}  "
+                      f"({total_mb} MB)", flush=True)
+                read = 0
+                next_report = 16 * 1024 * 1024  # every ~16 MB
+                while True:
+                    chunk = resp.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    fh.write(chunk)
+                    read += len(chunk)
+                    if read >= next_report:
+                        pct = f" ({100 * read / total:.0f}%)" if total else ""
+                        print(f"[download]   {read / 1e6:.0f} MB{pct}",
+                              flush=True)
+                        next_report += 16 * 1024 * 1024
+            # A truncated download (cancelled run, dropped connection) leaves a
+            # nonzero file that would otherwise be trusted on the next call —
+            # treat a size mismatch as failure and try the next mirror.
+            if total is not None and os.path.getsize(dst) != total:
+                raise IOError(
+                    f"incomplete download: got {os.path.getsize(dst)} of "
+                    f"{total} bytes"
+                )
             if os.path.getsize(dst) > 0:
+                print(f"[download] done: {filename} "
+                      f"({os.path.getsize(dst) / 1e6:.0f} MB)", flush=True)
                 return dst
         except Exception as e:  # noqa: BLE001 - report and try next mirror
             last_err = e
+            print(f"[download] FAILED {url}: {e}", flush=True)
             if os.path.exists(dst):
                 try:
                     os.remove(dst)
