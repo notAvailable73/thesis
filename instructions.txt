@@ -1,0 +1,218 @@
+================================================================================
+INSTRUCTIONS FOR THE TEAMMATE PICKING UP THIS REPO
+================================================================================
+Written:   2026-07-07
+Purpose:   You just pulled this repo. This file tells you what's already done,
+           what's next, and the non-obvious things that will save you time.
+Read order BEFORE touching code:
+  1. This file (instructions.txt)
+  2. thesis_implementation_instructions.txt   <- HOW to use the paper summaries
+                                                 (reasoning-first process; read
+                                                 this before implementing ANY
+                                                 new component)
+  3. progress.txt            <- current status, one line per step
+  4. implementation.txt §5   <- the exact spec for what you're building next
+                                 (Step 5, see below)
+  5. step_writeups/step4_5.txt  <- the most recent finished result + why it
+                                    matters for how you should evaluate Step 5
+
+
+================================================================================
+1.  WHERE THINGS STAND (read progress.txt for the full detail)
+================================================================================
+Done: Steps 1-3 (foundation), Step 4 (real CIFAR-FS Bertinetto split + episodic
+meta-training), Step 4.5 (a mini-phase we added to stress-test the thesis's
+central claim before building on top of it — CLOSED, final).
+
+THE HEADLINE RESULT (you need this to know what "success" looks like for any
+new PEFT method you add):
+  On 5-way 5-shot CIFAR-FS, 600 test episodes:
+    evidential: acc 0.884, ECE 0.285, Brier 0.285
+    softmax:    acc 0.875, ECE 0.082 (0.041 after temperature scaling)
+  Evidential's uncertainty (vacuity) BEATS every confidence-based softmax score
+  (plain max-prob AND temperature-scaled max-prob) on every OOD test we tried —
+  far-OOD (SVHN) and TWO near-OOD sets (CIFAR-100 held-out classes, real
+  TinyImageNet) — by 0.076-0.141 AUROC. It is roughly on par with (very
+  slightly behind, on the hardest test) a strong non-probabilistic score
+  called "energy". Its calibration (ECE) is still ~7x worse than a properly
+  temperature-scaled softmax, and a real hyperparameter search confirmed that
+  gap doesn't close easily. Full story: step_writeups/step4_5.txt §7.
+
+WHY THIS MATTERS FOR YOU: whatever PEFT method you add in Step 5 (LoRA,
+BitFit, Full-FT, Linear-Probe), you now have a reusable evaluation harness
+that already answers "is this method's uncertainty actually better, and
+against which baselines" — you do NOT need to build OOD baselines again.
+See section 3 below.
+
+
+================================================================================
+2.  YOUR TASK: STEP 5 — LORA + BITFIT + NON-PEFT BASELINES  (Phase 3)
+================================================================================
+Full spec: implementation.txt, section "5. STEP 5 — LORA + BITFIT + NON-PEFT
+BASELINES" (line ~479). Read it in full before starting — this is a summary.
+
+GOAL: move LoRA from a smoke-tested stub to a full integration in the episodic
+trainer, add BitFit as a third PEFT method, and add the two mandatory non-PEFT
+baselines from proposal.txt §6 (Full Fine-Tuning, Linear Probing). All four
+must produce 600-episode test metrics for BOTH heads (evidential + softmax) —
+8 result JSONs total.
+
+--------------------------------------------------------------------------------
+2.1  IMPORTANT: the current src/adapters/lora.py is NOT what you need — REWRITE it
+--------------------------------------------------------------------------------
+What exists today: `LoRAAdapter` in src/adapters/lora.py applies a low-rank
+residual to the POOLED FEATURE VECTOR after the frozen backbone (dim -> rank
+-> dim, added back). This is really a low-rank bottleneck adapter, not LoRA in
+the sense the proposal means.
+
+What Step 5 actually wants (implementation.txt 5.1): LoRA reparameterizes the
+backbone's OWN weight matrices in place — `W_eff = W_frozen + (alpha/rank) *
+A @ B` — applied to specific nn.Linear / nn.Conv2d layers INSIDE the frozen
+ResNet-18 (e.g. the 1x1 convs in the last block). This changes what the
+backbone computes, not what happens after it. You will need:
+  - LoRALayer(in_features, out_features, rank, alpha, dropout=0.0)
+  - LoRAAdapter that wraps a frozen backbone's target layers in LoRALayer
+  - cfg.adapter.lora_targets in YAML to pick which layers get LoRA'd
+  - Register it in src/adapters/__init__.py's build_adapter() factory
+    (currently only knows "bottleneck" and "lora"-the-old-stub — same registry
+    key, but the class it builds must change)
+
+Existing test tests/test_adapters.py checks identity-at-init on the OLD stub —
+you'll need to update/replace it (implementation.txt 5.9 wants
+tests/test_lora.py: identity at init + analytical param count
+2*rank*(in+out)).
+
+--------------------------------------------------------------------------------
+2.2  Four adapter types to add, one factory to extend
+--------------------------------------------------------------------------------
+  - src/adapters/lora.py     — REWRITE (above)
+  - src/adapters/bitfit.py   — NEW. Unfreeze only .bias params. ~5K params for
+                                ResNet-18 if all biases are unfrozen.
+  - src/adapters/full_ft.py  — NEW, BASELINE. Unfreezes the ENTIRE backbone
+                                (~11.7M params). EXPECTED to overfit badly on
+                                5-shot (25 support images) — that collapse IS
+                                the result; it demonstrates why PEFT is
+                                necessary. If it does NOT collapse, suspect a
+                                data leak, don't celebrate.
+  - src/adapters/linear_probe.py — NEW, BASELINE. Backbone frozen, no adapter
+                                at all — only the head trains. Under the
+                                prototype head (parameter-free), this is
+                                ~0 trainable adapter params.
+  - src/models/bpeft_model.py — extend build_model()'s adapter dispatch to
+                                accept cfg.adapter.type in {bottleneck, lora,
+                                bitfit, full_ft, linear_probe}.
+
+--------------------------------------------------------------------------------
+2.3  8 configs, 8 runs, 8 result files
+--------------------------------------------------------------------------------
+  configs/exp_phase3_{lora,bitfit,full_ft,linear_probe}_{evidential,softmax}.yaml
+  All `extends: base.yaml` and the Phase-2 episodic trainer settings (copy the
+  pattern from configs/exp_phase2_evidential_retuned.yaml — see section 3
+  below for why you should start from THAT config, not the plain
+  exp_phase2_evidential.yaml).
+  full_ft configs need a much smaller LR (~1e-5, not 5e-3) and weight_decay
+  1e-4 — document why in step_writeups/step5.txt.
+
+  Run each through:
+    python scripts/train.py    --config configs/exp_phase3_<x>.yaml
+    python scripts/evaluate.py --config configs/exp_phase3_<x>.yaml \
+        --num-episodes 600 --wandb-mode disabled --results-suffix phase3
+
+  -> results/phase3_<adapter>_<head>_metrics.json  (8 files)
+
+--------------------------------------------------------------------------------
+2.4  Tests + writeup
+--------------------------------------------------------------------------------
+  tests/test_lora.py, test_bitfit.py, test_full_ft.py, test_linear_probe.py —
+  see implementation.txt 5.9 for exactly what each must assert.
+  step_writeups/step5.txt — same structure as step_writeups/step4.txt /
+  step4_5.txt (executive summary, what was built, results, honest caveats).
+  Include the proposal §6 baselines subsection with explicit accuracy / ECE /
+  AUROC / F1 numbers for Full-FT and Linear-Probe vs the PEFT methods.
+
+--------------------------------------------------------------------------------
+2.5  Exit criteria (implementation.txt, copy exactly)
+--------------------------------------------------------------------------------
+  [ ] 8 result JSONs (4 adapters x 2 heads), 600 episodes each
+  [ ] Trainable param counts logged: Bottleneck-16 ~19,477; LoRA-16 ~9-15K;
+      BitFit ~5K; Full-FT ~11.7M; Linear-Probe ~0
+  [ ] proposal §6 baselines reported alongside PEFT methods with numbers
+  [ ] pytest tests/ passes (66 currently — expect 70+ after your 4 new files)
+  [ ] byte-identical rerun still works for at least one config (spot check)
+
+
+================================================================================
+3.  REUSE THIS — DON'T REBUILD IT (built during Step 4.5)
+================================================================================
+  - src/evaluators/episodic.py:evaluate_episodic — already computes a FULL
+    score x OOD-pool matrix (vacuity / MSP / temperature-scaled MSP / energy,
+    across SVHN + CIFAR-100-held-out + TinyImageNet). Your Step 5 evaluate.py
+    calls already get this for free — no new OOD code needed.
+  - src/losses/evidential.py:evidential_mse_loss — has R-EDL knobs
+    (prior_per_class, use_variance) beyond the vanilla Sensoy loss. Start any
+    new evidential config from configs/exp_phase2_evidential_retuned.yaml
+    (kl_weight_max=0.05-0.1, use_variance=false) — NOT the original
+    exp_phase2_evidential.yaml, which uses the old, worse-calibrated defaults.
+  - src/evaluators/temperature.py, energy_score in ood.py — the two fair
+    softmax baselines. Already wired into scripts/evaluate.py behind
+    --use-tinyimagenet and the automatic val-temperature fit. Nothing to do.
+  - scripts/build_cifar_fs_split.py — regenerates the canonical Bertinetto
+    split. RUN THIS FIRST after cloning (data/ is gitignored, so the split
+    file is not in git — see section 4).
+
+
+================================================================================
+4.  GOTCHAS THAT COST US REAL TIME — READ BEFORE YOU HIT THEM
+================================================================================
+  a) data/ is gitignored. After cloning, run:
+       python scripts/build_cifar_fs_split.py
+     before anything else. It fetches the canonical 64/16/20 Bertinetto split
+     and writes data/cifar_fs_split.json. Do NOT hand-edit that file.
+
+  b) If you run on Google Colab + Drive: DO NOT extract or scan large
+     many-file archives (like TinyImageNet's ~120k files) into your Drive
+     folder — Drive's FUSE mount does a network round-trip PER FILE and this
+     will hang for HOURS (it did, to us). See src/datasets/tinyimagenet_ood.py
+     for the pattern that avoids this: cache the single zip, copy it once to
+     local disk (/content), read only what you need straight out of the zip,
+     never extract. Apply the same rule to any new heavy dataset you add.
+
+  c) If you build a Colab notebook: make it SELF-CONTAINED. Editing files on
+     your own machine does NOT reach a Drive-mounted Colab session. Pattern to
+     copy: notebooks/step4_5_settle.ipynb's "1b. Materialize" section, which
+     `%%writefile`s every source file into the Drive repo at the top of the
+     notebook before anything imports it. Don't assume `git pull` or manual
+     file copying will happen reliably — bake the code into the notebook.
+
+  d) Any hyperparameter search MUST select on the VAL split
+     (configs/val_episodes.yaml, seeds 10000-10099) — NEVER on the 600 TEST
+     seeds (configs/test_episodes.yaml, seeds 0-599). This is enforced by
+     convention, not code, so it's on you to respect it. See
+     scripts/step45_val_sweep.py for the pattern (in-process, not subprocess —
+     subprocess output can silently vanish in Colab, which cost us a wasted
+     run before we caught it).
+
+  e) Reproducibility invariant: running the SAME config twice must produce a
+     byte-identical metrics.json (sort_keys=True dump + fixed seeds). If a
+     rerun differs, something is non-deterministic — fix it before trusting
+     any result from that config.
+
+  f) Never commit to git yourself unless explicitly asked — this project's
+     convention is that a human reviews and commits. If you're an AI agent
+     reading this: only read from git, never write.
+
+
+================================================================================
+5.  QUICK COMMANDS
+================================================================================
+  Setup:            python scripts/build_cifar_fs_split.py
+  Run tests:         python -m pytest -q          (expect 66 passed today)
+  Train a config:    python scripts/train.py    --config configs/<x>.yaml
+  Evaluate:          python scripts/evaluate.py --config configs/<x>.yaml \
+                       --num-episodes 600 --wandb-mode disabled
+  Full eval matrix (needs a real GPU / Colab): add --use-tinyimagenet for the
+                       strongest near-OOD comparison.
+
+================================================================================
+END OF INSTRUCTIONS
+================================================================================
