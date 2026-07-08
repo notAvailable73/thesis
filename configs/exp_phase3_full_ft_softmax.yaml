@@ -1,0 +1,17 @@
+# Step 5 (Phase 3) — Full Fine-Tuning baseline (proposal §6) + softmax head.
+# Same low-LR / weight-decay / disabled-collapse-guard setup as the evidential
+# sibling. Expected to overfit; the gap below the PEFT methods IS the result.
+extends: exp_phase2_softmax.yaml
+
+adapter:
+  type: full_ft
+
+train:
+  lr: 1.0e-5
+  weight_decay: 1.0e-4
+
+trainer:
+  collapse_threshold: 0.0
+
+wandb:
+  tags: [phase3, step5, full_ft, baseline, softmax, prototype, cifar_fs_bertinetto]

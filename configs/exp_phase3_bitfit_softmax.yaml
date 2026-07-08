@@ -1,0 +1,10 @@
+# Step 5 (Phase 3) — BitFit + softmax prototype head on CIFAR-FS Bertinetto.
+# BitFit trains only backbone BatchNorm biases (~4.8K params). Softmax sibling
+# of exp_phase3_bitfit_evidential.
+extends: exp_phase2_softmax.yaml
+
+adapter:
+  type: bitfit
+
+wandb:
+  tags: [phase3, step5, bitfit, softmax, prototype, cifar_fs_bertinetto]

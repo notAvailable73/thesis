@@ -1,0 +1,25 @@
+# Step 5 (Phase 3) — Full Fine-Tuning baseline (proposal §6) + evidential head.
+#
+# Unfreezes the ENTIRE ResNet-18 backbone (~11.7M params). EXPECTED to overfit
+# catastrophically on 25-image support sets; the collapse IS the result (shows
+# PEFT is necessary). Two deliberate choices vs the PEFT configs:
+#   - train.lr lowered to 1e-5 (from 5e-3) + weight_decay 1e-4 to give it a
+#     fair chance against overfitting (implementation.txt 5.6).
+#   - trainer.collapse_threshold: 0.0 DISABLES the R-EPISODIC-COLLAPSE guard so
+#     a pathological (but honest) run completes and writes its metrics JSON
+#     instead of aborting. (BN running stats stay frozen; only affine+conv
+#     weights update — see step5.txt.)
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: full_ft
+
+train:
+  lr: 1.0e-5
+  weight_decay: 1.0e-4
+
+trainer:
+  collapse_threshold: 0.0
+
+wandb:
+  tags: [phase3, step5, full_ft, baseline, evidential, prototype, cifar_fs_bertinetto]

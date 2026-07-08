@@ -1,0 +1,250 @@
+================================================================================
+STEP 5 -- LORA + BITFIT + NON-PEFT BASELINES (FULL-FT, LINEAR-PROBE) -- IMPL
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     3 (All PEFT methods + baselines)
+Scope:     Move LoRA from the Step 2 pooled-feature stub to a real in-backbone
+           low-rank reparameterization; add BitFit (bias-only) as a third PEFT
+           method; add the two proposal.txt §6 primary non-PEFT baselines
+           (Full Fine-Tuning, Linear Probing). All four run through the Phase-2
+           episodic trainer + prototype head on CIFAR-FS Bertinetto and produce
+           600-episode test metrics for BOTH heads (evidential + softmax) = 8
+           result JSONs.
+Spec:      implementation.txt §5 ; instructions.txt §2 ; plan.txt Phase 3
+Previous:  step_writeups/step4.txt, step4_5.txt (the current baseline of record)
+
+STATUS OF THIS WRITEUP:
+  Implementation + tests + configs are COMPLETE and committed to the working
+  tree. The 8 GPU training/eval runs are executed on Google Colab (the repo's
+  standard run environment); the RESULTS tables in §4 are filled in from those
+  runs. Sections marked "[FILL AFTER COLAB RUN]" are placeholders to be
+  completed once the notebook has produced the 8 JSONs — the numbers are NOT
+  invented here (honesty rule, thesis_implementation_instructions.txt §6).
+
+
+================================================================================
+0.  PAPER-GROUNDED REASONING (per thesis_implementation_instructions §5)
+================================================================================
+Sources: PAPER SUMMARIES/PEFT_summaries.txt — LoRA (Hu 2021, paper 2), BitFit
+(Ben-Zaken 2022, paper 3), ConvLoRA (Aleem 2024, paper 5) and Conv-LoRA
+(Zhong 2024, paper 6) for LoRA-inside-CNN-convs, Conv-Adapter (Chen 2022,
+paper 4) for the 1x1-vs-locality caveat, Unified View (He 2022, paper 7) for
+insertion-form/scaling vocabulary.
+
+LoRA
+  WHAT: W_eff = W_frozen + (alpha/rank) * B @ A, A Kaiming-uniform, B=0 so the
+  update is identity at init (Hu 2021). Applied here to the backbone's OWN conv
+  weights, not the pooled feature (that was the mis-named Step 2 stub).
+  PROS: exactly the proposal's "LoRA reparameterizes weight matrices" and the
+  named "Standard LoRA + Softmax" baseline; zero inference overhead once merged;
+  ConvLoRA/Conv-LoRA prove it works inside CNN convs in extreme low-data (10
+  images) regimes — a close match to our 25-image support sets.
+  CONS/FIT: on a 3x3 conv the down-projection carries the full k*k kernel and
+  the param count explodes (>160K at rank 16 for a 512->512 conv2), breaking
+  comparability with Bottleneck. RESOLUTION: target the 1x1 downsample conv of
+  the final stage (layer4.0.downsample.0). A 1x1 conv is a pure channel matrix,
+  so LoRA on it is the clean rank*(in+out) matrix reparameterization — and it
+  avoids the "loss of locality" failure Conv-Adapter (Chen 2022) attributes to
+  1x1 FEATURE adapters (we adapt a weight, and retain the frozen 1x1 conv, so
+  the parallel 3x3 path's locality is untouched). At rank 16, 256->512:
+  16*(256+512) = 12,288 trainable params — inside the exit-criteria 9-15K band.
+  DEVIATION FLAGGED: implementation.txt 5.1 states the analytical count as
+  "2 * rank * (in + out)". The honest count for a standard A/B decomposition is
+  rank*(in+out) — exactly HALF. tests/test_lora.py asserts the correct value.
+  Target set is configurable via cfg.adapter.lora_targets, so widening it later
+  (e.g. also conv2 of each layer4 block) is a one-line config change.
+
+BitFit
+  WHAT: freeze all weights and gains; train only additive bias vectors
+  (Ben-Zaken 2022). For torchvision ResNet-18 the convs are bias-free (BN
+  follows), so the only biases are the BatchNorm shifts (beta). We unfreeze
+  exactly the `.bias` params — NOT the BN gains (gamma) — staying true to
+  "bias-only" rather than "affine-only". ~4,800 params (all BN betas).
+  FIT: the proposal's extreme "<0.1% params" selective baseline for RQ2. Note
+  Ben-Zaken report bias-only tolerates/needs a LARGER LR than full-FT; we keep
+  the Phase-2 LR (5e-3) for comparability with Bottleneck/LoRA and note this.
+
+Full Fine-Tuning (proposal §6 baseline)
+  WHAT: unfreeze the whole backbone (~11.18M params, fc removed). EXPECTED to
+  overfit catastrophically on 25-image support sets — the collapse IS the
+  result (proposal §3 Problem 1: parameter inefficiency). LR lowered to 1e-5 +
+  weight_decay 1e-4 to give it a fair chance; the R-EPISODIC-COLLAPSE guard is
+  DISABLED (collapse_threshold: 0.0) so the pathological run completes and
+  writes honest numbers instead of aborting.
+
+Linear Probing (proposal §6 baseline)
+  WHAT: backbone frozen, no adapter, only the head trains. Under the param-free
+  prototype head: softmax => 0 trainable params (training-free nearest-
+  prototype); evidential => 2 trainable params (the head's learnable evidence
+  affine). The most extreme PEFT point on the curve — all transfer from frozen
+  ImageNet features.
+
+CARRIED-IN ASSUMPTION (untested): the evidential evidence-affine (scale 2,
+bias -6) was VAL-selected on BOTTLENECK features in Step 4.5. We reuse it for
+every adapter (cosine logits are bounded, so it should transfer), but the
+per-adapter CALIBRATION numbers should be sanity-checked on VAL before being
+trusted. A per-adapter VAL sweep is out of Step 5 scope (Step 10's grid).
+
+DOCUMENTED DEVIATION (BatchNorm): for every backbone-trainable adapter
+(LoRA/BitFit/Full-FT) the episodic trainer keeps the backbone in eval() mode,
+so BN RUNNING STATISTICS stay frozen at their ImageNet values; only the affine
+(BitFit beta; Full-FT gamma+beta) and conv weights (LoRA A/B; Full-FT) update.
+Updating BN stats from 25-image support batches is unstable and would leak
+query statistics — freezing them is standard few-shot practice.
+
+
+================================================================================
+1.  WHAT WAS BUILT
+================================================================================
+Adapters (src/adapters/):
+  lora.py        REWRITTEN. LoRALayer (linear reference form), LoRAConv2d
+                 (wraps a frozen conv, adds low-rank update, identity at init),
+                 LoRAAdapter (injects LoRAConv2d into cfg.adapter.lora_targets
+                 inside the backbone; its own forward is identity on the pooled
+                 feature — the adaptation lives in the backbone).
+  bitfit.py      NEW. Unfreezes only backbone `.bias` params (BN betas).
+  full_ft.py     NEW. Unfreezes the entire backbone.
+  linear_probe.py NEW. No-op; backbone stays frozen.
+  __init__.py    build_adapter(spec, dim, backbone=None) extended to
+                 {bottleneck, lora, bitfit, full_ft, linear_probe}. In-backbone
+                 adapters require `backbone`; each adapter advertises a
+                 `backbone_trainable` class flag.
+
+Model (src/models/bpeft_model.py):
+  build_model now passes the backbone to build_adapter and stores
+  model.backbone_trainable. BPEFTModel.adapter_features runs the backbone WITH
+  autograd when backbone_trainable, else under no_grad (legacy Step 1-4 path,
+  byte-identical for Bottleneck / single_episode).
+
+Trainer (src/trainers/episodic_trainer.py):
+  + freeze_backbone flag: only re-freezes backbone params each epoch for
+    post-pool / linear-probe adapters; LoRA/BitFit/Full-FT keep their
+    in-backbone params trainable. BN is kept in eval() for ALL types.
+  + collapse guard gated on collapse_threshold > 0 (Full-FT sets it to 0.0).
+  + _adapter_grad_norm generalized to ALL trainable params (LoRA/BitFit/Full-FT
+    keep params in the backbone, where model.adapter is empty). Identical to
+    the old adapter-only sum for the frozen-backbone Bottleneck path.
+
+Scripts (scripts/train.py):
+  + passes freeze_backbone = not model.backbone_trainable to the trainer.
+  + zero-trainable-parameter path: Linear-Probe + softmax has no params to
+    optimise (Adam rejects an empty list) — _save_trainfree_checkpoint runs one
+    val pass for a reportable accuracy and saves an episodic-schema checkpoint,
+    skipping meta-training. scripts/evaluate.py loads it unchanged.
+
+Configs (8): configs/exp_phase3_{lora,bitfit,full_ft,linear_probe}_{evidential,
+  softmax}.yaml. Evidential configs extend exp_phase2_evidential_retuned.yaml
+  (the VAL-selected R-EDL config — instructions.txt §3); softmax configs extend
+  exp_phase2_softmax.yaml. Full-FT overrides train.lr=1e-5, weight_decay=1e-4,
+  trainer.collapse_threshold=0.0.
+
+Tests (4 new + test_adapters.py updated): test_lora.py, test_bitfit.py,
+  test_full_ft.py, test_linear_probe.py. The old pooled-feature LoRA-stub tests
+  were removed (the stub no longer exists).
+
+Runner: scripts/run_step5.sh loops the 8 train+eval pairs (resumes by skipping
+  existing metrics JSONs).
+
+
+================================================================================
+2.  TRAINABLE PARAMETER COUNTS (analytical — verifiable offline)
+================================================================================
+These are exact and do not depend on the GPU run:
+
+  Adapter          Head         Trainable params (adapter + head)
+  ---------------  -----------  ---------------------------------
+  Bottleneck-16    softmax      16,912            (adapter only)
+  Bottleneck-16    evidential   16,914            (+2 evidence affine)
+  LoRA-16          softmax      12,288            (layer4.0.downsample.0)
+  LoRA-16          evidential   12,290            (+2 evidence affine)
+  BitFit           softmax       4,800            (all BN betas)
+  BitFit           evidential    4,802            (+2 evidence affine)
+  Full-FT          softmax      11,176,512        (whole backbone, fc removed)
+  Full-FT          evidential   11,176,514        (+2 evidence affine)
+  Linear-Probe     softmax               0        (training-free)
+  Linear-Probe     evidential            2        (evidence affine only)
+
+  NOTE 1: The exit-criteria "Bottleneck rank-16: 19,477" is the Step-1 figure
+  (bottleneck adapter + a trained 5-way LINEAR head). Phase 2+ uses the
+  parameter-free prototype head, so the head contributes 0 (softmax) or 2
+  (evidential) instead of ~2,565. The adapter itself is 16,912 either way.
+  NOTE 2: Full-FT is 11.18M (not 11.7M) because model.fc is nn.Identity()
+  (the 513K classifier is removed). 11.7M is the count WITH the ImageNet fc.
+
+
+================================================================================
+3.  HOW TO REPRODUCE (Colab / GPU)
+================================================================================
+  python scripts/build_cifar_fs_split.py          # once, if data/ is empty
+  bash scripts/run_step5.sh                        # 8 train + 8 eval
+
+  or per-config:
+    python scripts/train.py    --config configs/exp_phase3_<x>.yaml
+    python scripts/evaluate.py --config configs/exp_phase3_<x>.yaml \
+        --num-episodes 600 --wandb-mode disabled --results-suffix phase3 \
+        --use-tinyimagenet
+  -> results/phase3_<adapter>_<head-descriptor>_metrics.json (8 files)
+
+  Full-FT is the slow one (backprop through the whole backbone for
+  100 episodes/epoch); the others are close to Bottleneck's cost.
+
+
+================================================================================
+4.  RESULTS (600 test episodes, CIFAR-FS Bertinetto, 5-way 5-shot)
+================================================================================
+[FILL AFTER COLAB RUN — read the 8 results/phase3_*_metrics.json]
+
+4.1  Accuracy / calibration master table
+  Method        Head        Acc     F1     ECE    ECE_ts  Brier   n_params
+  ------------  ----------  -----   -----  -----  ------  ------   --------
+  Bottleneck    evidential  0.884    ...   0.285    -     0.285    16,914   (Step 4.5 ref)
+  Bottleneck    softmax     0.875    ...   0.082   0.041  0.190    16,912   (Step 4.5 ref)
+  LoRA          evidential   ...     ...    ...     -      ...      12,290
+  LoRA          softmax      ...     ...    ...     ...    ...      12,288
+  BitFit        evidential   ...     ...    ...     -      ...       4,802
+  BitFit        softmax      ...     ...    ...     ...    ...       4,800
+  Full-FT       evidential   ...     ...    ...     -      ...      11.18M   [BASELINE]
+  Full-FT       softmax      ...     ...    ...     ...    ...      11.18M   [BASELINE]
+  Linear-Probe  evidential   ...     ...    ...     -      ...           2   [BASELINE]
+  Linear-Probe  softmax      ...     ...    ...     ...    ...           0   [BASELINE]
+
+4.2  OOD AUROC (vacuity for evidential; msp/ts_msp/energy for softmax),
+     per pool (svhn_far / cifar100_near / tin_near)
+  [FILL AFTER COLAB RUN]
+
+4.3  proposal §6 BASELINES SUBSECTION (mandatory)
+  proposal.txt §6 mandates Full Fine-Tuning and Linear Probing as primary
+  baselines. Expected and to-be-confirmed story:
+    - Full-FT: catastrophic overfit on 25-image supports -> query accuracy
+      BELOW every PEFT method. If it is within ~1pp of PEFT, suspect a data
+      leak (implementation.txt 5 RISK) rather than a genuine win.
+    - Linear-Probe: strong frozen-feature prototype accuracy (few-shot on good
+      ImageNet features is a famously hard-to-beat baseline — cf.
+      thesis_implementation_instructions.txt §4), near-zero trainable params.
+  Explicit Acc / ECE / AUROC / F1 numbers: [FILL AFTER COLAB RUN]
+
+
+================================================================================
+5.  HONEST CAVEATS
+================================================================================
+  - LoRA target set is a single 1x1 conv (12,288 params). It is a faithful
+    LoRA, but a deliberately small-capacity one; if LoRA underperforms it may
+    be capacity, not the method — widening lora_targets is a config change.
+  - The "2*rank*(in+out)" figure in implementation.txt is wrong by 2x; we use
+    the honest rank*(in+out).
+  - Evidence-affine reused from a bottleneck VAL sweep (see §0); per-adapter
+    calibration not independently VAL-tuned in Step 5.
+  - BN running stats frozen for all backbone-trainable adapters (see §0) — a
+    documented deviation from vanilla Full-FT, justified for few-shot.
+  - Byte-identical rerun spot-check: [CONFIRM ON COLAB for one config].
+
+
+================================================================================
+6.  EXIT CRITERIA
+================================================================================
+  [ ] 8 result JSONs (4 adapters x 2 heads), 600 episodes      [COLAB]
+  [x] Trainable param counts logged/documented (§2)
+  [ ] proposal §6 baselines reported with numbers (§4.3)       [COLAB]
+  [ ] pytest tests/ passes (70+ expected: 66 + ~4 files)       [COLAB]
+  [ ] byte-identical rerun for one config                      [COLAB]
+================================================================================

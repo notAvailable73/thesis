@@ -40,11 +40,16 @@ class BPEFTModel(nn.Module):
     """
 
     def __init__(self, backbone: nn.Module, adapter: nn.Module,
-                 head: nn.Module):
+                 head: nn.Module, backbone_trainable: bool = False):
         super().__init__()
         self.backbone = backbone
         self.adapter = adapter
         self.head = head
+        # Step 5: LoRA / BitFit / Full-FT put trainable parameters INSIDE the
+        # backbone, so gradients must flow through it. Post-pool adapters
+        # (Bottleneck) and Linear-Probe keep the backbone frozen and run it
+        # under no_grad (legacy Step 1-4 behaviour). This flag decides which.
+        self.backbone_trainable = bool(backbone_trainable)
 
     # ------------------------------------------------------------------
     # Step 1-3 legacy entry points (single-episode trainer; per-episode
@@ -65,9 +70,18 @@ class BPEFTModel(nn.Module):
     # Step 4 episodic entry point.
     # ------------------------------------------------------------------
     def adapter_features(self, x: torch.Tensor) -> torch.Tensor:
-        """Frozen backbone -> trainable adapter. Returns (B, D)."""
-        with torch.no_grad():
+        """Backbone -> adapter. Returns (B, D).
+
+        When backbone_trainable is False (Bottleneck / Linear-Probe) the
+        backbone is frozen and run under no_grad, exactly as in Step 1-4.
+        When True (LoRA / BitFit / Full-FT) it runs WITH autograd so gradients
+        reach the trainable parameters living inside the backbone.
+        """
+        if self.backbone_trainable:
             feats = self.backbone(x)
+        else:
+            with torch.no_grad():
+                feats = self.backbone(x)
         return self.adapter(feats)
 
     def adapter_features_from_features(self, feats: torch.Tensor) -> torch.Tensor:
@@ -118,10 +132,15 @@ def build_model(cfg) -> BPEFTModel:
     """
     backbone = build_backbone(cfg["backbone"]["name"])
     dim = int(cfg["backbone"].get("feature_dim", 512))
-    adapter = build_adapter(dict(cfg["adapter"]), dim=dim)
+    # Step 5: build_adapter may inject into / unfreeze the backbone in place
+    # (lora / bitfit / full_ft), so it needs the backbone. Post-pool adapters
+    # ignore it. The adapter advertises whether the backbone must train.
+    adapter = build_adapter(dict(cfg["adapter"]), dim=dim, backbone=backbone)
+    backbone_trainable = bool(getattr(adapter, "backbone_trainable", False))
     head = build_head(
         dict(cfg["head"]),
         in_dim=dim,
         num_classes=int(cfg["dataset"]["n_way"]),
     )
-    return BPEFTModel(backbone, adapter, head)
+    return BPEFTModel(backbone, adapter, head,
+                      backbone_trainable=backbone_trainable)

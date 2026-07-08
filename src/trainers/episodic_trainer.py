@@ -95,6 +95,7 @@ class EpisodicTrainer:
         collapse_threshold: float = 0.25,
         evid_prior_per_class: float = 1.0,
         evid_use_variance: bool = True,
+        freeze_backbone: bool = True,
     ):
         if interpretation not in ("softmax", "evidential"):
             raise ValueError(
@@ -131,6 +132,10 @@ class EpisodicTrainer:
         # sweeps these on VAL to lower ID under-confidence / ECE.
         self.evid_prior_per_class = float(evid_prior_per_class)
         self.evid_use_variance = bool(evid_use_variance)
+        # Step 5: Bottleneck / Linear-Probe keep the backbone frozen (default).
+        # LoRA / BitFit / Full-FT set freeze_backbone=False so the trainable
+        # parameters inside the backbone keep requires_grad=True across epochs.
+        self.freeze_backbone = bool(freeze_backbone)
 
         self.history = EpisodicHistory()
         self.best_val_acc: float = -1.0
@@ -185,12 +190,18 @@ class EpisodicTrainer:
     # Train / validate loops
     # ------------------------------------------------------------------
     def _adapter_grad_norm(self) -> float:
-        """L2 norm over the adapter's gradients after backward(). A value
-        of ~0 means no learning signal is reaching the PEFT module (the
-        evidential-collapse fingerprint on the gradient side)."""
+        """L2 norm over ALL trainable gradients after backward(). A value of
+        ~0 means no learning signal is reaching the PEFT module (the
+        evidential-collapse fingerprint on the gradient side).
+
+        Step 5: iterate over every trainable parameter (not just
+        model.adapter), because LoRA/BitFit/Full-FT keep their trainable
+        parameters inside the backbone, where model.adapter is empty. For
+        post-pool adapters (Bottleneck) this is identical to the old
+        adapter-only sum, since the backbone is frozen."""
         sq = 0.0
-        for p in self.model.adapter.parameters():
-            if p.grad is not None:
+        for p in self.model.parameters():
+            if p.requires_grad and p.grad is not None:
                 sq += float(p.grad.detach().pow(2).sum().item())
         return sq ** 0.5
 
@@ -198,11 +209,17 @@ class EpisodicTrainer:
                          global_step_start: int
                          ) -> tuple[float, float, float, float, int]:
         self.model.train()
-        # Make sure frozen-BatchNorm in the backbone stays in eval mode
-        # (same invariant as Step 1's FewShotTrainer.fit_episode).
+        # Keep BatchNorm in the backbone in eval mode for ALL adapter types so
+        # its running statistics stay frozen at their ImageNet values (updating
+        # them from 25-image support batches is unstable and would leak query
+        # stats). eval() does NOT block gradients — for LoRA/BitFit/Full-FT the
+        # affine/conv params inside the backbone still update.
         self.model.backbone.eval()
-        for p in self.model.backbone.parameters():
-            p.requires_grad = False
+        # Only re-freeze the backbone parameters for post-pool / linear-probe
+        # adapters. LoRA/BitFit/Full-FT keep their in-backbone params trainable.
+        if self.freeze_backbone:
+            for p in self.model.backbone.parameters():
+                p.requires_grad = False
 
         total_loss = 0.0
         total_acc = 0.0
@@ -336,7 +353,11 @@ class EpisodicTrainer:
             #      starvation fingerprint) -> the model cannot express
             #      confidence and no gradient flows. Abort before Colab burns
             #      a full session on a doomed run.
-            if epoch == 1:
+            # collapse_threshold <= 0 disables BOTH guards. The Full-FT baseline
+            # (Step 5) is EXPECTED to behave pathologically (overfit / evidence
+            # collapse), so its config sets collapse_threshold: 0.0 to let the
+            # run finish and produce the honest (bad) numbers instead of aborting.
+            if epoch == 1 and self.collapse_threshold > 0:
                 if val_acc <= self.collapse_threshold:
                     raise EpisodicCollapse(
                         f"validation accuracy after epoch 1 was {val_acc:.3f}, "

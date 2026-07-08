@@ -1,0 +1,14 @@
+# Step 5 (Phase 3) — BitFit + evidential prototype head on CIFAR-FS Bertinetto.
+#
+# BitFit (Ben-Zaken 2022): train only the backbone's bias terms. ResNet-18
+# convs are bias-free (followed by BN), so this unfreezes the BatchNorm shift
+# (beta) parameters only (~4.8K), leaving BN gains and conv weights frozen.
+# The extreme "<0.1% params" selective baseline. Gradients flow through the
+# backbone to reach the biases (backbone_trainable).
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: bitfit
+
+wandb:
+  tags: [phase3, step5, bitfit, evidential, prototype, cifar_fs_bertinetto]

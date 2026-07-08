@@ -1,0 +1,24 @@
+# Step 5 (Phase 3) — LoRA + evidential prototype head on CIFAR-FS Bertinetto.
+#
+# Starts from the VAL-selected R-EDL evidential config (kl_weight_max=0.1,
+# use_variance=false, gentle evidence affine) — instructions.txt §3 says start
+# every new evidential config from the retuned one, NOT the original.
+#
+# LoRA (Hu 2021) reparameterizes the backbone's OWN weights: it injects a
+# low-rank update into the 1x1 downsample conv of the final ResNet-18 stage
+# (a pure channel matrix, so LoRA on it is the clean rank*(in+out) form). At
+# rank 16 with target layer4.0.downsample.0 (256->512): 16*(256+512)=12,288
+# trainable params — inside the exit-criteria 9-15K band and comparable to
+# Bottleneck-16 (~19K). Gradients flow through the backbone (backbone_trainable).
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null                      # null -> alpha defaults to rank
+  dropout: 0.0
+  lora_targets:
+    - layer4.0.downsample.0
+
+wandb:
+  tags: [phase3, step5, lora, evidential, prototype, cifar_fs_bertinetto]

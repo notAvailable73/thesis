@@ -1,0 +1,14 @@
+# Step 5 (Phase 3) — Linear Probing baseline (proposal §6) + softmax head.
+#
+# Backbone frozen, NO adapter, parameter-free softmax prototype head => ZERO
+# trainable parameters. There is nothing to optimise: scripts/train.py detects
+# the empty parameter list, runs one val pass for reporting, and saves a
+# checkpoint (the frozen backbone). This is the honest training-free
+# nearest-prototype baseline — the most extreme PEFT point on the curve.
+extends: exp_phase2_softmax.yaml
+
+adapter:
+  type: linear_probe
+
+wandb:
+  tags: [phase3, step5, linear_probe, baseline, softmax, prototype, cifar_fs_bertinetto]

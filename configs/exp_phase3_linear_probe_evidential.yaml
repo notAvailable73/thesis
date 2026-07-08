@@ -1,0 +1,13 @@
+# Step 5 (Phase 3) — Linear Probing baseline (proposal §6) + evidential head.
+#
+# Backbone frozen, NO adapter inserted. Under the prototype head the only
+# trainable parameters are the head's learnable evidence-affine (2 scalars:
+# scale + bias), so this run tunes exactly those 2 params — the purest form of
+# "only the head trains". All transfer comes from the frozen ImageNet features.
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: linear_probe
+
+wandb:
+  tags: [phase3, step5, linear_probe, baseline, evidential, prototype, cifar_fs_bertinetto]

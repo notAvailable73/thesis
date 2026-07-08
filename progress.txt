@@ -17,9 +17,12 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-Next:        Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines)
-Blocker:     none
-Today:       2026-07-07
+In progress: Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines) —
+             CODE + TESTS + 8 CONFIGS + WRITEUP DRAFT complete (2026-07-08);
+             the 8 Colab train+eval runs + final result JSONs/numbers are the
+             remaining work. Run: bash scripts/run_step5.sh
+Blocker:     none (awaiting a Colab GPU session for the 8 runs)
+Today:       2026-07-08
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -318,36 +321,51 @@ PHASE 3 — ALL PEFT METHODS + PLACEMENT  (NOT STARTED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [ ] NOT STARTED
+STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [~] IN PROGRESS
 --------------------------------------------------------------------------------
 Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Est: 1.5-2 weeks
+Writeup: step_writeups/step5.txt (draft; results §4 pending the Colab run)
 
 Actions:
-  [ ] 5.1  src/adapters/lora.py — full rewrite from Step 2 stub;
-           LoRALayer + LoRAAdapter; target set in cfg.adapter.lora_targets
-  [ ] 5.2  src/adapters/bitfit.py — unfreeze backbone biases only
-  [ ] 5.3  src/adapters/full_ft.py — proposal §6 PRIMARY BASELINE
-           (unfreezes the entire backbone)
-  [ ] 5.4  src/adapters/linear_probe.py — proposal §6 PRIMARY BASELINE
-           (backbone stays frozen; only head trainable)
-  [ ] 5.5  src/models/bpeft_model.py — factory accepts adapter.type ∈
-           {bottleneck, lora, bitfit, full_ft, linear_probe}
-  [ ] 5.6  8 configs: configs/exp_phase3_{lora,bitfit,full_ft,
-           linear_probe}_{evidential,softmax}.yaml
-  [ ] 5.7  Run all 8 configs through scripts/train + scripts/evaluate
-  [ ] 5.8  8 result JSONs: results/phase3_<adapter>_<head>_metrics.json
-  [ ] 5.9  4 new tests: test_lora, test_bitfit, test_full_ft,
-           test_linear_probe
-  [ ] 5.10 step_writeups/step5.txt with proposal §6 baselines section
+  [x] 5.1  src/adapters/lora.py — REWRITTEN from Step 2 stub; LoRALayer +
+           LoRAConv2d + LoRAAdapter (injects LoRAConv2d into the backbone's
+           cfg.adapter.lora_targets; default layer4.0.downsample.0, 1x1 conv,
+           12,288 params @ rank 16). No longer a pooled-feature adapter.
+  [x] 5.2  src/adapters/bitfit.py — unfreezes backbone .bias params only
+           (BN betas, ~4,800)
+  [x] 5.3  src/adapters/full_ft.py — proposal §6 PRIMARY BASELINE
+           (unfreezes the whole backbone, ~11.18M with fc removed)
+  [x] 5.4  src/adapters/linear_probe.py — proposal §6 PRIMARY BASELINE
+           (backbone frozen; only head trainable: 0 softmax / 2 evidential)
+  [x] 5.5  src/models/bpeft_model.py + src/adapters/__init__.py — factory
+           accepts adapter.type ∈ {bottleneck, lora, bitfit, full_ft,
+           linear_probe}; build_adapter now takes the backbone; model carries a
+           backbone_trainable flag; adapter_features is grad-aware. ALSO:
+           episodic_trainer.py gained freeze_backbone + a collapse-guard gate
+           (threshold<=0 disables it for Full-FT) + a generalized grad-norm;
+           scripts/train.py plumbs freeze_backbone and handles the zero-param
+           Linear-Probe path (train-free checkpoint).
+  [x] 5.6  8 configs: configs/exp_phase3_{lora,bitfit,full_ft,
+           linear_probe}_{evidential,softmax}.yaml (+ scripts/run_step5.sh)
+  [ ] 5.7  Run all 8 configs through scripts/train + scripts/evaluate   [COLAB]
+  [ ] 5.8  8 result JSONs: results/phase3_<adapter>_<head>_metrics.json [COLAB]
+  [x] 5.9  4 new tests: test_lora, test_bitfit, test_full_ft,
+           test_linear_probe (+ test_adapters.py updated: old pooled-feature
+           LoRA-stub tests removed)
+  [~] 5.10 step_writeups/step5.txt — structure + reasoning + analytical param
+           counts + baselines framing DONE; results §4 tables pending run.
 
 Exit criteria:
-  [ ] All 8 result JSONs present
-  [ ] Trainable param counts logged:
-        Bottleneck rank-16:  19,477   LoRA rank-16:  ~9-15K
-        BitFit (all biases):  ~5K     Full-FT:       ~11.7M
-        Linear Probe:         ~0      (prototype head is param-free)
-  [ ] proposal §6 baselines numerically compared against PEFT methods
-  [ ] pytest tests/ → 37+ passed (4 new tests)
+  [ ] All 8 result JSONs present                                        [COLAB]
+  [x] Trainable param counts documented (step5.txt §2):
+        Bottleneck rank-16:  16,912 (adapter; 19,477 was Step-1 linear head)
+        LoRA rank-16:        12,288 (layer4.0.downsample.0)
+        BitFit (all BN betas): 4,800
+        Full-FT:             11,176,512 (fc removed; 11.7M with fc)
+        Linear Probe:         0 (softmax) / 2 (evidential evidence-affine)
+  [ ] proposal §6 baselines numerically compared against PEFT methods   [COLAB]
+  [ ] pytest tests/ → 70+ passed (66 + new asserts across 4 files)      [COLAB]
+  [ ] byte-identical rerun spot-check for one config                    [COLAB]
 
 --------------------------------------------------------------------------------
 STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [ ] NOT STARTED
@@ -624,6 +642,38 @@ NOTES / DECISIONS LOG
             Probing baseline added to plan.txt and implementation.txt.
             They were missing from the original post-defence spec but
             are mandatory per proposal §6 and §7.
+
+2026-07-08  Decision (Step 5, LoRA): target the 1x1 downsample conv of the
+            final stage (layer4.0.downsample.0) — a pure channel matrix, so
+            LoRA on it is the clean rank*(in+out) reparameterization, 12,288
+            params @ rank 16 (inside the 9-15K band, comparable to Bottleneck).
+            A 3x3 conv2 target would explode to >160K params (down-projection
+            carries the full k*k kernel). Target set is a config knob
+            (cfg.adapter.lora_targets) so it can be widened later.
+
+2026-07-08  Flag (Step 5): implementation.txt 5.1's LoRA param formula
+            "2*rank*(in+out)" is wrong by 2x; the honest A/B count is
+            rank*(in+out). Tests assert the correct value; noted in step5.txt.
+
+2026-07-08  Decision (Step 5, BatchNorm): for ALL backbone-trainable adapters
+            (LoRA/BitFit/Full-FT) the trainer keeps the backbone in eval() mode,
+            so BN running stats stay frozen at ImageNet values; only affine/conv
+            weights update. Updating BN stats from 25-image supports is unstable
+            and leaks query stats. Documented deviation from vanilla Full-FT.
+
+2026-07-08  Decision (Step 5, Full-FT): its config sets collapse_threshold=0.0,
+            which disables the R-EPISODIC-COLLAPSE guard (now gated on
+            threshold>0), so the EXPECTED overfit/collapse completes and writes
+            honest metrics instead of aborting the Colab run. LR 1e-5, wd 1e-4.
+
+2026-07-08  Architecture (Step 5): LoRA/BitFit/Full-FT put trainable params
+            INSIDE the frozen backbone. build_adapter now receives the backbone
+            and mutates it in place; the model exposes backbone_trainable so
+            adapter_features runs the backbone WITH autograd (vs no_grad for the
+            frozen Bottleneck/Linear-Probe/legacy paths). The single_episode +
+            Bottleneck paths stay byte-identical. Linear-Probe+softmax has 0
+            trainable params -> train.py short-circuits to a train-free
+            checkpoint (Adam rejects an empty parameter list).
 
 
 ================================================================================

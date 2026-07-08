@@ -1,0 +1,16 @@
+# Step 5 (Phase 3) — LoRA + softmax prototype head on CIFAR-FS Bertinetto.
+# This is the proposal's named "Standard LoRA + Softmax" non-Bayesian baseline.
+# Same LoRA target set / rank as the evidential sibling so the head-to-head
+# isolates softmax-vs-evidential.
+extends: exp_phase2_softmax.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+  lora_targets:
+    - layer4.0.downsample.0
+
+wandb:
+  tags: [phase3, step5, lora, softmax, prototype, cifar_fs_bertinetto]

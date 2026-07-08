@@ -180,6 +180,53 @@ def _train_single_episode(cfg, args, logger, device, wb) -> None:
 
 
 # =====================================================================
+# Step 5: training-free path for the zero-parameter Linear-Probe baseline
+# =====================================================================
+@torch.no_grad()
+def _save_trainfree_checkpoint(cfg, args, model, interp, device,
+                               val_iter_factory, logger, wb) -> None:
+    """Linear-probe + parameter-free head: nothing to train. Run ONE val pass
+    (for a reportable best_val_acc), then save a checkpoint whose schema
+    matches the episodic path so scripts/evaluate.py loads it unchanged."""
+    model.eval()
+    correct = total = 0
+    for sx, sy, qx, qy in val_iter_factory(1):
+        q_logits = model.forward_proto(sx.to(device), sy.to(device),
+                                       qx.to(device))
+        preds = q_logits.argmax(dim=-1).cpu()
+        correct += int((preds == qy).sum().item())
+        total += int(len(qy))
+    val_acc = correct / max(1, total)
+    logger.info(f"linear-probe (train-free) val accuracy: {val_acc:.3f}")
+
+    ckpt_dir = Path(cfg.output.checkpoint_dir)
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    tag = _checkpoint_tag(cfg)
+    ckpt_path = ckpt_dir / f"model_phase2_{tag}.pt"
+    torch.save({
+        "state_dict":     model.state_dict(),
+        "config_path":    str(Path(args.config).resolve()),
+        "head_type":      cfg.head.type,
+        "adapter_type":   cfg.adapter.type,
+        "trainer_type":   "episodic",
+        "interpretation": interp,
+        "best_val_acc":   float(val_acc),
+        "best_val_epoch": 0,
+        "train_history": {
+            "epoch": [], "train_loss": [], "train_acc": [],
+            "val_loss": [], "val_acc": [val_acc], "kl_weight_at_end": [],
+            "mean_evidence": [], "adapter_grad_norm": [],
+        },
+    }, ckpt_path)
+    logger.info(f"saved train-free checkpoint: {ckpt_path}")
+    wb.update_summary({
+        "train/best_val_acc":   float(val_acc),
+        "train/best_val_epoch": 0,
+        "train/total_epochs":   0,
+    })
+
+
+# =====================================================================
 # Step 4 / Phase 2 path (trainer.type: episodic)
 # =====================================================================
 def _train_episodic(cfg, args, logger, device, wb) -> None:
@@ -249,8 +296,26 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
     logger.info(f"trainable params: {n_params:,}")
     wb.update_summary({"n_params": int(n_params)})
 
+    trainable = [p for p in model.parameters() if p.requires_grad]
+
+    # Step 5: the Linear-Probe baseline with a softmax prototype head has ZERO
+    # trainable parameters (frozen backbone + parameter-free head). There is
+    # nothing to optimise, and torch.optim.Adam rejects an empty parameter
+    # list — so short-circuit: evaluate the frozen model once on the val
+    # episodes for reporting, save a checkpoint, and skip meta-training. This
+    # is the honest "training-free nearest-prototype" baseline result.
+    if len(trainable) == 0:
+        logger.info(
+            "no trainable parameters (linear-probe + parameter-free head) — "
+            "skipping optimization; running one val pass for reporting."
+        )
+        _save_trainfree_checkpoint(
+            cfg, args, model, interp, device, val_iter_factory, logger, wb,
+        )
+        return
+
     optimizer = torch.optim.Adam(
-        [p for p in model.parameters() if p.requires_grad],
+        trainable,
         lr=float(cfg.train.lr),
         weight_decay=float(cfg.train.weight_decay),
     )
@@ -276,6 +341,9 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
         # R-EDL knobs (Step 4.5 / W2); defaults reproduce the Sensoy loss.
         evid_prior_per_class=float(cfg.loss.get("prior_per_class", 1.0)),
         evid_use_variance=bool(cfg.loss.get("use_variance", True)),
+        # Step 5: keep the backbone frozen only for post-pool / linear-probe
+        # adapters; LoRA/BitFit/Full-FT train parameters inside the backbone.
+        freeze_backbone=not bool(getattr(model, "backbone_trainable", False)),
     )
     result = trainer.fit(train_iter_factory, val_iter_factory)
 
