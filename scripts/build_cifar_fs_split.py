@@ -77,6 +77,7 @@ def main() -> None:
         "val":   split_names["val"],
         "test":  split_names["test"],
     }
+    _OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(_OUT, "w") as f:
         json.dump(out, f, indent=2)
     print(f"wrote {_OUT}  (64/16/20, disjoint, union=100, status={status})")
