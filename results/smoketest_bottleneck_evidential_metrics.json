@@ -1,0 +1,34 @@
+{
+  "accuracy_ci95": 0.052993336522273934,
+  "accuracy_mean": 0.8293333292007447,
+  "accuracy_std": 0.06045750143792185,
+  "adapter_type": "bottleneck",
+  "brier_mean": 0.2756479769945145,
+  "brier_std": 0.05236251118704811,
+  "config_path": "/home/sadman/Academics/Study/Thesis/thesis/configs/exp_step1.yaml",
+  "ece_per_episode_mean": 0.1492431873480479,
+  "ece_per_episode_std": 0.03178978337772547,
+  "ece_pooled": 0.11254663530985515,
+  "episodes_file": "configs/test_episodes.yaml",
+  "head_type": "evidential",
+  "n_params": 19477,
+  "num_episodes": 5,
+  "ood_auroc_mean": 0.960176,
+  "ood_auroc_std": 0.010137354991427606,
+  "seed": 42,
+  "seeds_first10": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "seeds_last10": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "trainer_type": "single_episode"
+}

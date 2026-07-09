@@ -1,0 +1,28 @@
+# DEMO-SPEED variant of exp_phase2_evidential_retuned.yaml.
+#
+# Same architecture, same episodic meta-training loop, same evidential loss
+# and learnable evidence affine -- only the epoch/episode BUDGET is cut, so a
+# genuinely trained checkpoint (real gradient updates, real data) is produced
+# in minutes instead of the ~4+ hours the full 30-epoch/100-episode schedule
+# takes on CPU. NOT for reporting thesis numbers -- just for wiring a real
+# trained adapter into the app for a supervisor demo. Re-run the retuned
+# config (not this one) for anything accuracy-bearing.
+extends: exp_phase2_evidential_retuned.yaml
+
+trainer:
+  type: episodic
+  num_epochs: 6
+  episodes_per_epoch: 40
+  val_episodes_per_epoch: 25
+  early_stop_patience: 3
+  collapse_threshold: 0.25
+  train_seed_offset: 20000
+
+loss:
+  kl_weight_max: 0.1
+  kl_anneal_steps: 150     # ~3.75 epochs at 40 episodes/epoch, scaled down from 1000/100
+  prior_per_class: 1.0
+  use_variance: false
+
+wandb:
+  tags: [phase2, step4_5, evidential, prototype, cifar_fs_bertinetto, redl, demo_speed]
