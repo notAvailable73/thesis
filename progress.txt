@@ -17,12 +17,13 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-In progress: Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines) —
-             CODE + TESTS + 8 CONFIGS + WRITEUP DRAFT complete (2026-07-08);
-             the 8 Colab train+eval runs + final result JSONs/numbers are the
-             remaining work. Run: bash scripts/run_step5.sh
-Blocker:     none (awaiting a Colab GPU session for the 8 runs)
-Today:       2026-07-08
+Just closed: Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines) —
+             all 8 Colab train+eval runs DONE (N=600, 2026-07-21); 8 result
+             JSONs in results/phase3_*; pytest 91 passed; writeup step5.txt §4
+             filled. Headline below. One optional box left: byte-identical rerun.
+Next up:     Step 6 (Adapter Placement Study, RQ1 — serial vs parallel).
+Blocker:     none.
+Today:       2026-07-21
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -51,6 +52,27 @@ BOTH probability-based softmax scores (MSP, TS-MSP) on EVERY OOD pool tested:
   writeup is FINAL, no caveats remain open (§5, §8).
   Perf note: TinyImageNet loader initially hung 1h+ on Google Drive (120k-file
   extraction over FUSE) — fixed to read straight from the zip, no extraction.
+
+Step 5 headline (Phase 3, same split/protocol, N=600, 2026-07-21) — TWO findings:
+  (1) The evidential OOD edge GENERALISES across PEFT methods. Evidential vacuity
+      beats softmax msp AND ts_msp on every OOD pool for all four trained-adapter
+      methods (LoRA, BitFit, Full-FT, + Bottleneck ref) by +0.010 to +0.134 AUROC;
+      vs energy it stays competitive-not-dominant (same as Step 4.5). The central
+      claim is NOT a Bottleneck artefact. Calibration stays the open problem
+      (evidential ECE ~0.33 vs softmax-TS 0.005-0.041).
+  (2) Full-FT did NOT collapse — it is the TOP-accuracy run (softmax 0.905),
+      contradicting proposal §6's "overfits on 25 images". Cause is a PROTOCOL
+      mismatch (episodic meta-training freezes a shared backbone at test; there
+      is no per-episode fine-tune to overfit), NOT a data leak (disjoint 64/20
+      classes, BN frozen, early-stopped at ep 6). REFRAME §6: PEFT reaches ~98%
+      of Full-FT accuracy (Bottleneck 0.884 / BitFit 0.881 vs 0.905) at 660x-
+      2330x fewer params — the story is EFFICIENCY, not Full-FT viability.
+  Accuracy: FullFT-sm .905 > FullFT-ev .888 > Bottleneck-ev .884 > BitFit-sm .881
+      > Bottleneck-sm .875 > LinearProbe .874 > BitFit-ev .869 > LoRA-sm .860 >
+      LoRA-ev .828. LoRA is weakest (single-1x1-conv capacity, pre-flagged).
+      Linear-Probe evidential is the degenerate corner (ECE 0.623; vacuity
+      collapses to 0.708/0.584 on svhn/cifar100 — no adapter to shape evidence).
+  Full numbers/story: step_writeups/step5.txt §4.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -321,10 +343,10 @@ PHASE 3 — ALL PEFT METHODS + PLACEMENT  (NOT STARTED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [~] IN PROGRESS
+STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Est: 1.5-2 weeks
-Writeup: step_writeups/step5.txt (draft; results §4 pending the Colab run)
+Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Closed: 2026-07-21
+Writeup: step_writeups/step5.txt (COMPLETE; results §4 filled from the run)
 
 Actions:
   [x] 5.1  src/adapters/lora.py — REWRITTEN from Step 2 stub; LoRALayer +
@@ -347,25 +369,26 @@ Actions:
            Linear-Probe path (train-free checkpoint).
   [x] 5.6  8 configs: configs/exp_phase3_{lora,bitfit,full_ft,
            linear_probe}_{evidential,softmax}.yaml (+ scripts/run_step5.sh)
-  [ ] 5.7  Run all 8 configs through scripts/train + scripts/evaluate   [COLAB]
-  [ ] 5.8  8 result JSONs: results/phase3_<adapter>_<head>_metrics.json [COLAB]
+  [x] 5.7  Ran all 8 configs through scripts/train + scripts/evaluate (Colab,
+           2026-07-21, N=600)
+  [x] 5.8  8 result JSONs present: results/phase3_<adapter>_<head>_metrics.json
   [x] 5.9  4 new tests: test_lora, test_bitfit, test_full_ft,
            test_linear_probe (+ test_adapters.py updated: old pooled-feature
            LoRA-stub tests removed)
-  [~] 5.10 step_writeups/step5.txt — structure + reasoning + analytical param
-           counts + baselines framing DONE; results §4 tables pending run.
+  [x] 5.10 step_writeups/step5.txt — COMPLETE; results §4 tables filled +
+           Full-FT proposal-§6 reframe written.
 
 Exit criteria:
-  [ ] All 8 result JSONs present                                        [COLAB]
+  [x] All 8 result JSONs present                                        DONE
   [x] Trainable param counts documented (step5.txt §2):
         Bottleneck rank-16:  16,912 (adapter; 19,477 was Step-1 linear head)
         LoRA rank-16:        12,288 (layer4.0.downsample.0)
         BitFit (all BN betas): 4,800
         Full-FT:             11,176,512 (fc removed; 11.7M with fc)
         Linear Probe:         0 (softmax) / 2 (evidential evidence-affine)
-  [ ] proposal §6 baselines numerically compared against PEFT methods   [COLAB]
-  [ ] pytest tests/ → 70+ passed (66 + new asserts across 4 files)      [COLAB]
-  [ ] byte-identical rerun spot-check for one config                    [COLAB]
+  [x] proposal §6 baselines numerically compared against PEFT methods   DONE (§4.3)
+  [x] pytest tests/ → 70+ passed                                        DONE (91 passed)
+  [ ] byte-identical rerun spot-check for one config                    PENDING (optional)
 
 --------------------------------------------------------------------------------
 STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [ ] NOT STARTED
