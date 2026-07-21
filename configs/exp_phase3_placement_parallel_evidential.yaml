@@ -1,0 +1,18 @@
+# Step 6 (RQ1) — Bottleneck adapter placed PARALLEL (alongside each stage's
+# final block, summed at the output) + evidential prototype head.
+#
+# Parallel = out' = out + body(input) via a forward hook. Same 1x1 bottleneck
+# form / rank / block_ids as the serial sibling, so the head-to-head isolates
+# serial-vs-parallel composition. Conv-Adapter (Chen 2022) predicts parallel >
+# serial for classification — Step 6 tests whether that holds in our few-shot
+# frozen-backbone prototype-head setting. See step_writeups/step6.txt.
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+wandb:
+  tags: [phase3, step6, placement, parallel, evidential, prototype, cifar_fs_bertinetto]

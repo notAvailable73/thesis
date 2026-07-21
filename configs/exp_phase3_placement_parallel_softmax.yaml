@@ -1,0 +1,13 @@
+# Step 6 (RQ1) — Bottleneck adapter placed PARALLEL + softmax prototype head.
+# Softmax sibling of exp_phase3_placement_parallel_evidential; same 1x1
+# bottleneck form / rank / block_ids. See step_writeups/step6.txt.
+extends: exp_phase2_softmax.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+wandb:
+  tags: [phase3, step6, placement, parallel, softmax, prototype, cifar_fs_bertinetto]
