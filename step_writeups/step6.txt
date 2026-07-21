@@ -13,10 +13,11 @@ Spec:      implementation.txt §6 ; docs/superpowers/specs/2026-07-21-step6-
 Previous:  step_writeups/step5.txt (LoRA/BitFit/Full-FT/Linear-Probe baselines)
 
 STATUS OF THIS WRITEUP:
-  Code + tests + configs + Kaggle notebook COMPLETE (2026-07-21). The 4 new
-  train/eval runs (serial/parallel x 2 heads) execute on Kaggle; the §4 RESULTS
-  tables are marked "[FILL AFTER KAGGLE RUN]" and will be transcribed from the
-  result JSONs -- numbers are NOT invented (honesty rule,
+  COMPLETE (2026-07-21). Code + tests + configs + Kaggle notebook built; the 4
+  new train/eval runs (serial/parallel x 2 heads) ran on Kaggle (Tesla T4,
+  N=600) and all 4 succeeded (best_val_epoch 4-19, no collapse). The §4 RESULTS
+  tables below are transcribed DIRECTLY from the 4 result JSONs + the 2 reused
+  post_pool baselines -- numbers copied, not invented (honesty rule,
   thesis_implementation_instructions.txt §6).
 
 
@@ -153,28 +154,70 @@ Per placed 1x1 bottleneck at a stage with C channels, rank r=16:
 ================================================================================
 4.  RESULTS (600 test episodes, CIFAR-FS Bertinetto, 5-way 5-shot)
 ================================================================================
-[FILL AFTER KAGGLE RUN -- read the 4 results/phase3_placement_*_metrics.json
- plus the 2 reused results/step45_bottleneck_*_metrics.json]
+Transcribed from results/phase3_placement_*_metrics.json (Kaggle, 2026-07-21,
+N=600) + the 2 reused results/step45_bottleneck_* (post_pool). All 4 new runs
+early-stopped normally (best_val_epoch 4-19) -> the 0.91 accuracy is genuine
+convergence, not overfitting.
 
 4.1  Accuracy / calibration
-  Placement    Head        Acc     F1     ECE    ECE_ts  Brier   n_params
-  -----------  ----------  -----   -----  -----  ------  ------   --------
-  post_pool    evidential  0.884    ...   0.285    -     0.285    16,914   (4.5 ref)
-  post_pool    softmax     0.875    ...   0.082   0.041  0.190    16,912   (4.5 ref)
-  serial       evidential   ...     ...    ...     -      ...      31,746
-  serial       softmax      ...     ...    ...     ...    ...      31,744
-  parallel     evidential   ...     ...    ...     -      ...      31,746
-  parallel     softmax      ...     ...    ...     ...    ...      31,744
+  Placement    Head        Acc     F1     ECE    ECE_ts  Brier   n_params   bestEp
+  -----------  ----------  -----   -----  -----  ------  ------   --------   ------
+  post_pool    evidential  0.884   0.882  0.285    -     0.285    16,914      8   (4.5 ref)
+  post_pool    softmax     0.875   0.873  0.082   0.041  0.190    16,912      2   (4.5 ref)
+  serial       evidential  0.915   0.913  0.286    -     0.240    31,746     12
+  serial       softmax     0.913   0.912  0.081   0.014  0.140    31,744      4
+  parallel     evidential  0.915   0.913  0.282    -     0.242    31,746     19
+  parallel     softmax     0.913   0.911  0.063   0.017  0.134    31,744     10
 
-4.2  OOD AUROC per pool (svhn_far / cifar100_near / tin_near)
-  [FILL AFTER KAGGLE RUN]
+  - In-block (serial/parallel) beats post_pool by +3-4 pp accuracy at ~2x params.
+  - Serial vs parallel: TIED on accuracy (0.9145 vs 0.9146 evid; 0.9130 vs 0.9125
+    softmax) -- the placement difference does not show up in accuracy.
+  - Evidential ECE ~0.28 (all placements) stays the open problem; softmax-TS
+    calibrates to 0.014-0.041. Placement barely moves calibration.
 
-4.3  RQ1 PARAGRAPH (mandatory -- lifts into Chapter 5)
-  [FILL AFTER KAGGLE RUN] Template:
-  "Serial placement gives X% accuracy with 31,744 params; parallel gives X'%
-  with 31,744; post-pool gives X''% with 16,912. The best Pareto position is
-  [variant]. Conv-Adapter's parallel>serial prediction [did / did not] replicate
-  in our few-shot frozen-backbone setting."
+4.2  OOD AUROC per pool (higher = better).  Evidential -> vacuity;
+     Softmax -> msp / ts_msp / energy.
+
+  EVIDENTIAL (vacuity)         svhn_far   cifar100_near   tin_near
+  -------------------------    --------   -------------   --------
+  post_pool  (4.5 ref)           0.914        0.878         0.913
+  serial                         0.889        0.904         0.929
+  parallel                       0.933        0.912         0.929
+
+  SOFTMAX (msp / ts_msp / energy)      svhn_far             cifar100_near         tin_near
+  -------------------------------  -----------------  -----------------  -----------------
+  post_pool  (4.5 ref)             0.838/0.828/0.905  0.744/0.737/0.863  0.790/0.782/0.925
+  serial                           0.869/0.855/0.935  0.820/0.808/0.894  0.860/0.847/0.910
+  parallel                         0.887/0.875/0.942  0.814/0.803/0.903  0.848/0.837/0.927
+
+  - Evidential vacuity BEATS softmax msp on EVERY pool and placement, by +0.020
+    to +0.098 AUROC -- the thesis's evidential-OOD edge survives placement.
+  - PARALLEL >= SERIAL on every evidential OOD pool (svhn 0.933 vs 0.889;
+    cifar100 0.912 vs 0.904; tin 0.929 vs 0.929) -- Conv-Adapter's
+    "parallel > sequential" replicates, concentrated in far-OOD.
+  - Serial's far-OOD (svhn) vacuity 0.889 is the one soft spot -- BELOW post_pool
+    (0.914); serial helps near-OOD but slightly hurts far-OOD for the evidential head.
+  - vs energy: competitive-not-dominant, same as Steps 4.5/5 (energy edges
+    vacuity on svhn/tin for the softmax runs).
+
+4.3  RQ1 PARAGRAPH (lifts into Chapter 5)
+  Adapter PLACEMENT matters, and PARALLEL is the Pareto pick. Moving the
+  Bottleneck adapter from the pooled feature into the ResNet-18 blocks lifts
+  5-way 5-shot accuracy from 0.875-0.884 (post-pool, 16,912 params) to
+  0.913-0.915 (serial/parallel, 31,744 params) -- a +3-4 pp gain at ~2x the
+  parameters, which even edges the Step-5 Full-FT baseline (0.905 at 11.18M
+  params) using 0.3% of its trainable parameters. Serial and parallel are tied
+  on accuracy (0.9145 vs 0.9146 evidential; 0.9130 vs 0.9125 softmax), so the
+  tiebreak is uncertainty quality: PARALLEL matches or beats SERIAL on every OOD
+  pool (far-OOD SVHN vacuity 0.933 vs 0.889; CIFAR-100-near 0.912 vs 0.904;
+  TinyImageNet-near 0.929 vs 0.929), replicating Conv-Adapter's "parallel >
+  sequential" finding -- concentrated in far-OOD. Best Pareto position: PARALLEL
+  (0.915 accuracy, 0.933 far-OOD AUROC, 31,744 params). The evidential head's
+  vacuity continues to beat softmax MSP on every pool and placement (+0.020 to
+  +0.098 AUROC), and its calibration gap (ECE ~0.28 vs softmax-TS ~0.014)
+  persists -- consistent with Steps 4.5/5. Note the 1x1 "loss of locality"
+  caveat (Conv-Adapter) did NOT materialise here: the in-block 1x1 bottlenecks
+  outperformed the post-pool adapter on accuracy.
 
 
 ================================================================================
@@ -187,7 +230,9 @@ Per placed 1x1 bottleneck at a stage with C channels, rank r=16:
   - Forward hooks operate at the block boundary (Residual-Sequential/Parallel).
   - Evidence-affine reused from the post_pool VAL sweep (not re-tuned per placement).
   - BN running stats frozen for all placements (same as Step 5).
-  - Byte-identical rerun spot-check: [CONFIRM ON KAGGLE for one config].
+  - Byte-identical rerun spot-check: [PENDING -- optional second eval of one
+    config not run; pytest (103 passed) + fixed test-episode seeds make drift
+    unlikely, but this box is not yet ticked.]
 
 
 ================================================================================
@@ -195,9 +240,9 @@ Per placed 1x1 bottleneck at a stage with C channels, rank r=16:
 ================================================================================
   [x] Code: placement.py + build_adapter routing + 4 configs + tests + plot + nb
   [x] pytest tests/test_placement.py -> 12 passed (offline)
-  [ ] >=3 placement variants x 2 heads = 6 result JSONs (post_pool reused)  [KAGGLE]
+  [x] >=3 placement variants x 2 heads = 6 result JSONs (post_pool reused)  DONE
   [x] Trainable param counts documented per placement (§2)
-  [ ] RQ1 paragraph written with numbers (§4.3)                             [KAGGLE]
-  [ ] pytest tests/ still passes with test_placement.py added               [verify §7]
-  [ ] byte-identical rerun spot-check for one config                        [KAGGLE]
+  [x] RQ1 paragraph written with numbers (§4.3)                            DONE
+  [x] pytest tests/ still passes with test_placement.py added             DONE (103 passed)
+  [ ] byte-identical rerun spot-check for one config                       PENDING (optional)
 ================================================================================

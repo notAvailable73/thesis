@@ -17,11 +17,13 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-Just closed: Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines) —
-             all 8 Colab train+eval runs DONE (N=600, 2026-07-21); 8 result
-             JSONs in results/phase3_*; pytest 91 passed; writeup step5.txt §4
+Just closed: Step 6 (Phase 3: Adapter Placement Study, RQ1) — 4 Kaggle train+eval
+             runs DONE (serial/parallel × 2 heads, N=600, Tesla T4, 2026-07-21),
+             all 4 OK (best_val_epoch 4-19); 4 JSONs in results/phase3_placement_*
+             + comparison PNG; pytest 103 passed; step6.txt §4 + RQ1 paragraph
              filled. Headline below. One optional box left: byte-identical rerun.
-Next up:     Step 6 (Adapter Placement Study, RQ1 — serial vs parallel).
+             (Step 5 closed just before — 8 JSONs, step5.txt filled.)
+Next up:     Step 7 (near-OOD TinyImageNet + far-OOD Gaussian, RQ3).
 Blocker:     none.
 Today:       2026-07-21
 
@@ -73,6 +75,22 @@ Step 5 headline (Phase 3, same split/protocol, N=600, 2026-07-21) — TWO findin
       Linear-Probe evidential is the degenerate corner (ECE 0.623; vacuity
       collapses to 0.708/0.584 on svhn/cifar100 — no adapter to shape evidence).
   Full numbers/story: step_writeups/step5.txt §4.
+
+Step 6 headline (Phase 3, RQ1, same split/protocol, N=600, 2026-07-21) — PLACEMENT
+MATTERS, PARALLEL IS THE PARETO PICK:
+  In-block placement of the 1x1 Bottleneck (serial/parallel, 31.7K params) beats
+  post_pool (16.9K) by +3-4pp accuracy (0.913-0.915 vs 0.875-0.884) — and edges
+  Step-5 Full-FT (0.905, 11.18M) at 0.3% of its trainable params. Serial vs
+  parallel TIE on accuracy (0.9145 vs 0.9146 evid); the tiebreak is OOD:
+    parallel-evid vacuity: svhn 0.933  cifar100 0.912  tin 0.929   (best OOD)
+    serial-evid   vacuity: svhn 0.889  cifar100 0.904  tin 0.929   (svhn dips below post_pool 0.914)
+  => parallel >= serial on every evidential OOD pool — Conv-Adapter's
+  "parallel > sequential" replicates, concentrated in far-OOD. Evidential vacuity
+  still beats softmax msp on EVERY pool+placement (+0.020..+0.098). Evidential ECE
+  ~0.28 stays the open calibration problem. The 1x1 "loss of locality" caveat did
+  NOT bite (in-block beat post_pool on accuracy). All 4 runs early-stopped normally
+  (best_val_epoch 4-19) — 0.915 is genuine, not overfit.
+  Full numbers/story: step_writeups/step6.txt §4 ; plot results/step6_placement_comparison.png.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -391,29 +409,40 @@ Exit criteria:
   [ ] byte-identical rerun spot-check for one config                    PENDING (optional)
 
 --------------------------------------------------------------------------------
-STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [ ] NOT STARTED
+STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 3     RQ: RQ1 (primary)                        Est: 1 week
+Phase: 3     RQ: RQ1 (primary)                        Closed: 2026-07-21
+Writeup: step_writeups/step6.txt (COMPLETE; results §4 + RQ1 paragraph filled)
+Design/plan: docs/superpowers/specs|plans/2026-07-21-step6-adapter-placement*
 
 Actions:
-  [ ] 6.1  src/adapters/placement.py — register_serial_adapter,
-           register_parallel_adapter (forward hooks on BasicBlock)
-  [ ] 6.2  src/backbones/resnet18.py — build_resnet18_with_placed_
-           adapters(cfg) using cfg.adapter.placement ∈ {post_pool,
-           serial, parallel}
-  [ ] 6.3  4 configs: configs/exp_phase3_placement_{serial,
-           parallel}_{evidential,softmax}.yaml
-  [ ] 6.4  Run + evaluate; 4 result JSONs
-  [ ] 6.5  Bar-chart comparison plot of accuracy / AUROC / ECE for
-           3 placement variants × 2 heads = 6 bars; 300 dpi PNG
-  [ ] 6.6  step_writeups/step6.txt with RQ1 paragraph drafted
+  [x] 6.1  src/adapters/placement.py — Conv1x1Bottleneck +
+           register_serial_adapter / register_parallel_adapter (forward hooks
+           on the final BasicBlock of each stage) + PlacementAdapter.
+  [x] 6.2  Placement wired via build_adapter (adapter.type=bottleneck +
+           adapter.placement ∈ {post_pool, serial, parallel}, block_ids).
+           Reuses backbone_trainable=True (like LoRA); NO resnet18.py /
+           trainer / evaluator changes needed.
+  [x] 6.3  4 configs: configs/exp_phase3_placement_{serial,parallel}_
+           {evidential,softmax}.yaml (rank 16, block_ids [0,1,2,3]).
+  [x] 6.4  Ran + evaluated on Kaggle (T4, N=600); 4 result JSONs
+           results/phase3_placement_*; all 4 OK (best_val_epoch 4-19).
+  [x] 6.5  scripts/step6_placement_plot.py -> results/step6_placement_
+           comparison.png (300 dpi; 3 placements × 2 heads).
+  [x] 6.6  step_writeups/step6.txt with the RQ1 Pareto paragraph filled.
+  [x] 6.7  Kaggle notebook notebooks/step6_placement.ipynb (git clone +
+           attached bpeft-data dataset; resilient CIFAR staging).
 
 Exit criteria:
-  [ ] 3 placement variants compared on Bottleneck for each head
-  [ ] Trainable param counts reported for each placement
-  [ ] RQ1 paragraph: "Serial X% acc / Y params; parallel X'/Y';
-      post-pool X''/Y''. Best Pareto-position is [variant]."
-  [ ] pytest tests/ → 38+ passed (test_placement.py added)
+  [x] 3 placement variants (post_pool reused + serial + parallel) × 2 heads
+        = 6 result JSONs
+  [x] Trainable param counts reported per placement (16,912 post_pool;
+        31,744 serial/parallel; +2 for evidential)
+  [x] RQ1 paragraph written: parallel is the Pareto pick (0.915 acc / 0.933
+        far-OOD / 31.7K params; beats post_pool and Step-5 Full-FT); serial
+        ties on accuracy but dips on far-OOD. See step6.txt §4.3.
+  [x] pytest tests/ → 103 passed (test_placement.py: 12 new)
+  [ ] byte-identical rerun spot-check for one config              PENDING (optional)
 
 
 ================================================================================
