@@ -17,15 +17,15 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-Just closed: Step 6 (Phase 3: Adapter Placement Study, RQ1) — 4 Kaggle train+eval
-             runs DONE (serial/parallel × 2 heads, N=600, Tesla T4, 2026-07-21),
-             all 4 OK (best_val_epoch 4-19); 4 JSONs in results/phase3_placement_*
-             + comparison PNG; pytest 103 passed; step6.txt §4 + RQ1 paragraph
-             filled. Headline below. One optional box left: byte-identical rerun.
-             (Step 5 closed just before — 8 JSONs, step5.txt filled.)
-Next up:     Step 7 (near-OOD TinyImageNet + far-OOD Gaussian, RQ3).
+Just closed: Step 7 (Phase 4: far-OOD Gaussian + OOD consolidation, RQ3) — Kaggle
+             re-eval of the parallel winner (both heads, N=600, T4, 2026-07-22),
+             both OK; added gaussian_far pool; results/phase4_ood_table.json +
+             phase4_parallel_* JSONs + step7_ood_comparison.png; pytest 107 passed;
+             step7.txt §4 + RQ3 paragraph filled. Headline below.
+             (Step 6 closed just before — RQ1 placement; Step 5 — PEFT baselines.)
+Next up:     Step 8 (MobileNetV3-Small backbone, RQ4/efficiency).
 Blocker:     none.
-Today:       2026-07-21
+Today:       2026-07-22
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -91,6 +91,21 @@ MATTERS, PARALLEL IS THE PARETO PICK:
   NOT bite (in-block beat post_pool on accuracy). All 4 runs early-stopped normally
   (best_val_epoch 4-19) — 0.915 is genuine, not overfit.
   Full numbers/story: step_writeups/step6.txt §4 ; plot results/step6_placement_comparison.png.
+
+Step 7 headline (Phase 4, RQ3, parallel winner, N=600, 2026-07-22) — EVIDENTIAL'S
+OOD EDGE IS LARGER ON NEAR-OOD THAN FAR-OOD (the RQ3 point):
+  Evidential vacuity beats softmax MSP on EVERY pool; gap widens near > far:
+    far : svhn +0.045 (0.933 vs 0.888)   gaussian +0.048 (0.980 vs 0.932)
+    near: cifar100 +0.098 (0.912 vs 0.814)   tin +0.080 (0.929 vs 0.848)
+  FPR@95 same story (near cifar100: evid 0.393 vs softmax 0.667). Mechanism:
+  MSP degrades under semantic (near) shift where the head stays confident;
+  Dirichlet vacuity stays discriminative (OpenOOD near>far; Malinin & Gales).
+  Gaussian sanity PASSES — both heads near-ceiling on white noise (evid 0.980;
+  softmax msp 0.932, energy 0.984). Softmax energy stays competitive on far-OOD
+  but loses on the decisive near-OOD axis. svhn/cifar/tin reproduced Step 6's
+  parallel numbers EXACTLY (determinism verified). TinyImageNet still uncurated —
+  near-OOD claim rests on the clean, disjoint cifar100_near.
+  Full numbers/story: step_writeups/step7.txt §4 ; table results/phase4_ood_table.json.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -450,26 +465,37 @@ PHASE 4 — OOD BREADTH  (NOT STARTED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 7 — NEAR-OOD TINYIMAGENET + FAR-OOD GAUSSIAN (RQ3)         [ ] NOT STARTED
+STEP 7 — NEAR-OOD TINYIMAGENET + FAR-OOD GAUSSIAN (RQ3)         [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 4     RQ: RQ3 (primary)                        Est: 1 week
+Phase: 4     RQ: RQ3 (primary)                        Closed: 2026-07-22
+Writeup: step_writeups/step7.txt (COMPLETE; §4 + RQ3 paragraph filled)
+Design/plan: docs/superpowers/specs|plans/2026-07-22-step7-far-ood-gaussian*
+Scope note: "tight consolidation" — near-OOD infra (7.1/7.3) already existed
+  from Steps 4.5/5/6; Step 7 added the Gaussian far-OOD pool + consolidated the
+  RQ3 story on the Step-6 winner (parallel). TinyImageNet kept UNCURATED
+  (documented); RQ3 rests on the clean, disjoint cifar100_near.
 
 Actions:
-  [ ] 7.1  src/datasets/tinyimagenet_ood.py — download + filter
-           classes that semantically overlap with CIFAR-FS test
-  [ ] 7.2  src/datasets/gaussian_noise_ood.py — 500 N(0,1) images,
-           seeded
-  [ ] 7.3  src/evaluators/ood.py — accept multiple OOD loaders;
-           return {AUROC, FPR@95} per OOD dataset
-  [ ] 7.4  Re-run scripts/evaluate.py on best Phase 3 config with
-           extended OOD list; save results/phase4_ood_table.json
-  [ ] 7.5  6 PNGs: vacuity histogram per OOD dataset × 2 heads
-  [ ] 7.6  step_writeups/step7.txt with RQ3 paragraph drafted
+  [x] 7.1  TinyImageNet near-OOD loader ALREADY built (Step 4.5); reused as-is,
+           uncurated (class-overlap filtering deferred — see caveat).
+  [x] 7.2  src/datasets/gaussian_noise_ood.py — seeded N(0,1), clamp [-3,3],
+           deterministic (torch.Generator). Exported in datasets/__init__.py.
+  [x] 7.3  Multi-OOD AUROC + FPR@95 per pool ALREADY in evaluate_episodic
+           (Step 4.5); --use-gaussian just adds a pool to the generic loop.
+  [x] 7.4  Re-ran the parallel winner (both heads) with --use-tinyimagenet
+           --use-gaussian; results/phase4_parallel_* + phase4_ood_table.json.
+  [x] 7.5  scripts/step7_ood_consolidate.py -> phase4_ood_table.json +
+           results/step7_ood_comparison.png (far-vs-near AUROC bars).
+  [x] 7.6  step_writeups/step7.txt with the RQ3 paragraph filled.
+  [x] 7.7  Kaggle notebook notebooks/step7_ood.ipynb.
 
 Exit criteria:
-  [ ] AUROC + FPR@95 for SVHN + TinyImageNet for best config × 2 heads
-  [ ] RQ3 paragraph: honest finding ("evidential wins on far-OOD by
-      X pp, on near-OOD by Y" — or ties / loses, both are valid)
+  [x] AUROC + FPR@95 for 4 OOD datasets (svhn/gaussian/cifar100/tin) × both heads
+  [x] RQ3 paragraph (honest finding): evidential beats softmax MSP on EVERY pool,
+        by MORE on near-OOD (+0.08..+0.10) than far-OOD (+0.045..+0.048); Gaussian
+        sanity passes. See step7.txt §4.3.
+  [x] pytest tests/ → 107 passed (test_gaussian_ood.py: 4 new)
+  [ ] byte-identical rerun spot-check for one config              PENDING (optional)
 
 
 ================================================================================

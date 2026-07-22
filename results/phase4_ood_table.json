@@ -1,0 +1,47 @@
+{
+  "config": "exp_phase3_placement_parallel",
+  "heads": {
+    "evidential": {
+      "cifar100": {
+        "auroc": 0.9119,
+        "fpr_at_95": 0.3929
+      },
+      "gaussian": {
+        "auroc": 0.9799,
+        "fpr_at_95": 0.1306
+      },
+      "svhn": {
+        "auroc": 0.9328,
+        "fpr_at_95": 0.3795
+      },
+      "tinyimagenet": {
+        "auroc": 0.9286,
+        "fpr_at_95": 0.2956
+      }
+    },
+    "softmax": {
+      "cifar100": {
+        "auroc": 0.8135,
+        "fpr_at_95": 0.667
+      },
+      "gaussian": {
+        "auroc": 0.9315,
+        "fpr_at_95": 0.4246
+      },
+      "svhn": {
+        "auroc": 0.8875,
+        "fpr_at_95": 0.5187
+      },
+      "tinyimagenet": {
+        "auroc": 0.8483,
+        "fpr_at_95": 0.6065
+      }
+    }
+  },
+  "n_id": "600 episodes x 75 query",
+  "n_ood": 500,
+  "score_per_head": {
+    "evidential": "vacuity",
+    "softmax": "msp"
+  }
+}
