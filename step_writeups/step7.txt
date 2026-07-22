@@ -1,0 +1,150 @@
+================================================================================
+STEP 7 -- RQ3: FAR-OOD GAUSSIAN + OOD CONSOLIDATION -- IMPL
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     4 (OOD breadth)
+Scope:     Add a far-OOD Gaussian-noise sanity pool to the OOD matrix, evaluate
+           it on the Step-6 winner (PARALLEL placement, both heads), and
+           consolidate the RQ3 story (far: SVHN + Gaussian; near: CIFAR-100-clean
+           + TinyImageNet). "Tight consolidation" scope -- the near-OOD infra
+           already exists (Steps 4.5/5/6) and RQ3's near-OOD claim already rests
+           on the provably-disjoint cifar100_near pool.
+Spec:      implementation.txt §7 ; docs/superpowers/specs/2026-07-22-step7-far-
+           ood-gaussian-design.md
+Previous:  step_writeups/step6.txt (placement study; parallel is the winner)
+
+STATUS OF THIS WRITEUP:
+  Code + tests + Kaggle notebook COMPLETE (2026-07-22). The re-eval of the 2
+  parallel configs with the extended OOD list runs on Kaggle; §4 RESULTS are
+  marked "[FILL AFTER KAGGLE RUN]" and will be transcribed from the JSONs --
+  numbers NOT invented (honesty rule, thesis_implementation_instructions.txt §6).
+
+
+================================================================================
+0.  PAPER-GROUNDED REASONING (per thesis_implementation_instructions §5)
+================================================================================
+Sources: ODD_paper_summaries.txt (OpenOOD near/far split; energy score) +
+Malinin & Gales (Dirichlet Prior Networks) as summarised.
+
+WHICH PAPERS / WHY
+  - OpenOOD frames OOD as NEAR (semantic shift, same domain) vs FAR (covariate
+    shift, different domain). Softmax-MSP is known to be easy on far-OOD and to
+    DEGRADE on near-OOD; evidential/Dirichlet vacuity is expected to hold up on
+    near-OOD -- this is RQ3.
+  - Gaussian white noise is the extreme FAR-OOD end: if a model cannot separate
+    pure noise from CIFAR features, something is broken.
+
+PROS / FIT
+  - Gaussian is a cheap, unambiguous far-OOD sanity check / ablation. It anchors
+    the "far" end of the near-vs-far axis alongside SVHN.
+
+CONS / CAVEAT (flagged)
+  - Gaussian is TRIVIALLY easy, so it is a sanity check, NOT a discriminating
+    test. The discriminating RQ3 evidence remains the near-OOD pools.
+  - TinyImageNet remains UNCURATED (all 200 classes; no CIFAR-FS-overlap
+    filtering -- implementation.txt 7.1 risk). RQ3's near-OOD claim therefore
+    rests on cifar100_near (16 val classes, provably disjoint from the 20 test
+    classes), with tin_near as a corroborating (slightly contaminated) pool.
+
+
+================================================================================
+1.  WHAT WAS BUILT
+================================================================================
+Datasets (src/datasets/):
+  gaussian_noise_ood.py  NEW. get_gaussian_ood(image_size, num_samples, seed,
+                         clamp) -> (N,3,224,224) seeded N(0,1) clamped [-3,3],
+                         deterministic via torch.Generator. Backbone-ready
+                         (same contract as get_svhn_ood).
+  __init__.py            exports get_gaussian_ood.
+
+Evaluator (scripts/evaluate.py): --use-gaussian flag + cfg.ood.use_gaussian
+  add a "gaussian_far" pool (mirrors --use-tinyimagenet). evaluate_episodic
+  already emits AUROC + FPR@95 per pool -> NO evaluator-core change.
+
+Consolidation (scripts/step7_ood_consolidate.py): reads the 2 parallel phase4
+  JSONs -> results/phase4_ood_table.json (per OOD dataset: native-score AUROC +
+  FPR@95, both heads) + results/step7_ood_comparison.png (far-vs-near bars).
+
+Tests (tests/test_gaussian_ood.py): shape/dtype, reproducibility, clamp range,
+  seed sensitivity. (4 tests.)
+
+Notebook: notebooks/step7_ood.ipynb (Kaggle) -- runs the 2 parallel configs
+  with --use-tinyimagenet --use-gaussian, consolidates, plots.
+
+
+================================================================================
+2.  OOD POOLS (evaluated on the parallel winner)
+================================================================================
+  Pool            Regime   Source                                  n
+  --------------  -------  --------------------------------------  ---
+  svhn_far        far      SVHN test (street numbers)              500
+  gaussian_far    far      seeded N(0,1) noise, clamp [-3,3]       500  [NEW]
+  cifar100_near   near     CIFAR-FS val classes (disjoint, clean)  500
+  tin_near        near     TinyImageNet train (uncurated)          500
+
+  Native ID-ness score per head: evidential -> vacuity (1-u);
+  softmax -> msp (max softmax prob). Also logged: ts_msp, energy (softmax).
+
+
+================================================================================
+3.  HOW TO REPRODUCE (Kaggle / GPU)
+================================================================================
+  Kaggle notebook: notebooks/step7_ood.ipynb (GPU T4, Internet ON, attach
+  bpeft-data). Or per-config:
+    python scripts/train.py    --config configs/exp_phase3_placement_parallel_<head>.yaml \
+        --wandb-mode disabled
+    python scripts/evaluate.py --config configs/exp_phase3_placement_parallel_<head>.yaml \
+        --num-episodes 600 --wandb-mode disabled --results-suffix phase4_parallel \
+        --use-tinyimagenet --use-gaussian
+    python scripts/step7_ood_consolidate.py
+  -> results/phase4_parallel_bottleneck_prototype-<head>_metrics.json,
+     results/phase4_ood_table.json, results/step7_ood_comparison.png
+
+
+================================================================================
+4.  RESULTS (600 test episodes, parallel placement, N_ood=500/pool)
+================================================================================
+[FILL AFTER KAGGLE RUN -- read results/phase4_ood_table.json. NOTE: svhn/cifar100
+/tin should REPRODUCE the Step-6 parallel numbers exactly (deterministic re-run);
+gaussian_far is the only new column.]
+
+4.1  OOD AUROC (native score: evidential=vacuity, softmax=msp)
+  Head        svhn(far)  gaussian(far)  cifar100(near)  tin(near)
+  ----------  ---------  -------------  --------------  ---------
+  evidential   0.933*        ...            0.912*         0.929*
+  softmax      0.887*        ...            0.814*         0.848*
+  (* expected from Step 6 parallel; confirm on the phase4 re-run.)
+
+4.2  FPR@95 (lower = better)
+  [FILL AFTER KAGGLE RUN]
+
+4.3  RQ3 PARAGRAPH (mandatory -- lifts into Chapter 5)
+  [FILL AFTER KAGGLE RUN] Template:
+  "On FAR-OOD (SVHN, Gaussian) evidential [wins/ties/loses] by X pp AUROC; both
+  heads are near-ceiling on Gaussian noise (sanity OK). On NEAR-OOD (clean
+  cifar100, tin) evidential beats softmax-MSP by Y pp -- the RQ3 finding. Softmax
+  energy remains competitive on far-OOD. Near-OOD is where the evidential edge
+  matters, consistent with OpenOOD's near>far difficulty ordering."
+
+
+================================================================================
+5.  HONEST CAVEATS
+================================================================================
+  - Gaussian is a sanity/ablation far-OOD, not a discriminating test.
+  - TinyImageNet UNCURATED (no CIFAR-FS-overlap filtering) -> RQ3 near-OOD claim
+    rests on the clean, disjoint cifar100_near; tin_near corroborates.
+  - Only the parallel WINNER is re-evaluated (best PEFT config, implementation.txt
+    §7); other placements/methods keep their Step 5/6 (svhn/cifar100/tin) numbers.
+  - Byte-identical rerun spot-check: [CONFIRM ON KAGGLE].
+
+
+================================================================================
+6.  EXIT CRITERIA
+================================================================================
+  [x] Code: gaussian_noise_ood.py + --use-gaussian + consolidate + tests + nb
+  [x] pytest tests/test_gaussian_ood.py -> 4 passed (offline)
+  [ ] AUROC + FPR@95 for >=2 OOD datasets (SVHN + TinyImageNet) x both heads  [KAGGLE]
+  [ ] Gaussian far-OOD column added to the table                             [KAGGLE]
+  [ ] RQ3 paragraph written with numbers (§4.3)                              [KAGGLE]
+  [ ] pytest tests/ still passes with test_gaussian_ood.py added             [verify]
+================================================================================
