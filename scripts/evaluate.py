@@ -41,7 +41,7 @@ from src.utils import (
 )
 from src.datasets import (
     build_dataset, sample_episode, get_svhn_ood, get_cifar_fs,
-    get_cifar_fs_heldout_ood, get_tinyimagenet_ood,
+    get_cifar_fs_heldout_ood, get_tinyimagenet_ood, get_gaussian_ood,
     EpisodicIterableDataset,
 )
 from src.models import build_model
@@ -370,6 +370,14 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
                                      image_size=img_size, num_samples=n_ood,
                                      seed=ood_seed)
         pools["tin_near"] = _extract_features(model.backbone, tin_x, device)
+    # Gaussian far-OOD (Step 7): pure-noise sanity/ablation pool. Same config OR
+    # --use-gaussian CLI flag pattern as TinyImageNet (eval-only, no retrain).
+    use_gauss = bool(cfg.ood.get("use_gaussian", False)) or bool(
+        getattr(args, "use_gaussian", False))
+    if use_gauss:
+        gauss_x = get_gaussian_ood(image_size=img_size, num_samples=n_ood,
+                                   seed=ood_seed)
+        pools["gaussian_far"] = _extract_features(model.backbone, gauss_x, device)
     logger.info("OOD pools: " + ", ".join(
         f"{k}={tuple(v.shape)}" for k, v in pools.items()))
 
@@ -442,6 +450,9 @@ def main() -> None:
     parser.add_argument("--use-tinyimagenet", action="store_true",
                         help="Add the TinyImageNet near-OOD pool at eval time "
                              "(no retrain needed); ORs with cfg.ood.use_tinyimagenet.")
+    parser.add_argument("--use-gaussian", action="store_true",
+                        help="Add the Gaussian-noise far-OOD pool at eval time "
+                             "(sanity/ablation); ORs with cfg.ood.use_gaussian.")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
