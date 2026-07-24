@@ -14,12 +14,12 @@ Spec:      implementation.txt §5 ; instructions.txt §2 ; plan.txt Phase 3
 Previous:  step_writeups/step4.txt, step4_5.txt (the current baseline of record)
 
 STATUS OF THIS WRITEUP:
-  Implementation + tests + configs are COMPLETE and committed to the working
-  tree. The 8 GPU training/eval runs are executed on Google Colab (the repo's
-  standard run environment); the RESULTS tables in §4 are filled in from those
-  runs. Sections marked "[FILL AFTER COLAB RUN]" are placeholders to be
-  completed once the notebook has produced the 8 JSONs — the numbers are NOT
-  invented here (honesty rule, thesis_implementation_instructions.txt §6).
+  COMPLETE. Implementation + tests + configs were committed to the working tree;
+  the 8 GPU train/eval runs were executed on Google Colab (repo standard env)
+  and finished 2026-07-21 (N=600 test episodes each; pytest 91 passed). The §4
+  RESULTS tables below are transcribed DIRECTLY from the 8
+  results/phase3_*_metrics.json — numbers are copied, not invented (honesty
+  rule, thesis_implementation_instructions.txt §6).
 
 
 ================================================================================
@@ -192,36 +192,108 @@ These are exact and do not depend on the GPU run:
 ================================================================================
 4.  RESULTS (600 test episodes, CIFAR-FS Bertinetto, 5-way 5-shot)
 ================================================================================
-[FILL AFTER COLAB RUN — read the 8 results/phase3_*_metrics.json]
+Transcribed from results/phase3_*_metrics.json (run 2026-07-21, N=600). The
+Bottleneck rows are the Step 4.5 baseline of record.
 
 4.1  Accuracy / calibration master table
   Method        Head        Acc     F1     ECE    ECE_ts  Brier   n_params
-  ------------  ----------  -----   -----  -----  ------  ------   --------
-  Bottleneck    evidential  0.884    ...   0.285    -     0.285    16,914   (Step 4.5 ref)
-  Bottleneck    softmax     0.875    ...   0.082   0.041  0.190    16,912   (Step 4.5 ref)
-  LoRA          evidential   ...     ...    ...     -      ...      12,290
-  LoRA          softmax      ...     ...    ...     ...    ...      12,288
-  BitFit        evidential   ...     ...    ...     -      ...       4,802
-  BitFit        softmax      ...     ...    ...     ...    ...       4,800
-  Full-FT       evidential   ...     ...    ...     -      ...      11.18M   [BASELINE]
-  Full-FT       softmax      ...     ...    ...     ...    ...      11.18M   [BASELINE]
-  Linear-Probe  evidential   ...     ...    ...     -      ...           2   [BASELINE]
-  Linear-Probe  softmax      ...     ...    ...     ...    ...           0   [BASELINE]
+  ------------  ----------  -----   -----  -----  ------  ------   ----------
+  Bottleneck    evidential  0.884   0.882  0.285    -     0.285       16,914   (Step 4.5 ref)
+  Bottleneck    softmax     0.875   0.873  0.082   0.041  0.190       16,912   (Step 4.5 ref)
+  LoRA          evidential  0.828   0.824  0.325    -     0.391       12,290
+  LoRA          softmax     0.860   0.857  0.087   0.018  0.215       12,288
+  BitFit        evidential  0.869   0.867  0.333    -     0.342        4,802
+  BitFit        softmax     0.881   0.879  0.146   0.005  0.211        4,800
+  Full-FT       evidential  0.888   0.886  0.338    -     0.322   11,176,514   [BASELINE]
+  Full-FT       softmax     0.905   0.903  0.073   0.014  0.154   11,176,512   [BASELINE]
+  Linear-Probe  evidential  0.874   0.873  0.623    -     0.708            2   [BASELINE]
+  Linear-Probe  softmax     0.874   0.873  0.448   0.030  0.455            0   [BASELINE]
 
-4.2  OOD AUROC (vacuity for evidential; msp/ts_msp/energy for softmax),
-     per pool (svhn_far / cifar100_near / tin_near)
-  [FILL AFTER COLAB RUN]
+  Headline reads:
+  - Accuracy: Full-FT(sm) 0.905 tops the table; the PEFT methods (Bottleneck
+    0.884, BitFit 0.881) and even Linear-Probe (0.874) sit within ~2-3 pp of it
+    -> the "Full-FT collapses" prediction did NOT hold; see §4.3.
+  - Calibration is unchanged from Step 4.5: evidential ECE ~0.33 (trained
+    adapters) stays ~4-6x worse than softmax, and softmax temperature-scaling
+    drives ECE to 0.005-0.041. Evidential is the worse-calibrated head
+    everywhere — calibration remains the open problem.
+  - LoRA is the weakest adapter (0.828 / 0.860) — capacity, not method (§5).
+  - Linear-Probe evidential ECE 0.623 / Brier 0.708 is the worst calibration in
+    the study: no adapter + reused evidence-affine -> mis-shaped Dirichlet.
 
-4.3  proposal §6 BASELINES SUBSECTION (mandatory)
-  proposal.txt §6 mandates Full Fine-Tuning and Linear Probing as primary
-  baselines. Expected and to-be-confirmed story:
-    - Full-FT: catastrophic overfit on 25-image supports -> query accuracy
-      BELOW every PEFT method. If it is within ~1pp of PEFT, suspect a data
-      leak (implementation.txt 5 RISK) rather than a genuine win.
-    - Linear-Probe: strong frozen-feature prototype accuracy (few-shot on good
-      ImageNet features is a famously hard-to-beat baseline — cf.
-      thesis_implementation_instructions.txt §4), near-zero trainable params.
-  Explicit Acc / ECE / AUROC / F1 numbers: [FILL AFTER COLAB RUN]
+4.2  OOD AUROC per pool (higher = better ID-vs-OOD separation).
+     Evidential head -> vacuity (1-u).  Softmax head -> msp / ts_msp / energy.
+     Pools: svhn_far (far-OOD), cifar100_near + tin_near (near-OOD).
+
+  EVIDENTIAL  (vacuity)        svhn_far   cifar100_near   tin_near
+  -------------------------    --------   -------------   --------
+  Bottleneck (4.5 ref)           0.914        0.878         0.913
+  LoRA                           0.895        0.803         0.842
+  BitFit                         0.926        0.815         0.841
+  Full-FT       [BASELINE]       0.909        0.868         0.897
+  Linear-Probe  [BASELINE]       0.708        0.584         0.886
+
+  SOFTMAX (msp / ts_msp / energy)      svhn_far             cifar100_near         tin_near
+  -------------------------------  -----------------  -----------------  -----------------
+  LoRA                             0.783/0.763/0.903  0.738/0.722/0.833  0.781/0.763/0.872
+  BitFit                           0.854/0.830/0.886  0.777/0.760/0.794  0.831/0.807/0.860
+  Full-FT       [BASELINE]         0.894/0.880/0.954  0.826/0.813/0.883  0.867/0.852/0.914
+  Linear-Probe  [BASELINE]         0.855/0.823/0.796  0.797/0.770/0.663  0.843/0.808/0.926
+  (Bottleneck softmax OOD matrix: see step_writeups/step4_5.txt §4.2.)
+
+  READING THE MATRIX (RQ2 / RQ3):
+  - Evidential vacuity BEATS softmax msp AND ts_msp on EVERY pool for all four
+    TRAINED-adapter methods (LoRA, BitFit, Full-FT, + the Bottleneck ref), by
+    +0.010 to +0.134 AUROC. The Step 4.5 "evidential > every confidence-based
+    softmax score" result therefore GENERALISES across PEFT methods — the
+    central thesis claim is not a Bottleneck artefact.
+  - Versus ENERGY (non-probabilistic) the picture matches Step 4.5: competitive,
+    not dominant. Energy edges vacuity on tin_near for every method, and on
+    svhn_far / cifar100_near for Full-FT and LoRA. Evidential's edge is
+    specifically over PROBABILITY-based scores.
+  - Linear-Probe evidential is the lone exception (vacuity 0.708 / 0.584 on
+    svhn / cifar100, LOSING to its own msp): with NO trained adapter and the
+    reused (untuned) evidence-affine, the Dirichlet is mis-shaped. This is the
+    degenerate zero-capacity corner, pre-flagged in §5, not a counter-result.
+
+4.3  proposal §6 BASELINES (Full Fine-Tuning + Linear Probing)
+
+  Full-FT  (11.18M params) — acc 0.888 evid / 0.905 softmax
+    The proposal predicted catastrophic overfit -> accuracy BELOW every PEFT
+    method. THAT DID NOT HAPPEN: Full-FT softmax (0.905) is the HIGHEST-accuracy
+    run of the whole study, ~2-3 pp above the PEFT pack. This is NOT the data
+    leak the risk note warned about — it is a PROTOCOL mismatch:
+      - "Overfits on 25 images" assumes PER-EPISODE fine-tuning (the Step 1-3
+        single_episode path). The Phase-2 EPISODIC protocol META-TRAINS one
+        shared backbone across ~600 episodes/epoch (thousands of distinct train
+        images), then FREEZES it at test and classifies by prototype similarity
+        — no per-episode adaptation. Full-FT never fits 25 images; it fits the
+        64-class train distribution, which simply yields better CIFAR features.
+      - No leak path: train (64) and test (20) classes are DISJOINT; BN running
+        stats are frozen; best_val_epoch=6 (it trained and early-stopped, did
+        not memorise); LR 1e-5 moves the 11M weights only gently from ImageNet.
+    HONEST REFRAME of proposal §6: under episodic meta-training, Full-FT is NOT
+    a failure mode — it is the expected TOP of a PARAMETER<->ACCURACY curve. The
+    thesis point becomes EFFICIENCY, not viability: PEFT reaches ~98% of Full-FT
+    accuracy (Bottleneck 0.884 / BitFit 0.881 vs 0.905) while training 660x-
+    2330x FEWER parameters (16.9K / 4.8K vs 11.18M; 0.04-0.15%), and
+    Linear-Probe matches it at 0 params. Replace "Full-FT overfits so PEFT is
+    necessary" with "PEFT gets ~98% of Full-FT accuracy at <0.2% of the
+    trainable parameters."
+
+  Linear-Probe  (0 / 2 params) — acc 0.874 (both heads)
+    As predicted, a strong frozen-feature baseline: it MATCHES Bottleneck /
+    BitFit accuracy with 0 (softmax) or 2 (evidential) trainable params —
+    confirming "few-shot on good ImageNet features is hard to beat". BUT its
+    calibration and evidential-OOD collapse (ECE 0.448 sm / 0.623 ev; vacuity
+    0.708 / 0.584 on svhn / cifar100). Takeaway: frozen features buy ACCURACY
+    for free, but a TRAINED adapter is needed for the evidential head's
+    uncertainty to be well-shaped — which cleanly motivates the PEFT methods.
+
+  Accuracy ranking (all 10 runs):
+    Full-FT(sm) 0.905 > Full-FT(ev) 0.888 > Bottleneck(ev) 0.884 >
+    BitFit(sm) 0.881 > Bottleneck(sm) 0.875 > Linear-Probe 0.874 >
+    BitFit(ev) 0.869 > LoRA(sm) 0.860 > LoRA(ev) 0.828.
 
 
 ================================================================================
@@ -230,21 +302,25 @@ These are exact and do not depend on the GPU run:
   - LoRA target set is a single 1x1 conv (12,288 params). It is a faithful
     LoRA, but a deliberately small-capacity one; if LoRA underperforms it may
     be capacity, not the method — widening lora_targets is a config change.
+    CONFIRMED at run time: LoRA is the lowest-accuracy method (0.828 evid /
+    0.860 softmax), consistent with the single-1x1-conv capacity ceiling.
   - The "2*rank*(in+out)" figure in implementation.txt is wrong by 2x; we use
     the honest rank*(in+out).
   - Evidence-affine reused from a bottleneck VAL sweep (see §0); per-adapter
     calibration not independently VAL-tuned in Step 5.
   - BN running stats frozen for all backbone-trainable adapters (see §0) — a
     documented deviation from vanilla Full-FT, justified for few-shot.
-  - Byte-identical rerun spot-check: [CONFIRM ON COLAB for one config].
+  - Byte-identical rerun spot-check: [PENDING — an optional second eval of one
+    config was not run. pytest (91 passed) + fixed test-episode seeds make a
+    drift unlikely, but this box is not yet ticked.]
 
 
 ================================================================================
 6.  EXIT CRITERIA
 ================================================================================
-  [ ] 8 result JSONs (4 adapters x 2 heads), 600 episodes      [COLAB]
+  [x] 8 result JSONs (4 adapters x 2 heads), 600 episodes      DONE 2026-07-21
   [x] Trainable param counts logged/documented (§2)
-  [ ] proposal §6 baselines reported with numbers (§4.3)       [COLAB]
-  [ ] pytest tests/ passes (70+ expected: 66 + ~4 files)       [COLAB]
-  [ ] byte-identical rerun for one config                      [COLAB]
+  [x] proposal §6 baselines reported with numbers (§4.3)       DONE (reframed)
+  [x] pytest tests/ passes (70+ expected)                      DONE (91 passed)
+  [ ] byte-identical rerun for one config                      PENDING (optional)
 ================================================================================

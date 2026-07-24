@@ -1,0 +1,19 @@
+# Step 6 (RQ1) — Bottleneck adapter placed SERIAL (in-line at each stage's
+# final block) + evidential prototype head on CIFAR-FS Bertinetto.
+#
+# The adapter FORM is the same 1x1 channel bottleneck across post_pool / serial
+# / parallel, so the comparison isolates PLACEMENT (RQ1: accuracy vs params).
+# Serial = out' = out + body(out) via a forward hook. Gradients flow through
+# the frozen backbone to the inserted bottlenecks (backbone_trainable).
+# Caveat: a 1x1 adapter "loses locality" (Conv-Adapter, Chen 2022) — accepted
+# to keep the form fixed. See step_writeups/step6.txt.
+extends: exp_phase2_evidential_retuned.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: serial
+  block_ids: [0, 1, 2, 3]
+
+wandb:
+  tags: [phase3, step6, placement, serial, evidential, prototype, cifar_fs_bertinetto]

@@ -11,6 +11,7 @@ Prototype head), evaluated on few-shot episodes (CIFAR-FS, 5-way k-shot) for acc
 OOD detection (SVHN far-OOD, CIFAR-100-heldout / TinyImageNet near-OOD).
 
 The four research questions (proposal.txt §4) that every experiment ultimately serves:
+
 - **RQ1**: adapter placement (serial vs parallel) — accuracy vs. parameter count tradeoff.
 - **RQ2**: does an Evidential Dirichlet head calibrate better than softmax under <500 trainable params?
 - **RQ3**: does a Bayesian loss prior improve near-OOD detection in low-data regimes?
@@ -25,7 +26,7 @@ code, and re-read `progress.txt` any time you're unsure what's already done:
 
 1. **`instructions.txt`** (untracked, meant for whoever/whatever picks up the repo next) — current task, gotchas,
    quick commands. Read this first, always.
-2. **`thesis_implementation_instructions.txt`** — the *process* rule for this repo: implementation choices must be
+2. **`thesis_implementation_instructions.txt`** — the _process_ rule for this repo: implementation choices must be
    justified against the paper summaries in `PAPER SUMMARIES/*.txt` (pros/cons/fit reasoning), not implemented from
    general training-data knowledge. If a paper summary and general knowledge conflict, defer to the summary and flag
    it. Do not invent hyperparameters/results not stated in a summary.
@@ -36,11 +37,12 @@ code, and re-read `progress.txt` any time you're unsure what's already done:
 4. **`plan.txt`** / **`proposal.txt`** / **`implementation.txt`** — proposal → phased plan → step-by-step build spec,
    in that order of increasing detail. `implementation.txt` has the exact spec (file list, config knobs, exit
    criteria) for whichever step is next.
-5. **`step_writeups/stepN.txt`** — the write-up for the most recently closed step; explains *why* results came out
+5. **`step_writeups/stepN.txt`** — the write-up for the most recently closed step; explains _why_ results came out
    the way they did, which matters for interpreting the next step's results.
 
 Do not treat this as a normal library-consumer codebase: correctness here means "matches the frozen protocol and is
 honestly reported," not just "code runs." Two conventions enforce that:
+
 - **Never regenerate a file marked "DO NOT REGENERATE — frozen"** (e.g. `configs/test_episodes.yaml`,
   `configs/val_episodes.yaml`, `data/cifar_fs_split.json`) — these fix the episode seeds / class splits so results
   stay comparable across runs and people.
@@ -51,8 +53,8 @@ honestly reported," not just "code runs." Two conventions enforce that:
 - **Never commit to git unless explicitly asked.** This project's convention is that a human reviews and commits.
 
 ## How do we run this project
+
 We use google colab to run this project with Jupiter notebook. You will see the notebooks for every step inside /notebooks folder.
- 
 
 ## Architecture
 
@@ -64,6 +66,7 @@ callers.
 
 **Two parallel trainer/evaluator protocols, dispatched on `cfg.trainer.type`** — both live side by side in
 `scripts/train.py` and `scripts/evaluate.py`, each with its own private helper function:
+
 - `single_episode` (Step 1-3, legacy): one fixed episode, 200 inner gradient steps directly on a fresh model each
   time, LinearHead/EvidentialHead. Kept byte-identical on purpose so old reproduction tests still pass — don't
   "clean up" this path.
@@ -76,7 +79,7 @@ callers.
   proposal §5B — see `progress.txt`'s 2026-05-19 decisions log).
 
 **Head "type" vs. "interpretation"**: `PrototypeHead` always emits raw similarity logits; whether those logits are
-read as softmax logits or mapped to Dirichlet evidence is decided *outside* the head, by `cfg.head.interpretation`
+read as softmax logits or mapped to Dirichlet evidence is decided _outside_ the head, by `cfg.head.interpretation`
 (`softmax` | `evidential`) and consumed in the loss/evaluator. The evidence mapping itself
 (`evidence = softplus(logits * scale + bias)`) lives in `PrototypeHead.to_evidence()` as the single source of truth
 shared by the trainer's loss and the evaluator's OOD score — never reimplement softplus-of-logits elsewhere, or
@@ -114,3 +117,5 @@ non-probabilistic "energy" OOD score specifically, evidential wins on far-OOD an
 TinyImageNet-near by -0.013. This is the Tier-3 verdict from `scripts/step45_verdict.py` / `step_writeups/step4_5.txt`.
 Treat this as the current baseline any new PEFT method (LoRA, BitFit, Full-FT, Linear-Probe — Step 5) is compared
 against, not something to reprove from scratch.
+
+Always Read `thesis_implementation_instructions.txt` before any implementation step.

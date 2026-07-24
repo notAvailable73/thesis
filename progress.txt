@@ -17,12 +17,15 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-In progress: Step 5 (Phase 3: LoRA + BitFit + Full-FT/Linear-Probe baselines) —
-             CODE + TESTS + 8 CONFIGS + WRITEUP DRAFT complete (2026-07-08);
-             the 8 Colab train+eval runs + final result JSONs/numbers are the
-             remaining work. Run: bash scripts/run_step5.sh
-Blocker:     none (awaiting a Colab GPU session for the 8 runs)
-Today:       2026-07-08
+Just closed: Step 7 (Phase 4: far-OOD Gaussian + OOD consolidation, RQ3) — Kaggle
+             re-eval of the parallel winner (both heads, N=600, T4, 2026-07-22),
+             both OK; added gaussian_far pool; results/phase4_ood_table.json +
+             phase4_parallel_* JSONs + step7_ood_comparison.png; pytest 107 passed;
+             step7.txt §4 + RQ3 paragraph filled. Headline below.
+             (Step 6 closed just before — RQ1 placement; Step 5 — PEFT baselines.)
+Next up:     Step 8 (MobileNetV3-Small backbone, RQ4/efficiency).
+Blocker:     none.
+Today:       2026-07-22
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -51,6 +54,58 @@ BOTH probability-based softmax scores (MSP, TS-MSP) on EVERY OOD pool tested:
   writeup is FINAL, no caveats remain open (§5, §8).
   Perf note: TinyImageNet loader initially hung 1h+ on Google Drive (120k-file
   extraction over FUSE) — fixed to read straight from the zip, no extraction.
+
+Step 5 headline (Phase 3, same split/protocol, N=600, 2026-07-21) — TWO findings:
+  (1) The evidential OOD edge GENERALISES across PEFT methods. Evidential vacuity
+      beats softmax msp AND ts_msp on every OOD pool for all four trained-adapter
+      methods (LoRA, BitFit, Full-FT, + Bottleneck ref) by +0.010 to +0.134 AUROC;
+      vs energy it stays competitive-not-dominant (same as Step 4.5). The central
+      claim is NOT a Bottleneck artefact. Calibration stays the open problem
+      (evidential ECE ~0.33 vs softmax-TS 0.005-0.041).
+  (2) Full-FT did NOT collapse — it is the TOP-accuracy run (softmax 0.905),
+      contradicting proposal §6's "overfits on 25 images". Cause is a PROTOCOL
+      mismatch (episodic meta-training freezes a shared backbone at test; there
+      is no per-episode fine-tune to overfit), NOT a data leak (disjoint 64/20
+      classes, BN frozen, early-stopped at ep 6). REFRAME §6: PEFT reaches ~98%
+      of Full-FT accuracy (Bottleneck 0.884 / BitFit 0.881 vs 0.905) at 660x-
+      2330x fewer params — the story is EFFICIENCY, not Full-FT viability.
+  Accuracy: FullFT-sm .905 > FullFT-ev .888 > Bottleneck-ev .884 > BitFit-sm .881
+      > Bottleneck-sm .875 > LinearProbe .874 > BitFit-ev .869 > LoRA-sm .860 >
+      LoRA-ev .828. LoRA is weakest (single-1x1-conv capacity, pre-flagged).
+      Linear-Probe evidential is the degenerate corner (ECE 0.623; vacuity
+      collapses to 0.708/0.584 on svhn/cifar100 — no adapter to shape evidence).
+  Full numbers/story: step_writeups/step5.txt §4.
+
+Step 6 headline (Phase 3, RQ1, same split/protocol, N=600, 2026-07-21) — PLACEMENT
+MATTERS, PARALLEL IS THE PARETO PICK:
+  In-block placement of the 1x1 Bottleneck (serial/parallel, 31.7K params) beats
+  post_pool (16.9K) by +3-4pp accuracy (0.913-0.915 vs 0.875-0.884) — and edges
+  Step-5 Full-FT (0.905, 11.18M) at 0.3% of its trainable params. Serial vs
+  parallel TIE on accuracy (0.9145 vs 0.9146 evid); the tiebreak is OOD:
+    parallel-evid vacuity: svhn 0.933  cifar100 0.912  tin 0.929   (best OOD)
+    serial-evid   vacuity: svhn 0.889  cifar100 0.904  tin 0.929   (svhn dips below post_pool 0.914)
+  => parallel >= serial on every evidential OOD pool — Conv-Adapter's
+  "parallel > sequential" replicates, concentrated in far-OOD. Evidential vacuity
+  still beats softmax msp on EVERY pool+placement (+0.020..+0.098). Evidential ECE
+  ~0.28 stays the open calibration problem. The 1x1 "loss of locality" caveat did
+  NOT bite (in-block beat post_pool on accuracy). All 4 runs early-stopped normally
+  (best_val_epoch 4-19) — 0.915 is genuine, not overfit.
+  Full numbers/story: step_writeups/step6.txt §4 ; plot results/step6_placement_comparison.png.
+
+Step 7 headline (Phase 4, RQ3, parallel winner, N=600, 2026-07-22) — EVIDENTIAL'S
+OOD EDGE IS LARGER ON NEAR-OOD THAN FAR-OOD (the RQ3 point):
+  Evidential vacuity beats softmax MSP on EVERY pool; gap widens near > far:
+    far : svhn +0.045 (0.933 vs 0.888)   gaussian +0.048 (0.980 vs 0.932)
+    near: cifar100 +0.098 (0.912 vs 0.814)   tin +0.080 (0.929 vs 0.848)
+  FPR@95 same story (near cifar100: evid 0.393 vs softmax 0.667). Mechanism:
+  MSP degrades under semantic (near) shift where the head stays confident;
+  Dirichlet vacuity stays discriminative (OpenOOD near>far; Malinin & Gales).
+  Gaussian sanity PASSES — both heads near-ceiling on white noise (evid 0.980;
+  softmax msp 0.932, energy 0.984). Softmax energy stays competitive on far-OOD
+  but loses on the decisive near-OOD axis. svhn/cifar/tin reproduced Step 6's
+  parallel numbers EXACTLY (determinism verified). TinyImageNet still uncurated —
+  near-OOD claim rests on the clean, disjoint cifar100_near.
+  Full numbers/story: step_writeups/step7.txt §4 ; table results/phase4_ood_table.json.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -321,10 +376,10 @@ PHASE 3 — ALL PEFT METHODS + PLACEMENT  (NOT STARTED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [~] IN PROGRESS
+STEP 5 — LORA + BITFIT + NON-PEFT BASELINES                     [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Est: 1.5-2 weeks
-Writeup: step_writeups/step5.txt (draft; results §4 pending the Colab run)
+Phase: 3     RQ: RQ1, RQ2 + proposal §6 baselines    Closed: 2026-07-21
+Writeup: step_writeups/step5.txt (COMPLETE; results §4 filled from the run)
 
 Actions:
   [x] 5.1  src/adapters/lora.py — REWRITTEN from Step 2 stub; LoRALayer +
@@ -347,50 +402,62 @@ Actions:
            Linear-Probe path (train-free checkpoint).
   [x] 5.6  8 configs: configs/exp_phase3_{lora,bitfit,full_ft,
            linear_probe}_{evidential,softmax}.yaml (+ scripts/run_step5.sh)
-  [ ] 5.7  Run all 8 configs through scripts/train + scripts/evaluate   [COLAB]
-  [ ] 5.8  8 result JSONs: results/phase3_<adapter>_<head>_metrics.json [COLAB]
+  [x] 5.7  Ran all 8 configs through scripts/train + scripts/evaluate (Colab,
+           2026-07-21, N=600)
+  [x] 5.8  8 result JSONs present: results/phase3_<adapter>_<head>_metrics.json
   [x] 5.9  4 new tests: test_lora, test_bitfit, test_full_ft,
            test_linear_probe (+ test_adapters.py updated: old pooled-feature
            LoRA-stub tests removed)
-  [~] 5.10 step_writeups/step5.txt — structure + reasoning + analytical param
-           counts + baselines framing DONE; results §4 tables pending run.
+  [x] 5.10 step_writeups/step5.txt — COMPLETE; results §4 tables filled +
+           Full-FT proposal-§6 reframe written.
 
 Exit criteria:
-  [ ] All 8 result JSONs present                                        [COLAB]
+  [x] All 8 result JSONs present                                        DONE
   [x] Trainable param counts documented (step5.txt §2):
         Bottleneck rank-16:  16,912 (adapter; 19,477 was Step-1 linear head)
         LoRA rank-16:        12,288 (layer4.0.downsample.0)
         BitFit (all BN betas): 4,800
         Full-FT:             11,176,512 (fc removed; 11.7M with fc)
         Linear Probe:         0 (softmax) / 2 (evidential evidence-affine)
-  [ ] proposal §6 baselines numerically compared against PEFT methods   [COLAB]
-  [ ] pytest tests/ → 70+ passed (66 + new asserts across 4 files)      [COLAB]
-  [ ] byte-identical rerun spot-check for one config                    [COLAB]
+  [x] proposal §6 baselines numerically compared against PEFT methods   DONE (§4.3)
+  [x] pytest tests/ → 70+ passed                                        DONE (91 passed)
+  [ ] byte-identical rerun spot-check for one config                    PENDING (optional)
 
 --------------------------------------------------------------------------------
-STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [ ] NOT STARTED
+STEP 6 — ADAPTER PLACEMENT STUDY (RQ1)                          [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 3     RQ: RQ1 (primary)                        Est: 1 week
+Phase: 3     RQ: RQ1 (primary)                        Closed: 2026-07-21
+Writeup: step_writeups/step6.txt (COMPLETE; results §4 + RQ1 paragraph filled)
+Design/plan: docs/superpowers/specs|plans/2026-07-21-step6-adapter-placement*
 
 Actions:
-  [ ] 6.1  src/adapters/placement.py — register_serial_adapter,
-           register_parallel_adapter (forward hooks on BasicBlock)
-  [ ] 6.2  src/backbones/resnet18.py — build_resnet18_with_placed_
-           adapters(cfg) using cfg.adapter.placement ∈ {post_pool,
-           serial, parallel}
-  [ ] 6.3  4 configs: configs/exp_phase3_placement_{serial,
-           parallel}_{evidential,softmax}.yaml
-  [ ] 6.4  Run + evaluate; 4 result JSONs
-  [ ] 6.5  Bar-chart comparison plot of accuracy / AUROC / ECE for
-           3 placement variants × 2 heads = 6 bars; 300 dpi PNG
-  [ ] 6.6  step_writeups/step6.txt with RQ1 paragraph drafted
+  [x] 6.1  src/adapters/placement.py — Conv1x1Bottleneck +
+           register_serial_adapter / register_parallel_adapter (forward hooks
+           on the final BasicBlock of each stage) + PlacementAdapter.
+  [x] 6.2  Placement wired via build_adapter (adapter.type=bottleneck +
+           adapter.placement ∈ {post_pool, serial, parallel}, block_ids).
+           Reuses backbone_trainable=True (like LoRA); NO resnet18.py /
+           trainer / evaluator changes needed.
+  [x] 6.3  4 configs: configs/exp_phase3_placement_{serial,parallel}_
+           {evidential,softmax}.yaml (rank 16, block_ids [0,1,2,3]).
+  [x] 6.4  Ran + evaluated on Kaggle (T4, N=600); 4 result JSONs
+           results/phase3_placement_*; all 4 OK (best_val_epoch 4-19).
+  [x] 6.5  scripts/step6_placement_plot.py -> results/step6_placement_
+           comparison.png (300 dpi; 3 placements × 2 heads).
+  [x] 6.6  step_writeups/step6.txt with the RQ1 Pareto paragraph filled.
+  [x] 6.7  Kaggle notebook notebooks/step6_placement.ipynb (git clone +
+           attached bpeft-data dataset; resilient CIFAR staging).
 
 Exit criteria:
-  [ ] 3 placement variants compared on Bottleneck for each head
-  [ ] Trainable param counts reported for each placement
-  [ ] RQ1 paragraph: "Serial X% acc / Y params; parallel X'/Y';
-      post-pool X''/Y''. Best Pareto-position is [variant]."
-  [ ] pytest tests/ → 38+ passed (test_placement.py added)
+  [x] 3 placement variants (post_pool reused + serial + parallel) × 2 heads
+        = 6 result JSONs
+  [x] Trainable param counts reported per placement (16,912 post_pool;
+        31,744 serial/parallel; +2 for evidential)
+  [x] RQ1 paragraph written: parallel is the Pareto pick (0.915 acc / 0.933
+        far-OOD / 31.7K params; beats post_pool and Step-5 Full-FT); serial
+        ties on accuracy but dips on far-OOD. See step6.txt §4.3.
+  [x] pytest tests/ → 103 passed (test_placement.py: 12 new)
+  [ ] byte-identical rerun spot-check for one config              PENDING (optional)
 
 
 ================================================================================
@@ -398,26 +465,37 @@ PHASE 4 — OOD BREADTH  (NOT STARTED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 7 — NEAR-OOD TINYIMAGENET + FAR-OOD GAUSSIAN (RQ3)         [ ] NOT STARTED
+STEP 7 — NEAR-OOD TINYIMAGENET + FAR-OOD GAUSSIAN (RQ3)         [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 4     RQ: RQ3 (primary)                        Est: 1 week
+Phase: 4     RQ: RQ3 (primary)                        Closed: 2026-07-22
+Writeup: step_writeups/step7.txt (COMPLETE; §4 + RQ3 paragraph filled)
+Design/plan: docs/superpowers/specs|plans/2026-07-22-step7-far-ood-gaussian*
+Scope note: "tight consolidation" — near-OOD infra (7.1/7.3) already existed
+  from Steps 4.5/5/6; Step 7 added the Gaussian far-OOD pool + consolidated the
+  RQ3 story on the Step-6 winner (parallel). TinyImageNet kept UNCURATED
+  (documented); RQ3 rests on the clean, disjoint cifar100_near.
 
 Actions:
-  [ ] 7.1  src/datasets/tinyimagenet_ood.py — download + filter
-           classes that semantically overlap with CIFAR-FS test
-  [ ] 7.2  src/datasets/gaussian_noise_ood.py — 500 N(0,1) images,
-           seeded
-  [ ] 7.3  src/evaluators/ood.py — accept multiple OOD loaders;
-           return {AUROC, FPR@95} per OOD dataset
-  [ ] 7.4  Re-run scripts/evaluate.py on best Phase 3 config with
-           extended OOD list; save results/phase4_ood_table.json
-  [ ] 7.5  6 PNGs: vacuity histogram per OOD dataset × 2 heads
-  [ ] 7.6  step_writeups/step7.txt with RQ3 paragraph drafted
+  [x] 7.1  TinyImageNet near-OOD loader ALREADY built (Step 4.5); reused as-is,
+           uncurated (class-overlap filtering deferred — see caveat).
+  [x] 7.2  src/datasets/gaussian_noise_ood.py — seeded N(0,1), clamp [-3,3],
+           deterministic (torch.Generator). Exported in datasets/__init__.py.
+  [x] 7.3  Multi-OOD AUROC + FPR@95 per pool ALREADY in evaluate_episodic
+           (Step 4.5); --use-gaussian just adds a pool to the generic loop.
+  [x] 7.4  Re-ran the parallel winner (both heads) with --use-tinyimagenet
+           --use-gaussian; results/phase4_parallel_* + phase4_ood_table.json.
+  [x] 7.5  scripts/step7_ood_consolidate.py -> phase4_ood_table.json +
+           results/step7_ood_comparison.png (far-vs-near AUROC bars).
+  [x] 7.6  step_writeups/step7.txt with the RQ3 paragraph filled.
+  [x] 7.7  Kaggle notebook notebooks/step7_ood.ipynb.
 
 Exit criteria:
-  [ ] AUROC + FPR@95 for SVHN + TinyImageNet for best config × 2 heads
-  [ ] RQ3 paragraph: honest finding ("evidential wins on far-OOD by
-      X pp, on near-OOD by Y" — or ties / loses, both are valid)
+  [x] AUROC + FPR@95 for 4 OOD datasets (svhn/gaussian/cifar100/tin) × both heads
+  [x] RQ3 paragraph (honest finding): evidential beats softmax MSP on EVERY pool,
+        by MORE on near-OOD (+0.08..+0.10) than far-OOD (+0.045..+0.048); Gaussian
+        sanity passes. See step7.txt §4.3.
+  [x] pytest tests/ → 107 passed (test_gaussian_ood.py: 4 new)
+  [ ] byte-identical rerun spot-check for one config              PENDING (optional)
 
 
 ================================================================================

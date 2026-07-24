@@ -6,6 +6,7 @@ from .cifar_fs import (
 )
 from .svhn_ood import get_svhn_ood
 from .tinyimagenet_ood import get_tinyimagenet_ood
+from .gaussian_noise_ood import get_gaussian_ood
 from .episode_sampler import sample_episode, EpisodicIterableDataset
 
 
@@ -36,6 +37,7 @@ __all__ = [
     "CIFAR100_CLASS_NAMES",
     "get_svhn_ood",
     "get_tinyimagenet_ood",
+    "get_gaussian_ood",
     "sample_episode",
     "EpisodicIterableDataset",
 ]

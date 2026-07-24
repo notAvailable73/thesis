@@ -3,6 +3,10 @@ from .lora import LoRAAdapter, LoRALayer, LoRAConv2d
 from .bitfit import BitFitAdapter
 from .full_ft import FullFTAdapter
 from .linear_probe import LinearProbeAdapter
+from .placement import (
+    PlacementAdapter, Conv1x1Bottleneck,
+    register_serial_adapter, register_parallel_adapter,
+)
 
 
 def build_adapter(spec: dict, dim: int, backbone=None):
@@ -24,7 +28,20 @@ def build_adapter(spec: dict, dim: int, backbone=None):
     """
     atype = spec["type"]
     if atype == "bottleneck":
-        return BottleneckAdapter(dim=dim, rank=int(spec["rank"]))
+        # Step 6: the Bottleneck adapter can be PLACED. post_pool (default) is
+        # the Step-4 pooled-feature adapter; serial/parallel insert a 1x1
+        # bottleneck inside the backbone blocks (needs the backbone).
+        placement = spec.get("placement", "post_pool")
+        if placement == "post_pool":
+            return BottleneckAdapter(dim=dim, rank=int(spec["rank"]))
+        if placement in ("serial", "parallel"):
+            if backbone is None:
+                raise ValueError(
+                    "serial/parallel bottleneck placement requires a backbone")
+            return PlacementAdapter(
+                backbone=backbone, rank=int(spec["rank"]),
+                placement=placement, block_ids=spec.get("block_ids"))
+        raise ValueError(f"Unknown bottleneck placement: {placement!r}")
     if atype == "lora":
         if backbone is None:
             raise ValueError("lora adapter requires a backbone to inject into")
@@ -57,4 +74,8 @@ __all__ = [
     "BitFitAdapter",
     "FullFTAdapter",
     "LinearProbeAdapter",
+    "PlacementAdapter",
+    "Conv1x1Bottleneck",
+    "register_serial_adapter",
+    "register_parallel_adapter",
 ]
