@@ -120,6 +120,56 @@ class LoRAConv2d(nn.Module):
 # implementation.txt 5.1 RISK.
 _DEFAULT_LORA_TARGETS: List[str] = ["layer4.0.downsample.0"]
 
+def _mobilenetv3_default_lora_target(features: nn.Module) -> List[str]:
+    """Step 8: the MobileNetV3 analogue of the ResNet default — the 1x1 LINEAR
+    PROJECTION conv of the DEEPEST inverted-residual block (for
+    MobileNetV3-Small: features.11.block.3.0, 576 -> 96).
+
+    Same reasoning as the ResNet target: a 1x1 dense (groups==1) conv is a pure
+    channel matrix, so LoRA on it is the clean rank*(in+out) reparameterization
+    — 10,752 params at rank 16, comparable to the ResNet target's 12,288. The
+    1x1 expand / KxK depthwise / 1x1 project convs are exactly the insertion
+    sites named in PAPER SUMMARIES/CNN_paper_summaries.txt §8.
+
+    Discovered by traversal rather than a hardcoded index so a torchvision
+    layout change surfaces as a clear error, not a silently wrong target. The
+    projection conv is the LAST 1x1 dense conv in the block (the depthwise conv
+    is grouped, and the squeeze-excite 1x1s come before the projection).
+    """
+    for i in range(len(features) - 1, -1, -1):
+        block = features[i]
+        if not hasattr(block, "use_res_connect"):
+            continue
+        last_name = None
+        for name, m in block.named_modules():
+            if (isinstance(m, nn.Conv2d) and tuple(m.kernel_size) == (1, 1)
+                    and m.groups == 1):
+                last_name = name
+        if last_name:
+            return [f"features.{i}.{last_name}"]
+    raise ValueError(
+        "found no 1x1 projection conv in the backbone's inverted-residual "
+        "blocks; set cfg.adapter.lora_targets explicitly."
+    )
+
+
+def default_lora_targets(backbone: nn.Module) -> List[str]:
+    """Family-appropriate default LoRA targets for `backbone`.
+
+    Overridden per-experiment by cfg.adapter.lora_targets, which stays the
+    single knob for widening or moving the target set.
+    """
+    if all(hasattr(backbone, a) for a in ("layer1", "layer4")):
+        return list(_DEFAULT_LORA_TARGETS)
+    features = getattr(backbone, "features", None)
+    if features is not None and any(
+            hasattr(m, "use_res_connect") for m in features):
+        return _mobilenetv3_default_lora_target(features)
+    raise ValueError(
+        f"No default LoRA target known for {type(backbone).__name__}; set "
+        f"cfg.adapter.lora_targets explicitly."
+    )
+
 
 def _replace_submodule(root: nn.Module, dotted: str, new_module: nn.Module) -> None:
     """Replace root.<dotted> (e.g. 'layer4.0.downsample.0') with new_module.
@@ -164,7 +214,7 @@ class LoRAAdapter(nn.Module):
         self.rank = int(rank)
         self.alpha = alpha
         self.targets: List[str] = (list(targets) if targets
-                                   else list(_DEFAULT_LORA_TARGETS))
+                                   else default_lora_targets(backbone))
         injected = 0
         for name in self.targets:
             base = backbone.get_submodule(name)

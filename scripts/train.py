@@ -97,8 +97,20 @@ def _head_descriptor(cfg) -> str:
 
 
 def _checkpoint_tag(cfg) -> str:
-    """Filesystem-safe tag identifying this training run."""
-    return f"{cfg.adapter.type}_{_head_descriptor(cfg)}_seed{cfg.seed}"
+    """Filesystem-safe tag identifying this training run.
+
+    Duplicated identically in scripts/evaluate.py (same convention as
+    _head_descriptor) — keep the two in sync or evaluate.py will look for a
+    checkpoint train.py never wrote.
+
+    cfg.output.run_tag (Step 8) replaces adapter.type in the tag when set, so
+    configs that differ only in backbone or adapter.placement get distinct
+    checkpoints instead of silently overwriting each other. Unset (the Step 1-7
+    default) reproduces the old `<adapter.type>_<head>_seed<seed>` name exactly.
+    """
+    run_tag = cfg.get("output", {}).get("run_tag") if isinstance(cfg, dict) else None
+    base = str(run_tag) if run_tag else cfg.adapter.type
+    return f"{base}_{_head_descriptor(cfg)}_seed{cfg.seed}"
 
 
 # =====================================================================
@@ -293,6 +305,21 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
     # --- Model + optimiser --------------------------------------------
     model = build_model(cfg).to(device)
     n_params = count_trainable_params(model)
+    logger.info(
+        f"backbone: {cfg.backbone.name} (feature_dim="
+        f"{cfg.backbone.get('feature_dim', 512)})  "
+        f"adapter: {cfg.adapter.type}"
+        f"/{cfg.adapter.get('placement', 'post_pool')}"
+    )
+    # Step 8: in-block placements resolve their sites from the backbone family,
+    # so log WHERE the adapters actually landed — the cheapest way to verify a
+    # new backbone's stage discovery from a Kaggle log.
+    if hasattr(model.adapter, "stage_paths"):
+        logger.info(
+            f"placement sites: " + ", ".join(
+                f"{p}({c}ch)" for p, c in zip(model.adapter.stage_paths,
+                                              model.adapter.stage_channels))
+        )
     logger.info(f"trainable params: {n_params:,}")
     wb.update_summary({"n_params": int(n_params)})
 

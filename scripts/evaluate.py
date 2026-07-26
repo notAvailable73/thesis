@@ -68,6 +68,17 @@ def _head_descriptor(cfg) -> str:
     return head_type
 
 
+def _checkpoint_tag(cfg) -> str:
+    """Same as scripts/train.py:_checkpoint_tag — kept in sync.
+
+    cfg.output.run_tag (Step 8) replaces adapter.type when set, so configs that
+    differ only in backbone / adapter.placement resolve to distinct checkpoints.
+    """
+    run_tag = cfg.get("output", {}).get("run_tag") if isinstance(cfg, dict) else None
+    base = str(run_tag) if run_tag else cfg.adapter.type
+    return f"{base}_{_head_descriptor(cfg)}_seed{cfg.seed}"
+
+
 # =====================================================================
 # Shared helpers
 # =====================================================================
@@ -336,8 +347,7 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
     ckpt_path = args.checkpoint
     if ckpt_path is None:
         ckpt_dir = Path(cfg.output.checkpoint_dir)
-        tag = f"{cfg.adapter.type}_{_head_descriptor(cfg)}_seed{cfg.seed}"
-        ckpt_path = ckpt_dir / f"model_phase2_{tag}.pt"
+        ckpt_path = ckpt_dir / f"model_phase2_{_checkpoint_tag(cfg)}.pt"
     ckpt = torch.load(ckpt_path, map_location=device)
     model.load_state_dict(ckpt["state_dict"])
     best_val_epoch = int(ckpt.get("best_val_epoch", -1))
@@ -406,6 +416,13 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
 
     # Augment with config-level metadata (so the JSON schema matches
     # Step 3's + the new Phase 2 fields).
+    # NOTE (Step 8): do NOT add keys here. The metrics JSON schema is frozen by
+    # the byte-identical-rerun invariant — Steps 4.5/5/6/7's committed
+    # results/*.json were written with exactly these keys, and adding one would
+    # make every re-run of those configs differ from the stored file. Anything a
+    # new step needs about the run (backbone, placement) is derived from the
+    # config / filename by the consolidation scripts instead — the pattern
+    # scripts/step6_placement_plot.py and step7_ood_consolidate.py already use.
     base_summary.update({
         "adapter_type": cfg.adapter.type,
         "config_path":  str(Path(args.config).resolve()),

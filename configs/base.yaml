@@ -117,3 +117,10 @@ wandb:
 output:
   checkpoint_dir: checkpoints
   results_dir: results
+  # Step 8: checkpoint filenames are `model_phase2_<run_tag>_<head>_seed<seed>.pt`,
+  # where run_tag defaults to adapter.type when null (Steps 1-7 behaviour). Two
+  # configs that differ only in backbone or adapter.placement share adapter.type
+  # and would overwrite each other's checkpoint, so every config beyond a plain
+  # `adapter.type` variation sets an explicit run_tag (see the exp_phase5_mbnet_*
+  # configs). Result-JSON names come from --results-suffix, not from this key.
+  run_tag: null

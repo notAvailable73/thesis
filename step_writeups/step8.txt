@@ -1,0 +1,381 @@
+================================================================================
+STEP 8 -- MOBILENETV3-SMALL BACKBONE (Phase 5, RQ4 prep) -- IMPL
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     5 (full grid + backbones + edge efficiency)
+Scope:     Add MobileNetV3-Small as the second mandatory backbone (proposal §5A),
+           verify every adapter type works at feature_dim 576, and re-run the
+           Step-6 WINNER recipe (parallel in-block 1x1 Bottleneck, both heads) on
+           it over the same frozen CIFAR-FS protocol -- plus a post-pool
+           Bottleneck row per head so the placement effect can be read WITHIN
+           this backbone too. 4 configs, 4 result JSONs, 600 test episodes each.
+Spec:      implementation.txt §8 ; progress.txt "STEP 8"
+Previous:  step_writeups/step7.txt (RQ3 far-vs-near OOD on the parallel winner)
+
+STATUS OF THIS WRITEUP:
+  CODE COMPLETE, RESULTS PENDING (2026-07-26). Backbone + backbone-agnostic
+  placement + configs + tests + consolidation script + Kaggle notebook are
+  built. §4 RESULTS is a TEMPLATE with explicit [PENDING] cells -- it must be
+  filled by transcribing results/phase5_backbone_table.json AFTER
+  notebooks/step8_mbnet.ipynb has run on a GPU. Nothing in §4 is estimated,
+  predicted or filled in from prior steps (honesty rule,
+  thesis_implementation_instructions.txt §6). §2's parameter counts ARE final:
+  they are analytical and asserted by tests/test_mobilenetv3.py offline.
+
+
+================================================================================
+0.  PAPER-GROUNDED REASONING (per thesis_implementation_instructions §5)
+================================================================================
+Sources: PAPER SUMMARIES/CNN_paper_summaries.txt -- "Searching for MobileNetV3"
+(Howard 2019); PEFT_summaries.txt -- Conv-Adapter (Chen 2022) for the placement
+form carried over from Step 6.
+
+WHICH PAPERS / WHY
+  - MobileNetV3 is the paper behind the backbone itself. Two things we take
+    directly from the summary:
+      (1) §6 reference numbers: V3-Small 1.0 = ~67.4-67.5% ImageNet top-1,
+          ~56-57 MAdds, 2.5M params (vs ResNet-18's 11.7M). This is the whole
+          point of the step -- RQ4's efficiency axis needs a backbone that is
+          genuinely small, not a second big one.
+      (2) §8 (relevance): the inverted-residual bottleneck's "1x1 expand /
+          depthwise KxK / SE / 1x1 project" convs are named as "the precise
+          convolutional sites for adapter/LoRA insertion". Our in-block
+          placement hooks at the BLOCK boundary and our LoRA default target
+          (the 1x1 project conv) sit exactly there.
+  - Conv-Adapter supplies the placement form (1x1 channel bottleneck, parallel
+    composition) that Step 6 found Pareto-optimal on ResNet-18. Step 8 holds
+    that form fixed and swaps only the backbone.
+
+PROS / FIT
+  - Directly serves RQ4: the latency/uncertainty Pareto frontier (Step 11) is
+    meaningless with one backbone. It also extends RQ2/RQ3 breadth for free --
+    every run emits the same calibration + OOD matrix.
+  - Howard 2019's own efficiency methodology (MAdds / params / real on-device
+    latency, incl. int8) is the template Step 11 will follow.
+
+CONS / CAVEATS (flagged, not hidden)
+  - MobileNetV3's ImageNet top-1 is ~7-8 pp below ResNet-18's. A drop in
+    few-shot accuracy is therefore EXPECTED and is a finding about the
+    accuracy/efficiency trade, not a bug. What would be a red flag is a
+    COLLAPSE (accuracy near 1/n_way = 0.20) -- the trainer's collapse guard is
+    deliberately left enabled (collapse_threshold 0.25) to catch that loudly.
+  - The paper is a NAS + hand-design paper; nothing in it speaks to adapters,
+    few-shot learning or evidential uncertainty. We take the architecture and
+    the efficiency framing only, and do not import any of its training recipe
+    (its RMSProp / LR 0.1 / batch 4096 schedule is for from-scratch ImageNet
+    training, irrelevant to a frozen backbone + tiny adapter).
+  - Howard 2019 §6 warns the h-swish latency win needs an optimised kernel.
+    That is a LATENCY caveat for Step 11's measurements, not an accuracy one --
+    recorded here so Step 11 does not treat MAdds as a latency proxy.
+
+DEVIATIONS / DECISIONS
+  - Feature dim = 576 (the pooled conv feature, torchvision's `classifier`
+    replaced by Identity), per implementation.txt §8.1. NOTE the alternative:
+    MobileNetV3's paper moves the final feature expansion AFTER pooling (CNN
+    summaries §3, hand design (i)); in torchvision that expansion is
+    `classifier[0]` (Linear 576->1024), so keeping it would give a 1024-d
+    feature. We use 576 because the spec says so, because classifier[0] is a
+    1000-class-tuned layer, and because the smaller feature is the honest
+    "small backbone". Flagged as an untested alternative, not a settled result.
+  - Placement stages are DERIVED, not hardcoded: the stage-final RESIDUAL
+    inverted-residual block of each channel-width group. Only residual blocks
+    (stride 1, in==out) are eligible, because parallel composition adds
+    body(block_input) to the block output and needs the two shapes to match.
+    For MobileNetV3-Small this gives 4 sites -- the direct analogue of
+    ResNet-18's layer1..layer4.
+  - BatchNorm: unchanged from Steps 5/6 -- the backbone stays in eval() so BN
+    running stats stay at their ImageNet values; only the inserted bottlenecks
+    train.
+
+CARRIED-IN ASSUMPTIONS (untested on this backbone)
+  - LR 5e-3, rank 16, kl_weight_max 0.1, prior_per_class 1.0, use_variance
+    false, and the evidence affine (scale 2, bias -6) are all carried over
+    UNCHANGED from the ResNet-18 VAL sweep (Step 4.5). They were never tuned on
+    MobileNetV3 features. Held fixed ON PURPOSE so the comparison isolates the
+    backbone -- but that means a poor MobileNetV3 number is confounded with
+    "recipe not re-tuned for this backbone". Per-backbone VAL tuning belongs to
+    Step 10's grid; if any Step 8 run underperforms badly, re-tune on VAL
+    (seeds 10000-10099) via the scripts/step45_val_sweep.py pattern before
+    concluding anything about the backbone.
+  - The evidence affine transfers more safely than it might look: the prototype
+    metric is COSINE with scale 10, so logits are bounded in [-10, 10]
+    regardless of feature magnitude, and the affine is learnable. This is the
+    reason the Step-4 "evidential collapse" (raw-L2 logits O(-50) -> softplus
+    ~0) is not expected to recur. Still an assumption, not a measurement.
+
+
+================================================================================
+1.  WHAT WAS BUILT
+================================================================================
+Backbone (src/backbones/):
+  mobilenetv3.py  NEW. build_frozen_mobilenetv3_small(pretrained=True) ->
+                  torchvision mobilenet_v3_small(IMAGENET1K_V1) with
+                  classifier=Identity, all params frozen, eval() -> forward(x)
+                  returns (B, 576), the same (B, D) contract as
+                  build_frozen_resnet18. MOBILENETV3_SMALL_FEATURE_DIM = 576.
+                  mobilenetv3_stage_paths(backbone) derives the in-block
+                  placement sites by traversal (see §2).
+  resnet18.py     MODIFIED, additive only: build_frozen_resnet18 gained
+                  `pretrained: bool = True`. Default is the old behaviour
+                  exactly; False is for offline tests.
+  __init__.py     build_backbone(name, pretrained=True) now routes
+                  resnet18 | mobilenetv3_small (aliases: mobilenet_v3_small,
+                  mobilenetv3, mbnet). Adds BACKBONE_FEATURE_DIMS +
+                  backbone_feature_dim() + canonical_backbone_name().
+
+Adapters (src/adapters/):
+  placement.py    MODIFIED. Stage resolution is now backbone-agnostic:
+                  resolve_stage_paths(backbone) dispatches ResNet (last block of
+                  layer1..layer4) vs MobileNetV3 (stage-final residual blocks);
+                  infer_block_channels(block) reads conv2.out_channels
+                  (ResNet BasicBlock) -> block.out_channels (InvertedResidual) ->
+                  last Conv2d/Norm, in that order. PlacementAdapter gained an
+                  optional stage_paths override and now records stage_paths /
+                  stage_channels for logging. The ResNet path resolves to the
+                  SAME module objects as before (asserted by a regression test).
+  lora.py         MODIFIED, additive: default_lora_targets(backbone) picks the
+                  family default -- ResNet layer4.0.downsample.0 (unchanged) or,
+                  for MobileNetV3, the 1x1 linear-projection conv of the deepest
+                  inverted-residual block (features.11.block.3.0 on Small),
+                  discovered by traversal so a torchvision layout change errors
+                  instead of silently targeting the wrong conv.
+  __init__.py     build_adapter passes adapter.stage_paths through; exports the
+                  new helpers.
+
+Model (src/models/bpeft_model.py): MODIFIED, additive -- build_model now asserts
+  cfg.backbone.feature_dim equals the backbone's canonical pooled dim. With two
+  backbones in play, a config that switches backbone but keeps feature_dim: 512
+  would otherwise silently build a mis-sized post-pool adapter. Every Steps-1-7
+  config is resnet18/512 and passes unchanged.
+
+Scripts:
+  train.py        _checkpoint_tag honours a new optional cfg.output.run_tag, so
+                  configs that differ ONLY in backbone or adapter.placement stop
+                  overwriting each other's checkpoint (all four Step 8 configs
+                  have adapter.type == "bottleneck"). run_tag unset -> the exact
+                  Steps-1-7 filename. Also logs the backbone / placement / the
+                  resolved placement sites, so a Kaggle log shows WHERE the
+                  adapters landed.
+  evaluate.py     Mirrors _checkpoint_tag (kept in sync, same convention as
+                  _head_descriptor). NO change to the metrics-JSON schema --
+                  see §5.
+  step8_backbone_compare.py  NEW. Reads the 4 new JSONs + the REUSED ResNet-18
+                  JSONs (Step 4.5 post_pool, Step 7 parallel) and writes
+                  results/phase5_backbone_table.json,
+                  results/step8_backbone_comparison.png (accuracy / far-OOD /
+                  near-OOD / ECE bars) and results/step8_params_vs_accuracy.png
+                  (RQ4-prep scatter incl. the Step-5 Full-FT point). Cells are
+                  identified by result FILENAME, not by JSON fields, so the
+                  frozen JSON schema is respected.
+
+Configs (configs/): exp_phase5_mbnet_{bottleneck,parallel}_{evidential,softmax}
+  .yaml (4 files). The bottleneck pair extends the Step-4.5 retuned evidential /
+  phase-2 softmax configs and overrides ONLY backbone + placement + run_tag; the
+  parallel pair extends its bottleneck sibling and overrides ONLY
+  adapter.placement/block_ids + run_tag.
+
+Tests (tests/test_mobilenetv3.py): 576-d feature contract, frozen+eval, registry
+  routing + aliases + feature-dim guard, stage discovery (paths, widths,
+  shape-preservation of every site), post-pool Bottleneck at 576, serial and
+  parallel identity-at-init + param count + gradient flow, LoRA family default,
+  BitFit, Linear-Probe -- plus 3 REGRESSION tests asserting ResNet-18's stage
+  paths (same module objects), its 31,744 placement param count and its LoRA
+  default target are unchanged by the refactor.
+
+Notebook: notebooks/step8_mbnet.ipynb (Kaggle) -- intro + a "how we work with
+  the data" guidelines section (frozen split, seed streams, VAL-only tuning, OOD
+  pools, the never-extract-many-file-archives rule, determinism), env/data/split
+  setup, tests, a backbone sanity cell (feature dim + placement sites + per-config
+  param counts), the 4 resumable runs, consolidation + plots, and a packaging
+  cell that zips the 4 CHECKPOINTS + all Step 8 results with a sha256 MANIFEST
+  and prints a download link.
+
+
+================================================================================
+2.  TRAINABLE PARAMETER COUNTS (analytical -- asserted offline by tests)
+================================================================================
+MobileNetV3-Small placement sites (derived, not hardcoded), rank r = 16:
+
+  stage  path            channels C   1x1 bottleneck params (2*C*r + r + C)
+  -----  --------------  ----------   -------------------------------------
+    0    features.3          24                     808
+    1    features.6          40                   1,336
+    2    features.8          48                   1,600
+    3    features.11         96                   3,184
+                                       TOTAL       6,928
+
+  Config                             Adapter form                    Trainable
+  ---------------------------------  ------------------------------  ---------
+  mbnet post_pool  softmax           Linear 576->16->576                19,024
+  mbnet post_pool  evidential        same + evidence affine             19,026
+  mbnet parallel   softmax           4 in-block 1x1 bottlenecks          6,928
+  mbnet parallel   evidential        same + evidence affine              6,930
+  (r18 post_pool   softmax           Linear 512->16->512   Step 4.5     16,912)
+  (r18 parallel    softmax           4 in-block 1x1 bottlenecks Step 6  31,744)
+  (r18 Full-FT     softmax           whole backbone        Step 5   11,176,512)
+
+  Two things worth noting for the RQ4 story:
+   - On MobileNetV3 the ordering FLIPS versus ResNet-18: in-block parallel is
+     ~2.7x CHEAPER than the post-pool adapter (6,928 vs 19,024), because the
+     stage widths are 24-96 channels while the pooled feature is 576-d. On
+     ResNet-18 parallel was ~1.9x more expensive (31,744 vs 16,912). Same
+     adapter form, opposite param verdict -- a direct consequence of the
+     backbone's channel profile.
+   - mbnet/parallel is the cheapest INSERTED-ADAPTER configuration in the thesis
+     so far: 6,930 params (0.06% of Full-FT's 11.18M) on a backbone that is
+     itself 4.7x smaller. (Two Step-5 methods have lower counts but insert no
+     new module: BitFit at 4,800 re-uses the backbone's existing BN biases —
+     0.881 softmax / 0.869 evidential, i.e. mixed vs post-pool Bottleneck's
+     0.875 / 0.884 — and Linear-Probe at 0/2 trains nothing, 0.874, with a
+     degenerate evidential corner at ECE 0.623.) Whether mbnet/parallel HOLDS
+     accuracy is exactly what §4 must report.
+
+  LoRA on MobileNetV3-Small (built + tested, NOT part of the 4 runs):
+    features.11.block.3.0 (1x1 project, 576 -> 96), rank 16
+      = 16 * (576 + 96) = 10,752 params (cf. ResNet-18's 12,288).
+    Deferred to Step 10's grid; noted here so the capability is on record.
+
+
+================================================================================
+3.  HOW TO REPRODUCE (Kaggle / GPU)
+================================================================================
+  Kaggle notebook: notebooks/step8_mbnet.ipynb
+    - Settings: Accelerator = GPU T4, Internet = ON.
+    - Attach the "bpeft-data" Kaggle Dataset (cifar-100-python.tar.gz +
+      test_32x32.mat; TinyImageNet downloads at runtime if not attached).
+    - Run top to bottom. The notebook's §8 cell zips the checkpoints + results
+      and prints a download link.
+
+  Or per-config (post_pool suffix `phase5_mbnet`, parallel `phase5_mbnet_parallel`):
+    python scripts/train.py    --config configs/exp_phase5_mbnet_<x>.yaml \
+        --wandb-mode disabled
+    python scripts/evaluate.py --config configs/exp_phase5_mbnet_<x>.yaml \
+        --num-episodes 600 --wandb-mode disabled \
+        --results-suffix <suffix> --use-tinyimagenet --use-gaussian
+    python scripts/step8_backbone_compare.py
+  -> results/phase5_mbnet[_parallel]_bottleneck_prototype-<head>_metrics.json (4)
+     results/phase5_backbone_table.json
+     results/step8_backbone_comparison.png, results/step8_params_vs_accuracy.png
+     checkpoints/model_phase2_mbnet_{bottleneck,parallel}_prototype-<head>_seed42.pt
+
+  ResNet-18 comparison rows are REUSED, never re-run:
+    post_pool: results/step45_bottleneck_prototype-<head>_metrics.json
+    parallel:  results/phase4_parallel_bottleneck_prototype-<head>_metrics.json
+               (Step 7's re-eval of the Step-6 winner; it reproduced Step 6's
+               svhn/cifar100/tin numbers exactly and adds the gaussian pool)
+
+
+================================================================================
+4.  RESULTS (600 test episodes, CIFAR-FS Bertinetto, 5-way 5-shot)
+================================================================================
+[PENDING RUN] Fill this section by transcribing results/phase5_backbone_table.json
+after notebooks/step8_mbnet.ipynb completes. COPY the numbers; do not retype from
+memory and do not carry any figure over from Steps 4.5/6/7 except the four
+ResNet-18 reference rows explicitly marked "(ref)", which are reused unchanged.
+
+4.1  Accuracy / calibration
+  Backbone     Placement   Head        Acc     F1     ECE    ECE_ts  Brier   n_params   bestEp
+  -----------  ----------  ----------  -----   -----  -----  ------  ------  ---------  ------
+  ResNet-18    post_pool   evidential  0.884   0.882  0.285    -     0.285     16,914     8   (ref, 4.5)
+  ResNet-18    post_pool   softmax     0.875   0.873  0.082   0.041  0.190     16,912     2   (ref, 4.5)
+  ResNet-18    parallel    evidential  0.915   0.913  0.282    -     0.242     31,746    19   (ref, 6/7)
+  ResNet-18    parallel    softmax     0.913   0.911  0.063   0.017  0.134     31,744    10   (ref, 6/7)
+  MobileNetV3  post_pool   evidential  [PEND]  [PEND] [PEND]   -     [PEND]    19,026   [PEND]
+  MobileNetV3  post_pool   softmax     [PEND]  [PEND] [PEND]  [PEND] [PEND]    19,024   [PEND]
+  MobileNetV3  parallel    evidential  [PEND]  [PEND] [PEND]   -     [PEND]     6,930   [PEND]
+  MobileNetV3  parallel    softmax     [PEND]  [PEND] [PEND]  [PEND] [PEND]     6,928   [PEND]
+
+4.2  OOD AUROC per pool, native score (evidential -> vacuity; softmax -> msp)
+  Cell                      svhn_far  gaussian_far  cifar100_near  tin_near
+  ------------------------  --------  ------------  -------------  --------
+  r18/post_pool evidential    0.914        -            0.878       0.913   (ref, 4.5)
+  r18/post_pool softmax       0.838        -            0.744       0.790   (ref, 4.5)
+  r18/parallel  evidential    0.933      0.980          0.912       0.929   (ref, 7)
+  r18/parallel  softmax       0.888      0.932          0.814       0.848   (ref, 7)
+  mbnet/post_pool evidential  [PEND]     [PEND]         [PEND]      [PEND]
+  mbnet/post_pool softmax     [PEND]     [PEND]         [PEND]      [PEND]
+  mbnet/parallel  evidential  [PEND]     [PEND]         [PEND]      [PEND]
+  mbnet/parallel  softmax     [PEND]     [PEND]         [PEND]      [PEND]
+
+  Also recorded per softmax cell by the consolidation script (the two fair
+  non-native baselines every step since 4.5 reports): ts_msp and energy AUROC
+  per pool. Fill from the table JSON's ood_auroc_ts_msp / ood_auroc_energy.
+
+4.3  QUESTIONS §4 MUST ANSWER (write the answer, whichever way it falls)
+  a) Does the protocol GENERALISE? Did all 4 runs train end-to-end, early-stop
+     at a sensible best_val_epoch, and land well above chance (0.20)? That is
+     the Step 8 exit criterion, and it is satisfied by a working run even if
+     accuracy is lower than ResNet-18's.
+  b) What does the small backbone COST in accuracy? Report the mbnet-vs-r18 gap
+     at matched placement. A drop is expected (ImageNet top-1 is ~7-8 pp lower);
+     quantifying it is the RQ4-prep deliverable.
+  c) Does PARALLEL still beat POST-POOL here? On ResNet-18 in-block placement
+     won by +3-4 pp accuracy at ~2x params. On MobileNetV3 parallel is ~2.7x
+     CHEAPER than post_pool, so if it also wins on accuracy the RQ1 conclusion
+     strengthens; if it loses, the honest reading is that Conv-Adapter's 1x1
+     "loss of locality" caveat bites harder in narrow (24-96 channel) stages
+     than in ResNet-18's wide ones -- state which happened.
+  d) Does the evidential OOD edge survive the backbone swap? Steps 4.5/5/6/7 all
+     found vacuity > softmax MSP on EVERY pool. Report whether that holds on
+     MobileNetV3 and by how much, and whether the calibration gap (evidential
+     ECE ~0.28 vs softmax-TS ~0.02-0.04) looks the same.
+  e) RQ4 prep: give the accuracy-per-trainable-parameter picture from
+     step8_params_vs_accuracy.png in one sentence -- which point is
+     Pareto-optimal once the backbone size is counted. Note explicitly that
+     latency/FLOPs are NOT measured here; that is Step 11.
+
+
+================================================================================
+5.  HONEST CAVEATS
+================================================================================
+  - RESULTS NOT YET RUN. Everything in §4 outside the "(ref)" rows is a
+    placeholder. Nothing in this writeup should be cited until those cells are
+    filled from the actual JSONs.
+  - The whole recipe (LR, rank, KL, evidence affine) is inherited from a
+    ResNet-18 VAL sweep and was NOT re-tuned for MobileNetV3. Deliberate (it
+    isolates the backbone) but it confounds "small backbone is worse" with
+    "recipe not re-tuned". Per-backbone VAL tuning -> Step 10.
+  - Feature dim 576 is the pooled CONV feature; the 1024-d post-pool variant
+    (torchvision's classifier[0], which is where MobileNetV3's paper puts the
+    final expansion) is untested here -- documented alternative, §0.
+  - Placement stages are the 4 stage-final RESIDUAL blocks. MobileNetV3-Small's
+    first downsampling group (features.1) is a stride-2 block, so it has NO
+    shape-preserving site and is not adapted; the 4 sites therefore are not at
+    the same 4 resolutions as ResNet-18's layer1..layer4. The placement
+    comparison across backbones is "same form, analogous depth", not identical
+    geometry.
+  - Only Bottleneck (post_pool + parallel) is RUN on this backbone. LoRA /
+    BitFit / Full-FT / Linear-Probe are wired and unit-tested at 576 but not
+    run -- implementation.txt §8's scope is the best combo from Step 6, and the
+    full cross-product is Step 10's grid.
+  - TinyImageNet stays UNCURATED (inherited caveat from Steps 4.5/7): the
+    near-OOD conclusion rests on the clean, disjoint cifar100_near pool.
+  - Byte-identical rerun spot-check for a Step 8 config: [PENDING].
+  - No change was made that alters any Steps-1-7 result: all backbone /
+    placement / LoRA edits are additive with ResNet-18 defaults preserved
+    (3 regression tests assert this), the metrics-JSON schema is untouched, and
+    cfg.output.run_tag defaults to null which reproduces the old checkpoint
+    filenames exactly. The ResNet-18 rows in §4 are read from the already
+    committed result files, not re-computed.
+
+
+================================================================================
+6.  EXIT CRITERIA
+================================================================================
+  [x] src/backbones/mobilenetv3.py (feature_dim 576, frozen)             8.1
+  [x] Adapters verified at feature_dim=576 (post-pool Bottleneck, LoRA,
+      BitFit, Linear-Probe, serial/parallel placement) via
+      tests/test_mobilenetv3.py                                          8.2
+  [x] 4 configs configs/exp_phase5_mbnet_*.yaml                          8.3
+  [x] Consolidation script + cross-backbone table/plots                  (extra)
+  [x] Kaggle notebook notebooks/step8_mbnet.ipynb (incl. artifact download)
+  [ ] MobileNetV3-Small runs the full episodic trainer end-to-end        PENDING RUN
+  [ ] Best (adapter, head) from Step 6 (parallel) evaluated on
+      MobileNetV3 x CIFAR-FS with 600-episode CI                        PENDING RUN
+  [ ] 4 result JSONs results/phase5_mbnet*_metrics.json                  PENDING RUN
+  [ ] §4 results table filled from the JSONs + §4.3 answered            PENDING RUN
+  [ ] pytest tests/ passes with test_mobilenetv3.py added
+      (107 before; run it on Kaggle where torchvision weights are
+      reachable)                                                         PENDING RUN
+  [ ] byte-identical rerun spot-check for one config                     PENDING (optional)
+================================================================================

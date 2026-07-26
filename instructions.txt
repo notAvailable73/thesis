@@ -1,7 +1,7 @@
 ================================================================================
 INSTRUCTIONS FOR THE TEAMMATE PICKING UP THIS REPO
 ================================================================================
-Written:   2026-07-07
+Written:   2026-07-07   ·   Updated: 2026-07-26 (sections 1-2 only)
 Purpose:   You just pulled this repo. This file tells you what's already done,
            what's next, and the non-obvious things that will save you time.
 Read order BEFORE touching code:
@@ -10,11 +10,60 @@ Read order BEFORE touching code:
                                                  (reasoning-first process; read
                                                  this before implementing ANY
                                                  new component)
-  3. progress.txt            <- current status, one line per step
-  4. implementation.txt §5   <- the exact spec for what you're building next
-                                 (Step 5, see below)
-  5. step_writeups/step4_5.txt  <- the most recent finished result + why it
-                                    matters for how you should evaluate Step 5
+  3. progress.txt            <- current status, one line per step (CANONICAL)
+  4. implementation.txt §8   <- the exact spec for what you're building next
+                                 (Step 8, see section 1A below)
+  5. step_writeups/step8.txt <- the step in flight (code done, results pending)
+  6. step_writeups/step7.txt <- the most recent CLOSED result
+
+NOTE: sections 2-5 below were written when Step 5 was next. Steps 5, 6 and 7 are
+CLOSED since. Section 1A is the current task; sections 3-5 (reuse list, gotchas,
+quick commands) are still accurate and still worth reading. Trust progress.txt
+over any other file if they disagree.
+
+
+================================================================================
+1A.  CURRENT TASK (as of 2026-07-26): FINISH STEP 8
+================================================================================
+Steps 1-7 are CLOSED. Step 8 (MobileNetV3-Small backbone, Phase 5, RQ4 prep) is
+CODE COMPLETE but NOT RUN.
+
+What already exists (built + offline-checked, nothing to redo):
+  src/backbones/mobilenetv3.py            frozen MobileNetV3-Small -> (B, 576)
+  src/adapters/placement.py               now backbone-agnostic (ResNet +
+                                          MobileNetV3 stage discovery)
+  src/adapters/lora.py                    family-aware default LoRA target
+  configs/exp_phase5_mbnet_{bottleneck,parallel}_{evidential,softmax}.yaml
+  scripts/step8_backbone_compare.py       cross-backbone table + 2 plots
+  tests/test_mobilenetv3.py               incl. 3 ResNet-18 regression guards
+  notebooks/step8_mbnet.ipynb             the Kaggle runner
+  step_writeups/step8.txt                 §0-§3 + §5 written; §4 = [PENDING]
+
+YOUR JOB, in order:
+  1. Run notebooks/step8_mbnet.ipynb on Kaggle (GPU T4, Internet ON, attach the
+     bpeft-data dataset). It trains + evaluates the 4 configs at N=600, builds
+     the table/plots, and zips the checkpoints + results for download.
+  2. Download the zip; commit results/phase5_mbnet*, phase5_backbone_table.json
+     and the two step8_*.png locally (checkpoints stay out of git).
+  3. Transcribe the numbers into step_writeups/step8.txt §4 — COPY them, do not
+     retype from memory — and answer the five questions in §4.3.
+  4. Tick Step 8's boxes in progress.txt and write its headline at the top.
+
+Two things to watch during the run:
+  - A MobileNetV3 accuracy DROP vs ResNet-18 is expected (its ImageNet top-1 is
+    ~7-8 pp lower) and is a finding, not a bug. Accuracy near 0.20 (= 1/n_way)
+    is a COLLAPSE — the trainer's guard aborts after epoch 1 if that happens.
+  - The whole recipe (LR, rank, KL, evidence affine) is inherited from a
+    ResNet-18 VAL sweep and was deliberately NOT re-tuned. If a run
+    underperforms badly, re-tune on the VAL seeds (10000-10099) via the
+    scripts/step45_val_sweep.py pattern before blaming the backbone.
+
+HARD CONSTRAINT carried into Step 8 and every step after it: do not change
+anything that alters an earlier step's results. In practice that means the
+metrics-JSON schema is frozen (adding a key breaks every earlier config's
+byte-identical rerun), and any refactor of shared code must keep the ResNet-18
+path resolving to exactly what it resolved to before — assert it with a
+regression test, as tests/test_mobilenetv3.py does.
 
 
 ================================================================================

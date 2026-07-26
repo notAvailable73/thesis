@@ -1,0 +1,31 @@
+# Step 8 (Phase 5, RQ4 prep) — MobileNetV3-Small + the STEP-6 WINNER placement
+# (PARALLEL in-block 1x1 bottleneck) + evidential prototype head.
+#
+# This is the config the Step 8 exit criterion names: "best (adapter, head) combo
+# from Step 6 evaluated on MobileNetV3 x CIFAR-FS with 600-episode CI". Step 6
+# found parallel placement Pareto-optimal on ResNet-18 (0.915 acc / 0.933 far-OOD
+# AUROC at 31,744 params); Step 8 asks whether that transfers to a 2.5M-param
+# backbone.
+#
+# Placement sites are derived from the backbone family, NOT hardcoded: for
+# MobileNetV3-Small that is the stage-final RESIDUAL inverted-residual block of
+# each channel-width group — features.{3,6,8,11} at 24/40/48/96 channels (see
+# src/backbones/mobilenetv3.py:mobilenetv3_stage_paths). Only residual blocks are
+# eligible because parallel composition (out + body(block_input)) needs the block
+# input and output to share a shape. block_ids [0,1,2,3] selects all four, the
+# direct analogue of ResNet-18's layer1..layer4. Trainable adapter params at
+# rank 16: 808 + 1,336 + 1,600 + 3,184 = 6,928 (+2 evidence affine).
+extends: exp_phase5_mbnet_bottleneck_evidential.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+output:
+  run_tag: mbnet_parallel
+
+wandb:
+  tags: [phase5, step8, mobilenetv3_small, bottleneck, parallel, evidential,
+         prototype, cifar_fs_bertinetto]

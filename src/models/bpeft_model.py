@@ -23,7 +23,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from ..backbones import build_backbone
+from ..backbones import build_backbone, backbone_feature_dim
 from ..adapters import build_adapter
 from ..heads import build_head, PrototypeHead
 
@@ -130,8 +130,19 @@ def build_model(cfg) -> BPEFTModel:
       - softmax / evidential land on LinearHead / EvidentialHead (Step 1-3).
       - prototype lands on the parameter-free PrototypeHead (Step 4+).
     """
-    backbone = build_backbone(cfg["backbone"]["name"])
+    backbone_name = cfg["backbone"]["name"]
+    backbone = build_backbone(backbone_name)
     dim = int(cfg["backbone"].get("feature_dim", 512))
+    # Step 8: with two backbones in play, a config that switches the backbone
+    # but forgets feature_dim would silently build a mis-sized post-pool
+    # adapter/head. Fail loudly instead.
+    expected_dim = backbone_feature_dim(backbone_name)
+    if dim != expected_dim:
+        raise ValueError(
+            f"cfg.backbone.feature_dim={dim} does not match backbone "
+            f"{backbone_name!r} (pooled feature dim {expected_dim}). Fix the "
+            f"config: backbone.feature_dim must be {expected_dim}."
+        )
     # Step 5: build_adapter may inject into / unfreeze the backbone in place
     # (lora / bitfit / full_ft), so it needs the backbone. Post-pool adapters
     # ignore it. The adapter advertises whether the backbone must train.
