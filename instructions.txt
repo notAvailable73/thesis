@@ -11,52 +11,57 @@ Read order BEFORE touching code:
                                                  this before implementing ANY
                                                  new component)
   3. progress.txt            <- current status, one line per step (CANONICAL)
-  4. implementation.txt §8   <- the exact spec for what you're building next
-                                 (Step 8, see section 1A below)
-  5. step_writeups/step8.txt <- the step in flight (code done, results pending)
-  6. step_writeups/step7.txt <- the most recent CLOSED result
+  4. implementation.txt §9   <- the exact spec for what you're building next
+                                 (Step 9, see section 1A below)
+  5. step_writeups/step8.txt <- the most recent CLOSED result (MobileNetV3)
+  6. step_writeups/step7.txt <- the one before it (far-vs-near OOD, RQ3)
 
-NOTE: sections 2-5 below were written when Step 5 was next. Steps 5, 6 and 7 are
-CLOSED since. Section 1A is the current task; sections 3-5 (reuse list, gotchas,
-quick commands) are still accurate and still worth reading. Trust progress.txt
-over any other file if they disagree.
+NOTE: sections 2-5 below were written when Step 5 was next. Steps 5, 6, 7 and 8
+are CLOSED since. Section 1A is the current task; sections 3-5 (reuse list,
+gotchas, quick commands) are still accurate and still worth reading. Trust
+progress.txt over any other file if they disagree.
 
 
 ================================================================================
-1A.  CURRENT TASK (as of 2026-07-26): FINISH STEP 8
+1A.  CURRENT TASK (as of 2026-07-26): STEP 8 IS CLOSED — NEXT IS STEP 9
 ================================================================================
-Steps 1-7 are CLOSED. Step 8 (MobileNetV3-Small backbone, Phase 5, RQ4 prep) is
-CODE COMPLETE but NOT RUN.
+Steps 1-8 are CLOSED. Step 8 (MobileNetV3-Small backbone, Phase 5, RQ4 prep) RAN
+on Kaggle T4 on 2026-07-26 (44 min, 4 train+eval pairs, N=600, pytest 135
+passed). Results are committed under results/phase5_mbnet*, the cross-backbone
+table is results/phase5_backbone_table.json, and step_writeups/step8.txt §4 is
+filled. Checkpoints are in the gitignored checkpoints/ (sha256 provenance in
+results/step8_mbnet_MANIFEST.txt).
 
-What already exists (built + offline-checked, nothing to redo):
-  src/backbones/mobilenetv3.py            frozen MobileNetV3-Small -> (B, 576)
-  src/adapters/placement.py               now backbone-agnostic (ResNet +
-                                          MobileNetV3 stage discovery)
-  src/adapters/lora.py                    family-aware default LoRA target
-  configs/exp_phase5_mbnet_{bottleneck,parallel}_{evidential,softmax}.yaml
-  scripts/step8_backbone_compare.py       cross-backbone table + 2 plots
-  tests/test_mobilenetv3.py               incl. 3 ResNet-18 regression guards
-  notebooks/step8_mbnet.ipynb             the Kaggle runner
-  step_writeups/step8.txt                 §0-§3 + §5 written; §4 = [PENDING]
+WHAT STEP 8 FOUND (three sentences you need before starting Step 9):
+  - The small backbone is nearly free: 0.3-1.6 pp accuracy below ResNet-18 at
+    matched placement, not the ~7-8 pp its ImageNet top-1 deficit predicted, for
+    a 12.1x smaller frozen trunk (927K vs 11.18M params).
+  - In-block PARALLEL placement is now strictly Pareto-dominant: +3.7 pp over
+    post_pool at 2.75x FEWER params (6,930 vs 19,026). mbnet/parallel hits
+    0.9090 softmax — above Step-5 ResNet-18 Full-FT (0.9047) with 1,613x fewer
+    trained params.
+  - Evidential vacuity still beats MSP/TS-MSP on all 8 cells, but now LOSES to
+    energy on 3 of 4 pools (it was 2-2 on ResNet-18), and the evidential-vs-
+    TS-softmax ECE gap widens to 35x. Scope any "on par with energy" sentence to
+    ResNet-18.
 
-YOUR JOB, in order:
-  1. Run notebooks/step8_mbnet.ipynb on Kaggle (GPU T4, Internet ON, attach the
-     bpeft-data dataset). It trains + evaluates the 4 configs at N=600, builds
-     the table/plots, and zips the checkpoints + results for download.
-  2. Download the zip; commit results/phase5_mbnet*, phase5_backbone_table.json
-     and the two step8_*.png locally (checkpoints stay out of git).
-  3. Transcribe the numbers into step_writeups/step8.txt §4 — COPY them, do not
-     retype from memory — and answer the five questions in §4.3.
-  4. Tick Step 8's boxes in progress.txt and write its headline at the top.
+YOUR JOB: Step 9 (MiniImageNet). Spec: implementation.txt §9; boxes in
+progress.txt "STEP 9". Nothing from Step 8 blocks it.
 
-Two things to watch during the run:
-  - A MobileNetV3 accuracy DROP vs ResNet-18 is expected (its ImageNet top-1 is
-    ~7-8 pp lower) and is a finding, not a bug. Accuracy near 0.20 (= 1/n_way)
-    is a COLLAPSE — the trainer's guard aborts after epoch 1 if that happens.
-  - The whole recipe (LR, rank, KL, evidence affine) is inherited from a
-    ResNet-18 VAL sweep and was deliberately NOT re-tuned. If a run
-    underperforms badly, re-tune on the VAL seeds (10000-10099) via the
-    scripts/step45_val_sweep.py pattern before blaming the backbone.
+TWO CARRY-OVERS FROM STEP 8 — they belong to STEP 10's grid, not Step 9:
+  1. Per-backbone VAL tuning. Step 8's whole recipe (LR 5e-3, rank 16,
+     kl_weight_max 0.1, evidence affine scale 2 / bias -6) was inherited from a
+     ResNet-18 VAL sweep and deliberately never re-tuned for MobileNetV3. Any
+     MobileNetV3 number is therefore an untuned lower bound. Re-tune on the VAL
+     seeds (10000-10099) via the scripts/step45_val_sweep.py pattern.
+  2. mbnet/parallel evidential has the thesis's worst evidential ECE (0.3069)
+     and is the only evidential run whose checkpoint was picked DURING KL warm-up
+     (epoch 3, kl_w=0.030 of 0.100; patience 5 stopped it at epoch 8). Test a
+     longer warm-up / patience > 5 before saying anything about the loss here.
+
+STILL OPEN (optional) FROM STEP 8: no byte-identical rerun spot-check was done
+for a Step 8 config. Cheapest close: re-run one evaluate.py cell in
+notebooks/step8_mbnet.ipynb against the saved checkpoint and diff the JSON.
 
 HARD CONSTRAINT carried into Step 8 and every step after it: do not change
 anything that alters an earlier step's results. In practice that means the

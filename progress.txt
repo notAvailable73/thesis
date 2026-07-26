@@ -5,7 +5,7 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-05-19
+Updated:   2026-07-26 (Step 8 CLOSED — MobileNetV3-Small runs are in)
 ================================================================================
 
 
@@ -17,21 +17,22 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-Just closed: Step 7 (Phase 4: far-OOD Gaussian + OOD consolidation, RQ3) — Kaggle
-             re-eval of the parallel winner (both heads, N=600, T4, 2026-07-22),
-             both OK; added gaussian_far pool; results/phase4_ood_table.json +
-             phase4_parallel_* JSONs + step7_ood_comparison.png; pytest 107 passed;
-             step7.txt §4 + RQ3 paragraph filled. Headline below.
-             (Step 6 closed just before — RQ1 placement; Step 5 — PEFT baselines.)
-In progress: Step 8 (MobileNetV3-Small backbone, RQ4 prep) — CODE COMPLETE
-             2026-07-26, RESULTS PENDING. Backbone + backbone-agnostic placement +
-             4 configs + tests + consolidation script + Kaggle notebook are built
-             and offline-checked; the 4 GPU runs have NOT been executed yet.
-             NEXT ACTION: run notebooks/step8_mbnet.ipynb on Kaggle (T4, Internet
-             ON, attach bpeft-data), then transcribe
-             results/phase5_backbone_table.json into step_writeups/step8.txt §4
-             and tick the boxes below.
-Blocker:     none (needs a GPU session).
+Just closed: Step 8 (Phase 5: MobileNetV3-Small backbone, RQ4 prep) — 4 configs
+             trained + evaluated on Kaggle T4 (2026-07-26 11:45-12:29 UTC), N=600,
+             no collapse; results/phase5_mbnet*_metrics.json (4) +
+             phase5_backbone_table.json + step8_backbone_comparison.png +
+             step8_params_vs_accuracy.png; pytest 135 passed (107 + 28 new,
+             incl. the 3 ResNet-18 regression guards); step8.txt §4 filled and
+             §4.3's five questions answered. Headline below.
+             (Step 7 closed just before — RQ3 far-vs-near OOD; Step 6 — RQ1
+             placement; Step 5 — PEFT baselines.)
+Next:        Step 9 (MiniImageNet dataset, RQ2/RQ3 breadth) — NOT STARTED. Two
+             carry-overs from Step 8 to schedule, both for Step 10's grid, not
+             Step 9: (i) per-backbone VAL tuning — the whole Step 8 recipe was
+             inherited from a ResNet-18 sweep and never re-tuned for MobileNetV3;
+             (ii) the mbnet/parallel evidential cell early-stopped at epoch 3,
+             mid-KL-warm-up, which is the prime suspect for its 0.307 ECE.
+Blocker:     none.
 Today:       2026-07-26
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
@@ -113,6 +114,51 @@ OOD EDGE IS LARGER ON NEAR-OOD THAN FAR-OOD (the RQ3 point):
   parallel numbers EXACTLY (determinism verified). TinyImageNet still uncurated —
   near-OOD claim rests on the clean, disjoint cifar100_near.
   Full numbers/story: step_writeups/step7.txt §4 ; table results/phase4_ood_table.json.
+
+Step 8 headline (Phase 5, RQ4 prep, MobileNetV3-Small vs ResNet-18, N=600,
+2026-07-26) — THE SMALL BACKBONE IS ALMOST FREE, AND PARALLEL BECOMES PARETO-
+DOMINANT:
+  Cost of the swap at matched placement (mbnet − r18 accuracy):
+    post_pool  evid −0.0163   softmax −0.0027      parallel evid −0.0098
+                                                   parallel softmax −0.0035
+  The two softmax gaps are INSIDE the 600-episode CI95 (±0.005); the two
+  evidential gaps exceed it. Either way 0.3-1.6 pp, NOT the ~7-8 pp that
+  MobileNetV3-Small's ImageNet top-1 deficit predicted — for a 12.1x smaller
+  frozen trunk (927,008 params vs 11,176,512). Few-shot 5-way transfer does not
+  need most of the capacity the ImageNet gap measures.
+  RQ1 STRENGTHENS: within MobileNetV3, in-block parallel beats post_pool by
+  +0.0376 (evid 0.9048 vs 0.8672) / +0.0370 (softmax 0.9090 vs 0.8720) while
+  using 2.75x FEWER params (6,930 vs 19,026). On ResNet-18 the same +3-4 pp win
+  cost 1.88x MORE params. So here parallel is strictly Pareto-dominant — better
+  accuracy AND cheaper, no trade-off to argue. Conv-Adapter's 1x1
+  "loss of locality" caveat did NOT bite in the narrow 24-96 ch stages.
+  RQ4 PREP: mbnet/parallel (6,928 params, 927K trunk) reaches 0.9090, ABOVE
+  Step-5 ResNet-18 Full-FT (0.9047, 11,176,512 params) — full-FT accuracy with
+  1,613x fewer trained params — and within 0.35 pp of the thesis best
+  (r18/parallel 0.9125 @ 31,744). Every mbnet/post_pool point is dominated.
+  LATENCY/FLOPs NOT MEASURED — parameters only; that is Step 11.
+  RQ2/RQ3 SURVIVE THE SWAP, WITH ONE REGRESSION:
+    vacuity beats msp on all 8 cells (parallel: svhn +0.108, gaussian +0.015,
+    cifar100 +0.041, tin +0.028) and ts_msp on all 8 (+0.033..+0.170).
+    mbnet/parallel evidential sets the best far-OOD SVHN AUROC in the thesis
+    (0.9522 vs r18/parallel 0.9328, FPR@95 0.226 vs 0.380) but its near-OOD is
+    BELOW r18/parallel (cifar100 0.875 vs 0.912; tin 0.913 vs 0.929).
+    REGRESSION vs ENERGY: energy now wins 3 of 4 pools on both mbnet placements
+    (parallel: svhn +0.004 to vacuity, gaussian −0.048, cifar100 −0.013, tin
+    −0.036). On ResNet-18 it was near-even (2-2). "Vacuity is on par with energy"
+    is a ResNet-18 statement only — do not generalise it.
+  CALIBRATION still the open problem, gap WIDER at the winning cell: evid ECE
+  0.3069 vs TS-softmax 0.0088 = 35x (r18/parallel 16.6x). Most of the widening is
+  the softmax side improving — 0.0088 is the best ECE_ts in the thesis. The
+  0.3069 is the worst evidential ECE; suspect is that its checkpoint was selected
+  at epoch 3, DURING the KL warm-up (kl_w=0.030 of 0.100), unlike the other three
+  evidential runs. Untested — Step 10.
+  No collapse anywhere (guard 0.25 never fired; mean_ev 1.69-2.56), so the Step-4
+  evidential collapse did not recur at 576-d. All 4 early-stopped normally
+  (best_val_epoch 14 / 1 / 3 / 10).
+  Full numbers/story: step_writeups/step8.txt §4 ; table
+  results/phase5_backbone_table.json ; plots results/step8_backbone_comparison.png
+  + results/step8_params_vs_accuracy.png.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -506,14 +552,14 @@ Exit criteria:
 
 
 ================================================================================
-PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (NOT STARTED)
+PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (IN PROGRESS — Step 8 CLOSED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 8 — MOBILENETV3-SMALL BACKBONE                             [~] IN PROGRESS
+STEP 8 — MOBILENETV3-SMALL BACKBONE                             [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 5     RQ: RQ4 (prep)                           Est: 0.5-1 week
-Writeup: step_writeups/step8.txt (CODE COMPLETE 2026-07-26; §4 results PENDING RUN)
+Phase: 5     RQ: RQ4 (prep)     Closed: 2026-07-26
+Writeup: step_writeups/step8.txt (COMPLETE — §4 filled from the run, §4.3 answered)
 Scope: second mandatory backbone (proposal §5A) + re-run the Step-6 WINNER
   (parallel in-block 1x1 Bottleneck, both heads) on it, plus a post-pool
   Bottleneck row per head so placement can also be read WITHIN this backbone.
@@ -559,18 +605,34 @@ Actions:
            consolidation + plots, and an artifact-packaging cell that zips the 4
            CHECKPOINTS + all Step 8 results with a sha256 MANIFEST and prints a
            download link.
-  [ ] 8.4b RUN it: 4 train+eval runs on Kaggle -> 4 result JSONs        PENDING
-  [ ] 8.5  step_writeups/step8.txt §4 filled from the JSONs (+ §4.3
-           questions answered)                                          PENDING
+  [x] 8.4b RAN it: 4 train+eval pairs, Kaggle T4, 2026-07-26 11:45-12:29 UTC,
+           ~44 min total. All 4 trained end-to-end and early-stopped on the
+           val-acc plateau (best_val_epoch 14 / 1 / 3 / 10 of 30, patience 5);
+           the collapse guard (0.25) never fired and evidential mean_ev stayed
+           1.69-2.56, so the Step-4 evidential collapse did NOT recur at 576-d.
+           Split reported canonical_bertinetto_via_torchmeta 64/16/20. SVHN was
+           not in the attached dataset and downloaded at runtime (the fix in
+           801e21e); TinyImageNet likewise. -> 4 result JSONs +
+           phase5_backbone_table.json + the 2 plots. Artifacts landed in
+           results/ (checkpoints -> gitignored checkpoints/, sha256 provenance
+           in results/step8_mbnet_MANIFEST.txt).
+  [x] 8.5  step_writeups/step8.txt §4 filled by transcription from
+           results/phase5_backbone_table.json; §4.3's five questions answered;
+           §5 caveats extended (single seed; warm-up-truncated evidential
+           checkpoint; energy regression); §1 headline written.
 
 Exit criteria:
-  [ ] MobileNetV3-Small runs full episodic trainer end-to-end            PENDING RUN
-  [ ] Best (adapter, head) from Step 6 evaluated on MobileNetV3 ×
-      CIFAR-FS with 600-episode CI                                      PENDING RUN
-  [ ] 4 result JSONs results/phase5_mbnet*_metrics.json                  PENDING RUN
-  [ ] pytest tests/ passes with test_mobilenetv3.py added (107 before;
-      needs a machine that can reach torchvision weights)               PENDING RUN
-  [ ] byte-identical rerun spot-check for one config                     PENDING (optional)
+  [x] MobileNetV3-Small runs full episodic trainer end-to-end             4/4 runs
+  [x] Best (adapter, head) from Step 6 evaluated on MobileNetV3 ×
+      CIFAR-FS with 600-episode CI      parallel: 0.9048 ±0.0052 evidential,
+                                                  0.9090 ±0.0053 softmax
+  [x] 4 result JSONs results/phase5_mbnet*_metrics.json
+  [x] pytest tests/ passes with test_mobilenetv3.py added         135 passed on
+      Kaggle T4 (107 before + 28 new, incl. the 3 ResNet-18 guards)
+  [ ] byte-identical rerun spot-check for one config      NOT DONE (optional; no
+      new nondeterminism was introduced, but that is an argument not a
+      measurement — cheapest close is to re-run one evaluate.py cell against the
+      saved checkpoint and diff the JSON)
 
 --------------------------------------------------------------------------------
 STEP 9 — MINIIMAGENET DATASET                                   [ ] NOT STARTED
@@ -815,6 +877,48 @@ NOTES / DECISIONS LOG
             (features.1) is stride-2, so it has NO eligible site — the 4 mbnet
             sites are "analogous depth", not the same resolutions as ResNet-18's
             layer1..layer4. Escape hatch: cfg.adapter.stage_paths.
+
+2026-07-26  Result (Step 8, run): the ~7-8 pp accuracy drop that §0 predicted from
+            MobileNetV3-Small's ImageNet top-1 deficit did NOT materialise — the
+            measured gap at matched placement is 0.3-1.6 pp (and the two softmax
+            gaps are inside the 600-episode CI95). NB the "~7-8 pp" expectation
+            itself is general knowledge, not summary-sourced: the summaries state
+            only V3-Small = ~67.4-67.5% top-1, never ResNet-18's — flagged in
+            step8.txt §4.3(b). Conclusion to carry into
+            Chapter 5: on 5-way 5-shot CIFAR-FS with a prototype head, ImageNet
+            top-1 is a poor predictor of few-shot transfer, so the RQ4 efficiency
+            axis costs far less accuracy than the backbone-size ratio suggests.
+            Confound that must be stated with it: the recipe was inherited from a
+            ResNet-18 VAL sweep and never re-tuned for this backbone, which if
+            anything biases AGAINST MobileNetV3 — so 0.3-1.6 pp is an upper bound
+            on the cost, not a tuned optimum.
+
+2026-07-26  Result (Step 8, RQ1): the Step-6 placement conclusion strengthens on
+            the second backbone. In-block parallel beats post_pool by +3.7 pp on
+            BOTH heads while costing 2.75x FEWER params, i.e. strictly
+            Pareto-dominant here (on ResNet-18 the same win cost 1.88x more).
+            Combined with the param-ordering flip logged below, the honest RQ1
+            statement is "in-block parallel wins on accuracy on both backbones;
+            whether it also wins on params depends on the backbone's channel
+            profile" — not "parallel costs ~2x params".
+
+2026-07-26  Finding to flag, NOT to bury (Step 8, RQ3): energy beats evidential
+            vacuity on 3 of 4 OOD pools on BOTH MobileNetV3 placements
+            (parallel: gaussian −0.048, cifar100 −0.013, tin −0.036; svhn +0.004
+            to vacuity). On ResNet-18/parallel the same comparison was near-even
+            (2-2). The claim that survives the backbone swap intact is the
+            PROBABILISTIC one — vacuity > MSP and > TS-MSP on all 8 cells, by
+            +0.015 to +0.170. Steps 4.5/7's "on par with energy" line must be
+            scoped to ResNet-18 wherever it appears in the thesis text.
+
+2026-07-26  Open question (Step 8 -> Step 10): mbnet/parallel evidential has the
+            worst evidential ECE in the thesis (0.3069) and is the only evidential
+            run whose checkpoint was selected DURING KL warm-up (epoch 3,
+            kl_w=0.030 of a 0.100 plateau; val-acc peaked there and patience 5
+            stopped it at epoch 8). Prime suspect, untested. Step 10's VAL tuning
+            should try a longer warm-up and/or patience > 5 before any claim is
+            made about the loss on this backbone. Do not cite 0.3069 as a
+            property of the evidential loss.
 
 2026-07-26  Observation (Step 8, RQ4 relevance): on MobileNetV3 the param
             ordering FLIPS vs ResNet-18 — in-block parallel is ~2.7x CHEAPER than
