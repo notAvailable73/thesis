@@ -1,0 +1,19 @@
+# Step 9 — MiniImageNet + ResNet-18 + POST-POOL Bottleneck + evidential head.
+#
+# The RQ1 placement baseline on the second in-distribution dataset: pairs with
+# exp_phase5_mini_parallel_evidential.yaml the same way
+# step45_bottleneck_prototype-evidential (CIFAR-FS post_pool) pairs with
+# phase4_parallel_bottleneck_prototype-evidential (CIFAR-FS parallel).
+extends: exp_phase5_mini_base_evidential.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: post_pool
+
+output:
+  run_tag: mini_postpool
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, bottleneck, post_pool, evidential,
+         prototype, ravi_larochelle]

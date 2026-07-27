@@ -1,0 +1,15 @@
+# Step 9 — MiniImageNet Linear-Probe reference (ResNet-18, no adapter,
+# parameter-free softmax prototype head -- ZERO trainable parameters).
+# Softmax sibling of exp_phase5_mini_linear_probe_evidential; see that file
+# for why this reference run matters (ImageNet-pretraining overlap confound).
+extends: exp_phase5_mini_base_softmax.yaml
+
+adapter:
+  type: linear_probe
+
+output:
+  run_tag: mini_linear_probe
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, linear_probe, baseline, softmax,
+         prototype, ravi_larochelle]

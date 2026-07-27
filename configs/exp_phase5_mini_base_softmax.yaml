@@ -1,0 +1,11 @@
+# Step 9 (Phase 5, RQ2/RQ3 breadth) — dataset switch to MiniImageNet (Ravi &
+# Larochelle 2017 64/16/20 split), softmax head. Shared parent for every
+# mini_* softmax variant. Softmax sibling of exp_phase5_mini_base_evidential;
+# same dataset switch, no R-EDL knobs to carry.
+extends: exp_phase2_softmax.yaml
+
+dataset:
+  name: mini_imagenet
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, softmax, prototype, ravi_larochelle]

@@ -1,0 +1,23 @@
+# Step 9 — MiniImageNet Linear-Probe reference (ResNet-18, no adapter,
+# parameter-free evidential prototype head -- only 2 evidence-affine scalars
+# train, same as exp_phase3_linear_probe_evidential.yaml on CIFAR-FS).
+#
+# Purpose: MiniImageNet's 100 classes are all in ILSVRC-2012, and both frozen
+# backbones are ImageNet-pretrained -- the "novel" test classes were seen
+# during pretraining, so raw frozen features are already a strong baseline.
+# This run turns that confound into a number: (parallel accuracy - this
+# accuracy) is the adapter's uplift over raw frozen features, directly
+# comparable to the CIFAR-FS uplift already on record (phase3_linear_probe:
+# 0.8741 vs phase4_parallel: 0.915, i.e. +4.1pp -- see step_writeups/step9.txt
+# §5 for the MiniImageNet number once run).
+extends: exp_phase5_mini_base_evidential.yaml
+
+adapter:
+  type: linear_probe
+
+output:
+  run_tag: mini_linear_probe
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, linear_probe, baseline, evidential,
+         prototype, ravi_larochelle]

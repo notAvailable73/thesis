@@ -40,10 +40,11 @@ from src.utils import (
     WandbRun, make_run_name, reliability_diagram, ood_histogram, confusion_matrix,
 )
 from src.datasets import (
-    build_dataset, sample_episode, get_svhn_ood, get_cifar_fs,
-    get_cifar_fs_heldout_ood, get_tinyimagenet_ood, get_gaussian_ood,
+    build_dataset, sample_episode, get_svhn_ood, get_id_split,
+    get_heldout_near_ood, get_tinyimagenet_ood, get_gaussian_ood,
     EpisodicIterableDataset,
 )
+from src.datasets.mini_imagenet import MINI_IMAGENET_ALL_WNIDS
 from src.models import build_model
 from src.losses import build_loss
 from src.trainers import train_one_episode
@@ -283,10 +284,7 @@ def _fit_val_temperature(model, cfg, device, repo_root, logger) -> float:
     with open(repo_root / "configs" / "val_episodes.yaml") as f:
         val_spec = yaml.safe_load(f)
     val_seeds = list(val_spec["seeds"])
-    val_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size), split="val",
-    )
+    val_split = get_id_split(cfg.dataset, split="val")
     val_iter = EpisodicIterableDataset(
         val_split, n_way=int(cfg.dataset.n_way), k_shot=int(cfg.dataset.k_shot),
         q_query=int(cfg.dataset.q_query), num_episodes=len(val_seeds),
@@ -315,12 +313,11 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
     interp = cfg.head.get("interpretation", "evidential")
     K = int(cfg.dataset.n_way)
 
-    # --- Test split (Bertinetto 20 test classes) ----------------------
-    test_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size),
-        split="test",
-    )
+    # --- Test split (20 held-out test classes) -------------------------
+    # Routed through get_id_split (Step 9): cfg.dataset.name unset (or
+    # "cifar_fs") resolves to exactly the get_cifar_fs(split="test") call
+    # every pre-Step-9 config already made -- the Bertinetto 20 test classes.
+    test_split = get_id_split(cfg.dataset, split="test")
 
     # Build EpisodicIterableDataset with seed_offset = seeds[0] so the
     # 600 episodes match configs/test_episodes.yaml's seeds exactly.
@@ -357,7 +354,7 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
         f"best_val_acc={ckpt.get('best_val_acc', float('nan')):.3f}"
     )
 
-    # --- OOD pools (Step 4.5 / W3): far SVHN + near CIFAR-100-heldout
+    # --- OOD pools (Step 4.5 / W3): far SVHN + near held-out-classes
     #     + optional near TinyImageNet. Each is precomputed backbone features. -
     img_size = int(cfg.dataset.image_size)
     n_ood = int(cfg.ood.num_samples)
@@ -366,19 +363,29 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
     svhn_x = get_svhn_ood(data_root=cfg.ood.data_root, image_size=img_size,
                           num_samples=n_ood, seed=ood_seed)
     pools["svhn_far"] = _extract_features(model.backbone, svhn_x, device)
-    heldout_x = get_cifar_fs_heldout_ood(
-        data_root=cfg.dataset.data_root, image_size=img_size,
-        num_samples=n_ood, seed=ood_seed, heldout_split="val")
-    pools["cifar100_near"] = _extract_features(model.backbone, heldout_x, device)
+    # Held-out-classes near-OOD: cifar100_near for cifar_fs, mini_near for
+    # mini_imagenet (Step 9) -- get_heldout_near_ood returns the right pool
+    # name for whichever dataset cfg.dataset.name selects.
+    near_pool_name, heldout_x = get_heldout_near_ood(
+        cfg.dataset, num_samples=n_ood, seed=ood_seed, heldout_split="val")
+    pools[near_pool_name] = _extract_features(model.backbone, heldout_x, device)
     # TinyImageNet near-OOD: from the config OR the --use-tinyimagenet CLI flag
     # (the flag lets us add it to an ALREADY-TRAINED checkpoint, eval-only, with
     # no retrain).
     use_tin = bool(cfg.ood.get("use_tinyimagenet", False)) or bool(
         getattr(args, "use_tinyimagenet", False))
     if use_tin:
+        # Step 9: TinyImageNet-200 shares 25 wnids with MiniImageNet's 100
+        # classes (5 of them MiniImageNet TEST classes) -- exclude all 100
+        # so the "OOD" pool cannot contain literal in-distribution images.
+        # exclude_wnids=None for cifar_fs leaves this call byte-identical to
+        # every pre-Step-9 run.
+        exclude_wnids = (MINI_IMAGENET_ALL_WNIDS
+                         if str(cfg.dataset.get("name", "cifar_fs")) == "mini_imagenet"
+                         else None)
         tin_x = get_tinyimagenet_ood(data_root=cfg.dataset.data_root,
                                      image_size=img_size, num_samples=n_ood,
-                                     seed=ood_seed)
+                                     seed=ood_seed, exclude_wnids=exclude_wnids)
         pools["tin_near"] = _extract_features(model.backbone, tin_x, device)
     # Gaussian far-OOD (Step 7): pure-noise sanity/ablation pool. Same config OR
     # --use-gaussian CLI flag pattern as TinyImageNet (eval-only, no retrain).

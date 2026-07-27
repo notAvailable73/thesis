@@ -38,7 +38,8 @@ from src.utils import (
     WandbRun, make_run_name,
 )
 from src.datasets import (
-    build_dataset, sample_episode, get_cifar_fs, EpisodicIterableDataset,
+    build_dataset, sample_episode, get_id_split,
+    EpisodicIterableDataset,
 )
 from src.models import build_model
 from src.losses import build_loss
@@ -256,16 +257,11 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
         )
 
     # --- Datasets: train + val splits ---------------------------------
-    train_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size),
-        split="train",
-    )
-    val_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size),
-        split="val",
-    )
+    # Routed through get_id_split (Step 9) so cfg.dataset.name selects the
+    # in-distribution dataset; unset (or "cifar_fs") resolves to exactly the
+    # get_cifar_fs(...) call every pre-Step-9 config already made.
+    train_split = get_id_split(cfg.dataset, split="train")
+    val_split = get_id_split(cfg.dataset, split="val")
     n_way   = int(cfg.dataset.n_way)
     k_shot  = int(cfg.dataset.k_shot)
     q_query = int(cfg.dataset.q_query)

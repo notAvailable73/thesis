@@ -1,0 +1,21 @@
+# Step 9 (Phase 5, RQ2/RQ3 breadth) — dataset switch to MiniImageNet (Ravi &
+# Larochelle 2017 64/16/20 split), evidential head. Shared parent for every
+# mini_* evidential variant (postpool / parallel / mbnet_postpool /
+# mbnet_parallel / linear_probe), the same role
+# exp_phase5_mbnet_bottleneck_evidential.yaml plays for the Step 8 mbnet_*
+# variants.
+#
+# Per instructions.txt §3 / the Step 4.5 R-EDL retune, evidential configs must
+# descend from exp_phase2_evidential_retuned.yaml (kl_weight_max 0.1, the
+# gentler evidence affine), NOT the plain exp_phase2_evidential.yaml -- that
+# retuned recipe is carried over UNCHANGED here so the comparison isolates the
+# dataset axis, exactly as Step 8 held it fixed to isolate the backbone axis.
+# Per-dataset VAL re-tuning stays a Step 10 carry-over (see step_writeups/
+# step9.txt §5).
+extends: exp_phase2_evidential_retuned.yaml
+
+dataset:
+  name: mini_imagenet
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, evidential, prototype, ravi_larochelle]

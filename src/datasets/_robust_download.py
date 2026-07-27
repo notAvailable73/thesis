@@ -10,6 +10,7 @@ If every mirror fails, raise a clear error telling the user to drop the file
 into `data/` manually (the function is a no-op once the file is present).
 """
 from __future__ import annotations
+import hashlib
 import os
 import shutil
 import time
@@ -32,7 +33,8 @@ _DEFAULT_TOTAL_TIMEOUT = 600.0  # 10 minutes per mirror
 
 def ensure_archive(data_root: str, filename: str, urls: list[str],
                    extracted_dirname: str | None = None,
-                   total_timeout: float = _DEFAULT_TOTAL_TIMEOUT) -> str:
+                   total_timeout: float = _DEFAULT_TOTAL_TIMEOUT,
+                   md5: str | None = None) -> str:
     """Make sure `data_root/filename` exists, fetching it with a browser UA.
 
     Args:
@@ -45,6 +47,12 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
             top of the per-chunk idle timeout. A mirror that is technically
             alive but too slow to finish in time is abandoned in favor of
             the next one, instead of hanging indefinitely.
+        md5: optional expected MD5 of the downloaded file (Step 9: the Zenodo
+            mini-ImageNet caches publish one). Only checked against a FRESH
+            download in this call (not an already-cached file, so existing
+            CIFAR/SVHN/TinyImageNet callers that never pass this incur zero
+            extra hashing cost). A mismatch deletes the file and tries the
+            next mirror, same as a truncated download.
 
     Returns the archive path. Raises RuntimeError if all mirrors fail and the
     file is absent.
@@ -105,6 +113,16 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
                     f"incomplete download: got {os.path.getsize(dst)} of "
                     f"{total} bytes"
                 )
+            if md5 is not None:
+                hasher = hashlib.md5()
+                with open(dst, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                        hasher.update(chunk)
+                got = hasher.hexdigest()
+                if got != md5:
+                    raise IOError(
+                        f"MD5 mismatch for {filename}: expected {md5}, got {got}"
+                    )
             if os.path.getsize(dst) > 0:
                 print(f"[download] done: {filename} "
                       f"({os.path.getsize(dst) / 1e6:.0f} MB)", flush=True)

@@ -1,0 +1,26 @@
+# Step 9 — MiniImageNet + MobileNetV3-Small + POST-POOL Bottleneck + evidential
+# head. Backbone-axis complement to exp_phase5_mini_postpool_evidential.yaml
+# (ResNet-18): together they test whether Step 8's mbnet-vs-r18 findings
+# (near-free accuracy, parallel Pareto-dominance, evidential losing to energy
+# on 3/4 pools) are CIFAR-FS artifacts or hold on a second dataset.
+#
+# feature_dim 576 / recipe carried over UNCHANGED from the ResNet-18 VAL sweep,
+# same untuned-recipe caveat Step 8 flagged for MobileNetV3 (see
+# step_writeups/step9.txt §5).
+extends: exp_phase5_mini_base_evidential.yaml
+
+backbone:
+  name: mobilenetv3_small
+  feature_dim: 576
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: post_pool
+
+output:
+  run_tag: mini_mbnet_postpool
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, mobilenetv3_small, bottleneck,
+         post_pool, evidential, prototype, ravi_larochelle]
