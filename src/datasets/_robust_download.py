@@ -35,7 +35,14 @@ _BROWSER_UA = (
 # for this) that can silently "run" for hours. This wall-clock cap bounds the
 # total time spent on any one mirror regardless of whether bytes are still
 # trickling in.
-_DEFAULT_TOTAL_TIMEOUT = 600.0  # 10 minutes per mirror
+#
+# Was 600s (10 min); Step 9 hit this on Kaggle against cs.toronto.edu at
+# ~150-200 KB/s (getting 40-90% through the 169 MB CIFAR-100 archive before
+# being abandoned each time), which needed ~15 min to complete. Tripled to
+# give 2x headroom over that observed worst case, not removed -- a genuinely
+# dead mirror should still be abandoned rather than hang for the whole
+# session (both mirrors failing now costs at most 2x this value per call).
+_DEFAULT_TOTAL_TIMEOUT = 1800.0  # 30 minutes per mirror
 
 
 def ensure_archive(data_root: str, filename: str, urls: list[str],
