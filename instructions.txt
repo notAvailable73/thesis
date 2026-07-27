@@ -51,7 +51,7 @@ WHAT STEP 9 BUILT (read step_writeups/step9.txt §0/§1 for the full reasoning):
   - 10 new configs/exp_phase5_mini_*.yaml (ResNet-18 + MobileNetV3-Small x
     post_pool + parallel x evidential + softmax, plus a ResNet-18 linear-probe
     reference pair), scripts/step9_dataset_compare.py (cross-dataset
-    consolidation, mirrors step8_backbone_compare.py), 36 new tests, and
+    consolidation, mirrors step8_backbone_compare.py), 35 new tests, and
     notebooks/step9_mini.ipynb (Kaggle, resumable 10-run driver + a timed
     MiniImageNet cache-build cell + an off-by-default 1-shot path).
 
@@ -66,7 +66,7 @@ YOUR JOB, IN ORDER:
      pickles (no real download was possible in the implementing session). If
      it raises "unrecognized MiniImageNet cache format", read the printed
      keys/shape and fix the loader — do not silently guess a different schema.
-  3. Confirm pytest passes (expect ~171 = 135 + 36 new) and no evidential run
+  3. Confirm pytest passes (expect ~170 = 135 + 35 new) and no evidential run
      collapses (collapse_threshold 0.25).
   4. Transcribe results/phase5_dataset_table.json into step_writeups/step9.txt
      §4 verbatim (never retype from memory), answer its §4.3 questions
@@ -293,7 +293,7 @@ tests/test_lora.py: identity at init + analytical param count
 ================================================================================
   Setup:             python scripts/build_cifar_fs_split.py
                      python scripts/build_mini_imagenet_split.py   (Step 9+)
-  Run tests:         python -m pytest -q          (expect ~171 as of Step 9;
+  Run tests:         python -m pytest -q          (expect ~170 as of Step 9;
                        run tests/test_mini_imagenet.py + test_dataset_dispatch.py
                        first if you only want the Step 9 additions)
   Train a config:    python scripts/train.py    --config configs/<x>.yaml

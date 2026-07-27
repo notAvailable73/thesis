@@ -373,7 +373,12 @@ def _build_split_cache(data_root: str, split: str,
 
     from ._robust_download import ensure_archive
     for s, (fname, _, md5) in _ZENODO_FILES.items():
-        ensure_archive(data_root, fname, [f"{_ZENODO_BASE}/{fname}"], md5=md5)
+        # user_agent=None: Zenodo's WAF 403s ensure_archive's default browser
+        # UA (verified live) while allowing urllib's own default UA through --
+        # the opposite of CIFAR's cs.toronto.edu, which is what that default
+        # exists for. See _robust_download.py's module docstring.
+        ensure_archive(data_root, fname, [f"{_ZENODO_BASE}/{fname}"], md5=md5,
+                       user_agent=None)
     pkl_path = Path(data_root) / _ZENODO_FILES[split][0]
     imgs, labels = _decode_pkl(pkl_path, wnids)
     return imgs, labels, "downloaded_zenodo_pkl"

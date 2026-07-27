@@ -12,25 +12,46 @@ Scope:     Add MiniImageNet (Ravi & Larochelle 2017, 64/16/20 split) as a
 Spec:      implementation.txt Section 9 ; progress.txt "STEP 9"
 Previous:  step_writeups/step8.txt (MobileNetV3-Small backbone, RQ4 prep)
 
-STATUS OF THIS WRITEUP: CODE COMPLETE -- **NOT YET RUN**.
-  Every file below (dataset loader, dispatch refactor, 12 configs, 2 new test
-  modules + extensions to a 3rd, consolidation script, Kaggle notebook) is
+STATUS OF THIS WRITEUP: CODE COMPLETE -- **RUN IN PROGRESS, RESULTS NOT YET
+  IN**. The implementing session had NO GPU, NO torch/numpy/PIL/torchvision,
+  and NO package manager available (verified: `import torch` raises
+  ModuleNotFoundError; no `pip`; no `nvidia-smi`) -- all code below was
   written, syntax-checked, and config-validated through the real config
-  loader. The implementing session had NO GPU, NO torch/numpy/PIL/
-  torchvision, and NO package manager available (verified: `import torch`
-  raises ModuleNotFoundError; no `pip`; no `nvidia-smi`) -- so nothing that
-  needs those could be executed. Per thesis_implementation_instructions.txt
-  Section 6 ("never state an assumed result as if confirmed"), Section 4
-  below is a TEMPLATE, not a result. Do not cite any number from this file
-  until Section 4 has been transcribed from an actual
-  results/phase5_mini*_metrics.json produced by notebooks/step9_mini.ipynb.
+  loader without execution. A separate Kaggle session has since started
+  running notebooks/step9_mini.ipynb and hit two REAL bugs during actual
+  execution (both fixed, neither yet re-verified end-to-end):
+    1. The CIFAR-100 staging cell (copied from Step 8's notebook) hard-failed
+       with `AssertionError` when no Kaggle dataset was attached, even though
+       get_cifar_fs() can already download CIFAR-100 at runtime. Fixed:
+       relaxed to fall through to runtime download (matching how SVHN/
+       TinyImageNet were already handled in the same cell), like every
+       earlier step's fresh-clone default.
+    2. The MiniImageNet Zenodo download failed with `HTTP 403 Forbidden` on
+       EVERY mirror. Root cause, confirmed live: Zenodo's WAF blocks the
+       exact browser User-Agent string ensure_archive() sends by default
+       (the one that exists specifically to unblock CIFAR's cs.toronto.edu
+       host) while allowing both curl's and urllib's own default UA through
+       -- the opposite problem, on a different host. Fixed: ensure_archive()
+       gained a per-call `user_agent` parameter (default unchanged =
+       preserves the CIFAR/SVHN/TinyImageNet fix); the MiniImageNet download
+       call now passes `user_agent=None`. Locked in with 2 new regression
+       tests (tests/test_robust_download.py) against a local echo server, so
+       a future change to either UA can't silently reintroduce either bug.
+  Per thesis_implementation_instructions.txt Section 6 ("never state an
+  assumed result as if confirmed"), Section 4 below is still a TEMPLATE, not
+  a result -- do not cite any number from this file until Section 4 has been
+  transcribed from an actual results/phase5_mini*_metrics.json produced by a
+  completed notebook run.
   What WAS verified without execution: every .py file in the repo compiles
   (`python -m py_compile`), all 35 configs (23 pre-existing + 12 new) resolve
   correctly through the real `load_config` deep-merge, the 10 result/
   checkpoint filenames the new configs produce collide with neither each
   other nor any existing committed result, and the frozen
   MINI_IMAGENET_SPLIT constant was cross-checked byte-for-byte against a
-  live fetch of the canonical Ravi & Larochelle CSVs during planning.
+  live fetch of the canonical Ravi & Larochelle CSVs during planning. The
+  Zenodo pkl schema assumption (_load_pkl_cache) remains UNEXERCISED against
+  a real downloaded file as of this update -- the download itself was the
+  blocker just fixed; decode correctness is the next thing that can fail.
 
 
 ================================================================================
@@ -175,7 +196,13 @@ Datasets (src/datasets/):
                     md5: Optional[str] = None, checked only against a FRESH
                     download (existing cached files are never re-hashed, so
                     every pre-Step-9 caller that never passes md5 pays zero
-                    extra cost).
+                    extra cost); and user_agent: Optional[str] = _BROWSER_UA
+                    (default unchanged), added AFTER a real Kaggle run hit
+                    Zenodo 403ing that exact browser UA (see STATUS at the
+                    top) -- MiniImageNet's download call passes
+                    user_agent=None, which a live test confirmed Zenodo
+                    accepts. 2 new regression tests lock in both hosts'
+                    opposite UA requirements (tests/test_robust_download.py).
 
 Scripts:
   train.py, evaluate.py, step45_val_sweep.py  MODIFIED. The 6 hardcoded
@@ -235,7 +262,7 @@ Tests: tests/test_mini_imagenet.py (NEW, 21 tests) -- frozen-split structure,
   cifar100-heldout tests already carry). tests/test_tinyimagenet_ood.py
   EXTENDED (+5 tests) -- exclude_wnids=None byte-identical to omitting the
   arg, and a non-empty exclusion actually drops the named classes.
-  Expected new total: ~171 (135 before Step 9 + 36 new), not yet confirmed by
+  Expected new total: ~170 (135 before Step 9 + 35 new), not yet confirmed by
   an actual pytest run (see STATUS above).
 
 Notebook: notebooks/step9_mini.ipynb (Kaggle) -- intro + a "how we work with
@@ -429,7 +456,7 @@ TODO once the notebook has run:
   [x] Kaggle notebook notebooks/step9_mini.ipynb (incl. artifact download,
       timed cache-build cell, off-by-default 1-shot path)
   [x] tests/test_mini_imagenet.py (21) + tests/test_dataset_dispatch.py (10)
-      + tests/test_tinyimagenet_ood.py extensions (5) -- 36 new tests,
+      + tests/test_tinyimagenet_ood.py extensions (5) -- 35 new tests,
       written and syntax-checked; NOT YET RUN (no local torch/numpy/GPU)
   [ ] MiniImageNet split JSON committed [to a live run's data/ directory],
       disjoint asserted BY AN ACTUAL RUN                    NOT DONE (code ready)
@@ -437,8 +464,8 @@ TODO once the notebook has run:
       (exit criterion per progress.txt)                     NOT DONE -- run pending
   [ ] 10 result JSONs results/phase5_mini*_metrics.json      NOT DONE -- run pending
   [ ] Section 4 filled from the JSONs + Section 4.3 answered NOT DONE -- run pending
-  [ ] pytest tests/ passes with the 36 new tests added        NOT DONE -- run pending
-      (expected ~171: 135 before Step 9 + 36 new)
+  [ ] pytest tests/ passes with the 35 new tests added        NOT DONE -- run pending
+      (expected ~170: 135 before Step 9 + 35 new)
   [ ] byte-identical rerun spot-check (also closes Step 8's carried-over
       optional item)                                        NOT DONE -- run pending
 ================================================================================

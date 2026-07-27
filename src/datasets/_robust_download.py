@@ -6,6 +6,13 @@ Colab clones (the `data/` dir is gitignored, so nothing is cached). We
 pre-fetch the archive with a browser User-Agent; torchvision's downloader
 then finds the verified file locally and skips the network entirely.
 
+Step 9 found the OPPOSITE problem on Zenodo (the MiniImageNet host): its WAF
+403s the exact browser UA string below while allowing both curl's and
+urllib's own default UA through (verified directly against the live host).
+There is no single User-Agent that satisfies every host this module talks to,
+so `user_agent` is a per-call parameter, not a fixed module behaviour --
+callers pass `user_agent=None` to send no custom header at all.
+
 If every mirror fails, raise a clear error telling the user to drop the file
 into `data/` manually (the function is a no-op once the file is present).
 """
@@ -34,8 +41,9 @@ _DEFAULT_TOTAL_TIMEOUT = 600.0  # 10 minutes per mirror
 def ensure_archive(data_root: str, filename: str, urls: list[str],
                    extracted_dirname: str | None = None,
                    total_timeout: float = _DEFAULT_TOTAL_TIMEOUT,
-                   md5: str | None = None) -> str:
-    """Make sure `data_root/filename` exists, fetching it with a browser UA.
+                   md5: str | None = None,
+                   user_agent: str | None = _BROWSER_UA) -> str:
+    """Make sure `data_root/filename` exists, fetching it from one of `urls`.
 
     Args:
         data_root: directory the archive belongs in.
@@ -53,6 +61,17 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
             CIFAR/SVHN/TinyImageNet callers that never pass this incur zero
             extra hashing cost). A mismatch deletes the file and tries the
             next mirror, same as a truncated download.
+        user_agent: header value to send, or None to send no custom
+            User-Agent at all (falls back to urllib's own default). Defaults
+            to the browser UA that unblocks CIFAR's host (cs.toronto.edu 403s
+            urllib's default UA). Step 9 found the OPPOSITE problem on
+            Zenodo: it 403s this exact browser UA string (a WAF heuristic
+            flagging a "Chrome" UA that arrives without the rest of a real
+            browser's fingerprint) while allowing both curl's and urllib's
+            own default UA through -- verified directly against the live
+            host. Different hosts, opposite blocking rules; there is no one
+            UA that satisfies both, hence this being a per-call parameter
+            rather than a single module constant.
 
     Returns the archive path. Raises RuntimeError if all mirrors fail and the
     file is absent.
@@ -70,9 +89,8 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
     last_err: Exception | None = None
     for url in urls:
         try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": _BROWSER_UA}
-            )
+            headers = {"User-Agent": user_agent} if user_agent else {}
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=180) as resp, \
                     open(dst, "wb") as fh:
                 total = resp.getheader("Content-Length")

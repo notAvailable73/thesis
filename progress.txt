@@ -38,7 +38,7 @@ In progress: Step 9 (MiniImageNet dataset, RQ2/RQ3 breadth) — CODE COMPLETE,
              shared wnids with MiniImageNet, 5 of them MiniImageNet TEST
              classes — filtered only for mini_imagenet runs); 10 configs (2
              backbones x 2 placements x 2 heads + ResNet-18 linear-probe
-             reference x 2 heads); scripts/step9_dataset_compare.py; 36 new
+             reference x 2 heads); scripts/step9_dataset_compare.py; 35 new
              tests across tests/test_mini_imagenet.py, test_dataset_dispatch.py,
              and an extension to test_tinyimagenet_ood.py; notebooks/
              step9_mini.ipynb. Every .py file compiles and all 35 configs
@@ -696,7 +696,7 @@ Actions:
   (25 wnids shared with MiniImageNet, 5 of them MiniImageNet TEST classes —
   filtered only for mini_imagenet runs, byte-identical default for cifar_fs);
   scripts/step9_dataset_compare.py (cross-dataset consolidation, mirrors
-  step8_backbone_compare.py); 36 new tests (tests/test_mini_imagenet.py,
+  step8_backbone_compare.py); 35 new tests (tests/test_mini_imagenet.py,
   test_dataset_dispatch.py, + test_tinyimagenet_ood.py extensions) — written,
   syntax-checked, NOT YET RUN.
 
