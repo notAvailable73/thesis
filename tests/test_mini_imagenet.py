@@ -278,6 +278,18 @@ def test_find_zenodo_pkls_absent_returns_none(tmp_path):
     assert _find_zenodo_pkls(str(tmp_path)) is None
 
 
+def test_find_zenodo_pkls_partial_returns_only_the_staged_splits(tmp_path):
+    """A dataset that only ships e.g. the test cache (all an eval-only run
+    needs) must be usable without forcing a full re-download of the other
+    two ~1.8GB-combined splits -- see _build_split_cache's `split in pkls`
+    check."""
+    fname, _size, _md5 = _ZENODO_FILES["test"]
+    (tmp_path / fname).write_bytes(b"x")
+    found = _find_zenodo_pkls(str(tmp_path))
+    assert found is not None
+    assert set(found.keys()) == {"test"}
+
+
 def test_find_csv_layout_staged(tmp_path):
     (tmp_path / "images").mkdir()
     for s in ("train", "val", "test"):

@@ -224,8 +224,13 @@ def _kaggle_candidate_dirs() -> List[Path]:
 
 
 def _find_zenodo_pkls(data_root: str) -> Optional[Dict[str, Path]]:
-    """3 pkl caches, either dropped directly in data_root or inside an
-    attached Kaggle dataset (searched non-recursively + one level deep)."""
+    """Whichever of the 3 pkl caches are staged, either dropped directly in
+    data_root or inside an attached Kaggle dataset (searched at any depth --
+    see `_kaggle_candidate_dirs`). May return a PARTIAL dict: a caller only
+    ever needs the one split it's about to load (`_build_split_cache` checks
+    `split in pkls`), so a dataset that only ships e.g. the test cache (all
+    an eval-only run needs) must not force a full ~1.8GB re-download of the
+    other two splits. Returns None only if nothing at all was found."""
     search_dirs = [Path(data_root)] + _kaggle_candidate_dirs()
     found: Dict[str, Path] = {}
     for split, (fname, _, _) in _ZENODO_FILES.items():
@@ -234,7 +239,7 @@ def _find_zenodo_pkls(data_root: str) -> Optional[Dict[str, Path]]:
             if cand.is_file():
                 found[split] = cand
                 break
-    return found if len(found) == 3 else None
+    return found if found else None
 
 
 def _find_csv_layout(data_root: str) -> Optional[Path]:
@@ -364,7 +369,7 @@ def _build_split_cache(data_root: str, split: str,
     ONE split. Falls back to downloading the Zenodo pkls if nothing is
     staged."""
     pkls = _find_zenodo_pkls(data_root)
-    if pkls is not None:
+    if pkls is not None and split in pkls:
         imgs, labels = _decode_pkl(pkls[split], wnids)
         return imgs, labels, "staged_zenodo_pkl"
 
