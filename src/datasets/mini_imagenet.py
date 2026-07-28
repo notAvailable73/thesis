@@ -35,6 +35,7 @@ DATA SOURCE — verified live during Step 9 planning, not assumed:
 from __future__ import annotations
 
 import csv
+import glob
 import hashlib
 import json
 import os
@@ -206,14 +207,20 @@ def load_mini_imagenet_split(split_path: Path | str | None = None,
 # and that happens exactly once per split (cached to .npy afterwards).
 # =====================================================================
 def _kaggle_candidate_dirs() -> List[Path]:
+    """Every directory under /kaggle/input, at any depth.
+
+    Was one level deep only (root + its immediate children), which matched
+    the classic mount layout (/kaggle/input/<slug>/...). Step 9 found a
+    newer Kaggle notebook environment nests one level deeper still,
+    grouping by source type first (/kaggle/input/datasets/<owner>/<slug>/,
+    verified live) -- a fixed depth silently misses every manually-attached
+    dataset there, so this walks the whole tree instead of assuming a depth.
+    """
     root = Path("/kaggle/input")
     if not root.is_dir():
         return []
-    dirs = [root]
-    for child in sorted(root.iterdir()):
-        if child.is_dir():
-            dirs.append(child)
-    return dirs
+    return [root] + [Path(p) for p in glob.glob(str(root / "**"), recursive=True)
+                     if os.path.isdir(p)]
 
 
 def _find_zenodo_pkls(data_root: str) -> Optional[Dict[str, Path]]:
