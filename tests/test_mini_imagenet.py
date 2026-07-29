@@ -19,6 +19,7 @@ import pytest
 import torch
 from PIL import Image
 
+from src.datasets import mini_imagenet
 from src.datasets.mini_imagenet import (
     MINI_IMAGENET_SPLIT,
     MINI_IMAGENET_ALL_WNIDS,
@@ -274,15 +275,20 @@ def test_find_zenodo_pkls_staged(tmp_path):
     assert set(found.keys()) == {"train", "val", "test"}
 
 
-def test_find_zenodo_pkls_absent_returns_none(tmp_path):
+def test_find_zenodo_pkls_absent_returns_none(tmp_path, monkeypatch):
+    # Isolate from whatever is actually mounted at /kaggle/input on the
+    # machine running the tests -- _find_zenodo_pkls falls back to scanning
+    # it whenever data_root alone doesn't hold all three splits.
+    monkeypatch.setattr(mini_imagenet, "_kaggle_candidate_dirs", lambda: [])
     assert _find_zenodo_pkls(str(tmp_path)) is None
 
 
-def test_find_zenodo_pkls_partial_returns_only_the_staged_splits(tmp_path):
+def test_find_zenodo_pkls_partial_returns_only_the_staged_splits(tmp_path, monkeypatch):
     """A dataset that only ships e.g. the test cache (all an eval-only run
     needs) must be usable without forcing a full re-download of the other
     two ~1.8GB-combined splits -- see _build_split_cache's `split in pkls`
     check."""
+    monkeypatch.setattr(mini_imagenet, "_kaggle_candidate_dirs", lambda: [])
     fname, _size, _md5 = _ZENODO_FILES["test"]
     (tmp_path / fname).write_bytes(b"x")
     found = _find_zenodo_pkls(str(tmp_path))
