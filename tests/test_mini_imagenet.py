@@ -302,12 +302,31 @@ def test_find_csv_layout_absent_returns_none(tmp_path):
 
 
 def test_find_imagefolder_layout_staged(tmp_path):
-    for i in range(95):
-        (tmp_path / f"n{i:08d}").mkdir()
+    for wnid in sorted(MINI_IMAGENET_ALL_WNIDS)[:95]:
+        (tmp_path / wnid).mkdir()
     assert _find_imagefolder_layout(str(tmp_path)) == tmp_path
 
 
 def test_find_imagefolder_layout_too_few_class_dirs_returns_none(tmp_path):
-    for i in range(3):
-        (tmp_path / f"n{i:08d}").mkdir()
+    for wnid in sorted(MINI_IMAGENET_ALL_WNIDS)[:3]:
+        (tmp_path / wnid).mkdir()
     assert _find_imagefolder_layout(str(tmp_path)) is None
+
+
+def test_find_imagefolder_layout_rejects_a_tinyimagenet_tree(tmp_path):
+    """TinyImageNet-200's train/ has 200 wnid-named class dirs but shares
+    only 25 wnids with MiniImageNet -- it must NOT be mistaken for a
+    MiniImageNet imagefolder mirror (it was, when the test here was
+    "looks like a wnid" rather than "is a MiniImageNet wnid"), because
+    _decode_imagefolder would then fail with a missing-class-dir error
+    that hides the real cause: a MiniImageNet pkl not being staged."""
+    train = tmp_path / "tiny-imagenet-200" / "train"
+    train.mkdir(parents=True)
+    shared = sorted(MINI_IMAGENET_ALL_WNIDS)[:25]
+    for wnid in shared:
+        (train / wnid).mkdir()
+    for i in range(175):
+        (train / f"n9{i:07d}").mkdir()
+    assert len(list(train.iterdir())) == 200
+    assert _find_imagefolder_layout(str(tmp_path)) is None
+    assert _find_imagefolder_layout(str(train)) is None

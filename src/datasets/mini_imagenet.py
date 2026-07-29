@@ -35,7 +35,6 @@ DATA SOURCE — verified live during Step 9 planning, not assumed:
 from __future__ import annotations
 
 import csv
-import glob
 import hashlib
 import json
 import os
@@ -202,25 +201,66 @@ def load_mini_imagenet_split(split_path: Path | str | None = None,
 # None if its layout isn't present, in the priority order _build_split_cache
 # tries them. Kaggle attaches datasets under /kaggle/input -- searched in
 # addition to data_root (same convention as tinyimagenet_ood.py's Colab/Drive
-# note, but /kaggle/input is a fast local-ish mount, not a Drive FUSE mount,
-# so directory scans here are cheap; only per-image decoding is expensive,
-# and that happens exactly once per split (cached to .npy afterwards).
+# note). /kaggle/input is much faster per-file than a Drive FUSE mount, but
+# not free: it is still a fused remote mount, so a scan of it is a per-entry
+# cost, paid again in every one of the ~20 train.py/evaluate.py subprocesses
+# a Step 9 run spawns. Each finder therefore checks data_root FIRST and only
+# falls through to /kaggle/input when something is genuinely missing, and the
+# /kaggle/input walk itself is depth-bounded and prunes image directories
+# (see _kaggle_candidate_dirs). Per-image DECODING is still the expensive
+# part, and that happens exactly once per split (cached to .npy afterwards).
 # =====================================================================
-def _kaggle_candidate_dirs() -> List[Path]:
-    """Every directory under /kaggle/input, at any depth.
+_KAGGLE_MAX_DEPTH = 6
+
+
+def _kaggle_candidate_dirs(max_depth: int = _KAGGLE_MAX_DEPTH) -> List[Path]:
+    """Every plausible dataset-root directory under /kaggle/input.
 
     Was one level deep only (root + its immediate children), which matched
     the classic mount layout (/kaggle/input/<slug>/...). Step 9 found a
     newer Kaggle notebook environment nests one level deeper still,
     grouping by source type first (/kaggle/input/datasets/<owner>/<slug>/,
     verified live) -- a fixed depth silently misses every manually-attached
-    dataset there, so this walks the whole tree instead of assuming a depth.
+    dataset there, so this walks rather than assuming an exact depth.
+
+    Two bounds keep that walk from degenerating, both learned the hard way
+    on Kaggle (the previous implementation was a bare
+    `glob('/kaggle/input/**', recursive=True)`, which enumerates every FILE
+    under the mount and then stats each one):
+      - `max_depth` -- a dataset root nests at most ~5 levels below
+        /kaggle/input even on the deepest mount layout observed.
+      - pruning -- never descend into a `<wnid>/` or `images/` directory.
+        Those hold the images themselves, never a nested dataset root, and
+        they are exactly where the file counts explode (an attached
+        TinyImageNet is ~120k files under `train/<wnid>/images/` and
+        `val/images/`). Their PARENTS are still returned, so the
+        `<wnid>/*.jpg` and `images/`+csv layouts below stay discoverable.
     """
     root = Path("/kaggle/input")
     if not root.is_dir():
         return []
-    return [root] + [Path(p) for p in glob.glob(str(root / "**"), recursive=True)
-                     if os.path.isdir(p)]
+    out = [root]
+    frontier = [root]
+    for _ in range(max_depth):
+        nxt: List[Path] = []
+        for d in frontier:
+            try:
+                entries = list(os.scandir(d))
+            except OSError:
+                continue
+            for e in entries:
+                if e.name == "images" or _WNID_RE.match(e.name):
+                    continue
+                try:
+                    if e.is_dir():
+                        nxt.append(Path(e.path))
+                except OSError:
+                    continue
+        if not nxt:
+            break
+        out.extend(nxt)
+        frontier = nxt
+    return out
 
 
 def _find_zenodo_pkls(data_root: str) -> Optional[Dict[str, Path]]:
@@ -230,15 +270,29 @@ def _find_zenodo_pkls(data_root: str) -> Optional[Dict[str, Path]]:
     ever needs the one split it's about to load (`_build_split_cache` checks
     `split in pkls`), so a dataset that only ships e.g. the test cache (all
     an eval-only run needs) must not force a full ~1.8GB re-download of the
-    other two splits. Returns None only if nothing at all was found."""
-    search_dirs = [Path(data_root)] + _kaggle_candidate_dirs()
+    other two splits. Returns None only if nothing at all was found.
+
+    data_root is checked FIRST and, when it already holds all three, the
+    /kaggle/input walk is skipped entirely. Same precedence as before
+    (data_root wins per split), but a notebook that stages the pkls into
+    data/ no longer pays a mount-wide directory scan in every one of the 20
+    train/evaluate subprocesses a Step 9 run spawns."""
     found: Dict[str, Path] = {}
+    root = Path(data_root)
     for split, (fname, _, _) in _ZENODO_FILES.items():
-        for d in search_dirs:
+        if (root / fname).is_file():
+            found[split] = root / fname
+    if len(found) == len(_ZENODO_FILES):
+        return found
+    for d in _kaggle_candidate_dirs():
+        for split, (fname, _, _) in _ZENODO_FILES.items():
+            if split in found:
+                continue
             cand = d / fname
             if cand.is_file():
                 found[split] = cand
-                break
+        if len(found) == len(_ZENODO_FILES):
+            break
     return found if found else None
 
 
@@ -247,26 +301,47 @@ def _find_csv_layout(data_root: str) -> Optional[Path]:
     JPEGs + train.csv/val.csv/test.csv naming which wnid each file belongs
     to (the exact shape scripts/build_mini_imagenet_split.py's source CSVs
     describe)."""
-    search_dirs = [Path(data_root)] + _kaggle_candidate_dirs()
-    for d in search_dirs:
-        if not d.is_dir():
-            continue
-        if ((d / "images").is_dir()
-                and all((d / f"{s}.csv").exists() for s in ("train", "val", "test"))):
+    def _is_csv_layout(d: Path) -> bool:
+        return ((d / "images").is_dir()
+                and all((d / f"{s}.csv").exists()
+                        for s in ("train", "val", "test")))
+
+    root = Path(data_root)
+    if root.is_dir() and _is_csv_layout(root):
+        return root
+    for d in _kaggle_candidate_dirs():
+        if _is_csv_layout(d):
             return d
     return None
 
 
-def _find_imagefolder_layout(data_root: str) -> Optional[Path]:
-    """A directory whose immediate children are (mostly) wnid-named dirs of
-    images -- the common shape for third-party Kaggle re-hosts."""
-    search_dirs = [Path(data_root)] + _kaggle_candidate_dirs()
-    for d in search_dirs:
-        if not d.is_dir():
-            continue
-        children = [c for c in d.iterdir() if c.is_dir()]
-        wnid_children = [c for c in children if _WNID_RE.match(c.name)]
-        if len(wnid_children) >= 90:  # allow a little slack below all 100
+def _find_imagefolder_layout(data_root: str,
+                             min_classes: int = 90) -> Optional[Path]:
+    """A directory whose immediate children are (mostly) MiniImageNet
+    wnid-named dirs of images -- the common shape for third-party Kaggle
+    re-hosts.
+
+    The match is against MINI_IMAGENET_ALL_WNIDS specifically, not against
+    "looks like a wnid" (`_WNID_RE`). A wnid-shaped test was wrong in one
+    concrete, live case: an attached TinyImageNet-200 has 200 wnid-named
+    dirs under `train/`, of which only 25 are MiniImageNet classes, so it
+    matched here and was handed to `_decode_imagefolder` as a MiniImageNet
+    mirror. That raised a confusing "expected class dir ... not found"
+    instead of the real problem (a MiniImageNet pkl was missing), which is
+    what this finder falling through to None reports.
+    """
+    def _covers_split(d: Path) -> bool:
+        try:
+            children = {c.name for c in d.iterdir() if c.is_dir()}
+        except OSError:
+            return False
+        return len(children & MINI_IMAGENET_ALL_WNIDS) >= min_classes
+
+    root = Path(data_root)
+    if root.is_dir() and _covers_split(root):
+        return root
+    for d in _kaggle_candidate_dirs():
+        if _covers_split(d):
             return d
     return None
 

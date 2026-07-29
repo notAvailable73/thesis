@@ -56,6 +56,13 @@ honestly reported," not just "code runs." Two conventions enforce that:
 
 We use google colab to run this project with Jupiter notebook. You will see the notebooks for every step inside /notebooks folder.
 
+**Never bring the GPU relay / vGPU system into a task unless the user names it.** The relay path
+(`src/vgpu/`, `docs/gpu-relay-guide.md`, `notebooks/*-v2.ipynb`, `requirements-vgpu.txt`, `GPU_POOL_URL`) is an
+opt-in alternative, not the default. Default to the plain hosted-notebook path (Colab/Kaggle: clone repo → install
+requirements → `scripts/train.py` / `scripts/evaluate.py`). When a step has both a `stepN.ipynb` and a
+`stepN-v2.ipynb`, "stepN" means the plain v1 notebook. Do not propose, edit, or read relay code as part of an
+unrelated request.
+
 ## Architecture
 
 **Pipeline**: `frozen backbone -> trainable adapter -> head`, assembled by `build_model(cfg)` in
