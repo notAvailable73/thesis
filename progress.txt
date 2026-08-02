@@ -5,7 +5,7 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-07-27 (Step 9 CODE COMPLETE, run pending — see below)
+Updated:   2026-07-30 (Step 9 CLOSED — run completed, results transcribed)
 ================================================================================
 
 
@@ -17,45 +17,39 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below)
-Just closed: Step 8 (Phase 5: MobileNetV3-Small backbone, RQ4 prep) — 4 configs
-             trained + evaluated on Kaggle T4 (2026-07-26 11:45-12:29 UTC), N=600,
-             no collapse; results/phase5_mbnet*_metrics.json (4) +
-             phase5_backbone_table.json + step8_backbone_comparison.png +
-             step8_params_vs_accuracy.png; pytest 135 passed (107 + 28 new,
-             incl. the 3 ResNet-18 regression guards); step8.txt §4 filled and
-             §4.3's five questions answered. Headline below.
-             (Step 7 closed just before — RQ3 far-vs-near OOD; Step 6 — RQ1
-             placement; Step 5 — PEFT baselines.)
-In progress: Step 9 (MiniImageNet dataset, RQ2/RQ3 breadth) — CODE COMPLETE,
-             RUN PENDING (2026-07-27, no GPU/data environment was available to
-             the implementing session). Built: src/datasets/mini_imagenet.py
-             (frozen 64/16/20 wnid split cross-checked against a live fetch;
-             auto-discovers 3 source layouts or downloads from Zenodo,
-             MD5-checked); scripts/build_mini_imagenet_split.py; a
-             get_id_split/get_heldout_near_ood dispatch layer replacing 6
-             hardcoded get_cifar_fs(...) call sites (byte-identical for
-             cifar_fs, regression-tested); TinyImageNet exclude_wnids (25
-             shared wnids with MiniImageNet, 5 of them MiniImageNet TEST
-             classes — filtered only for mini_imagenet runs); 10 configs (2
-             backbones x 2 placements x 2 heads + ResNet-18 linear-probe
-             reference x 2 heads); scripts/step9_dataset_compare.py; 35 new
-             tests across tests/test_mini_imagenet.py, test_dataset_dispatch.py,
-             and an extension to test_tinyimagenet_ood.py; notebooks/
-             step9_mini.ipynb. Every .py file compiles and all 35 configs
-             (23 existing + 12 new) load through the real config merger;
-             nothing has been executed against real data/GPU. NEXT ACTION:
-             run notebooks/step9_mini.ipynb on Kaggle/Colab, then transcribe
-             results into step_writeups/step9.txt §4 and tick the boxes below.
-Next:        Finish Step 9 (run the notebook). Then Step 10 (MVT grid). Two
-             carry-overs from Step 8, both for Step 10's grid: (i) per-backbone
-             VAL tuning — the whole Step 8 recipe was inherited from a
-             ResNet-18 sweep and never re-tuned for MobileNetV3 (Step 9's
-             MiniImageNet recipe carries the same untuned-recipe caveat);
-             (ii) the mbnet/parallel evidential cell early-stopped at epoch 3,
-             mid-KL-warm-up, which is the prime suspect for its 0.307 ECE.
-Blocker:     none — Step 9 needs a GPU/Colab-or-Kaggle session to actually run;
-             all code is ready and waiting.
-Today:       2026-07-26
+Just closed: Step 9 (Phase 5: MiniImageNet as a 2nd in-distribution dataset,
+             RQ2/RQ3 breadth) — 10 configs trained + evaluated on Kaggle T4
+             (2026-07-30, log timestamps 00:54:55-03:17 UTC, ~142 min), N=600,
+             no collapse; results/step9_mini_artifacts/results/phase5_mini*_
+             metrics.json (10) + phase5_dataset_table.json +
+             step9_dataset_comparison.png + step9_adapter_uplift.png; pytest
+             208 passed / 6 failed (214 collected — all 6 failures traced to
+             one environment root cause, a real Kaggle dataset attached under
+             /kaggle/input during the test run, zero are logic bugs — see
+             step9.txt §5); step9.txt §4 filled and §4.3's five questions
+             answered. Headline below. Byte-identical rerun spot-check STILL
+             NOT DONE (optional, carried over from Step 8 too).
+             (Step 8 closed just before — MobileNetV3-Small backbone, RQ4 prep;
+             Step 7 — RQ3 far-vs-near OOD; Step 6 — RQ1 placement; Step 5 —
+             PEFT baselines.)
+Next:        Step 10 (MVT grid execution — all 4 RQs, the thesis's central
+             results table). Three carry-overs into Step 10's grid:
+             (i) per-backbone/per-dataset VAL tuning — the whole recipe (LR,
+             rank, KL schedule, evidence affine) was inherited from a single
+             ResNet-18/CIFAR-FS sweep and never re-tuned for MobileNetV3 OR
+             MiniImageNet; (ii) the mbnet/parallel evidential cell's
+             checkpoint-selected-during-KL-warm-up issue (Step 8: epoch 3,
+             kl_w=0.030) REPRODUCED on MiniImageNet too (Step 9: epoch 6,
+             kl_w=0.060) — a 2-for-2 pattern across independent datasets, now
+             a higher-priority target for a longer warm-up / patience>5 test;
+             (iii) NEW from Step 9: the MobileNetV3-vs-ResNet-18 accuracy gap
+             that was only 0.3-1.6 pp on CIFAR-FS (Step 8) balloons to
+             4.7-5.7 pp on MiniImageNet — untested whether this is a
+             backbone-capacity effect or just the same untuned-recipe problem
+             (i) hitting MobileNetV3 harder on this dataset; Step 10's
+             per-cell VAL tuning is what will distinguish them.
+Blocker:     none.
+Today:       2026-08-02
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -181,6 +175,58 @@ DOMINANT:
   Full numbers/story: step_writeups/step8.txt §4 ; table
   results/phase5_backbone_table.json ; plots results/step8_backbone_comparison.png
   + results/step8_params_vs_accuracy.png.
+
+Step 9 headline (Phase 5, RQ2/RQ3 breadth, MiniImageNet vs CIFAR-FS, N=600,
+2026-07-30) — THE PRETRAINING-OVERLAP CONFOUND IS REAL AND MEASURED, THE
+EVIDENTIAL-VS-ENERGY EDGE ERODES FURTHER, AND THE BACKBONE-COST FINDING
+DOES NOT REPLICATE:
+  MiniImageNet accuracy is 4-9 pp higher than the matched CIFAR-FS cell for 9
+  of 10 (adapter, head) pairs — mini/r18/parallel evidential peaks at 0.9601,
+  the highest accuracy recorded anywhere in this thesis. The linear-probe
+  control MEASURES the ImageNet-pretraining-overlap confound directly: the
+  parallel-minus-linear-probe uplift shrinks from CIFAR-FS's +3.84 pp
+  (softmax) / +4.05 pp (evidential) to MiniImageNet's +1.39 pp / +1.90 pp —
+  a third to a half the CIFAR-FS value (corrects an earlier approximate
+  "+4.1 pp" CIFAR-FS figure carried in instructions.txt/step9.txt — the
+  real committed number is +3.84 pp). One cell (mbnet/parallel/softmax)
+  inverts the pattern (-1.10 pp on MiniImageNet vs CIFAR-FS), reported
+  as-is, not explained away.
+  RQ2/RQ3: evidential vacuity beats softmax MSP and TS-MSP on all 16 of 16
+  (pool, config) MiniImageNet comparisons — the probabilistic claim survives
+  both the Step 8 backbone swap and this dataset swap intact. Against
+  ENERGY specifically, the "near-even" CIFAR-FS story does NOT hold: vacuity
+  wins only 7 of 16, and even r18/post_pool (a CIFAR-FS win for evidential)
+  flips to a near-total loss (1/4) on MiniImageNet. CALIBRATION: evidential
+  ECE stays flat (0.267-0.318, same band as CIFAR-FS's 0.264-0.307) while
+  TS-softmax ECE drops to new thesis-wide lows (0.0047-0.0053 on ResNet-18)
+  — the evidential-vs-TS-softmax gap explodes to 55-57x on ResNet-18 (vs
+  Step 8's previous worst, 35x), the strongest evidence yet that the ECE
+  surface really is flat regardless of dataset/backbone (Step 4.5's VAL
+  sweep finding).
+  RQ1/RQ4: placement (parallel > post_pool) REPLICATES on both backbones but
+  the margin shrinks to +0.7-1.4 pp (vs CIFAR-FS's +3.1-3.8 pp) — a plausible
+  near-saturation ceiling effect. The backbone-cost finding does NOT
+  replicate: Step 8 found MobileNetV3 costs only 0.3-1.6 pp vs ResNet-18 on
+  CIFAR-FS; on MiniImageNet the same gap is 4.7-5.7 pp (2.9-19x larger,
+  outside CI95). Untested whether this is a MobileNetV3-capacity effect or
+  the untuned-recipe caveat hitting harder here — Step 10's job to isolate.
+  mbnet/parallel evidential's checkpoint-selected-during-KL-warm-up issue
+  (Step 8: epoch 3/30, kl_w=0.030, worst evidential ECE) REPRODUCED exactly
+  on MiniImageNet (epoch 6/30, kl_w=0.060, again the worst evidential ECE of
+  its dataset, 0.3176) — 2-for-2 across independent datasets, raising the
+  priority of testing a longer KL warm-up / patience>5 on this cell in
+  Step 10.
+  No collapse anywhere (guard 0.25 never fired). pytest: 208 passed / 6
+  failed (214 collected) — all 6 traced to one environment cause (a real
+  Kaggle dataset attached under /kaggle/input during the test run shadows
+  tests that assume nothing is staged); zero are logic bugs in Step 9 code.
+  1 of the 6 (test_exclude_wnids_drops_the_named_classes) is new to Step 9
+  and, while explained by code inspection, is NOT independently confirmed by
+  a logged count from the real run — see step9.txt §5 for the full trace.
+  Full numbers/story: step_writeups/step9.txt §4 ; table
+  results/step9_mini_artifacts/results/phase5_dataset_table.json ; plots
+  results/step9_mini_artifacts/results/step9_dataset_comparison.png +
+  step9_adapter_uplift.png.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -574,7 +620,7 @@ Exit criteria:
 
 
 ================================================================================
-PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (IN PROGRESS — Step 8 CLOSED)
+PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (IN PROGRESS — Steps 8-9 CLOSED)
 ================================================================================
 
 --------------------------------------------------------------------------------
@@ -657,9 +703,9 @@ Exit criteria:
       saved checkpoint and diff the JSON)
 
 --------------------------------------------------------------------------------
-STEP 9 — MINIIMAGENET DATASET                            [~] CODE COMPLETE, RUN PENDING
+STEP 9 — MINIIMAGENET DATASET                                          [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 5     RQ: RQ2, RQ3 breadth                     Est: 1 week
+Phase: 5     RQ: RQ2, RQ3 breadth     Est: 1 week     Closed: 2026-07-30
 
 Actions:
   [x] 9.1  src/datasets/mini_imagenet.py:MINI_IMAGENET_SPLIT — frozen
@@ -668,7 +714,8 @@ Actions:
            scripts/build_mini_imagenet_split.py materializes
            data/mini_imagenet_split.json (gitignored, same convention as
            cifar_fs_split.json) and cross-validates against the frozen
-           constant — NOT YET RUN (no network+deps environment locally).
+           constant — RUN on Kaggle T4: disjoint asserted (test 20/train
+           64/val 16 classes, all "OK").
   [x] 9.2  src/datasets/mini_imagenet.py — auto-discovers 3 staged source
            layouts (Zenodo pkl caches / images+csv / wnid-imagefolder) or
            downloads the Zenodo pkls (MD5-checked); resize 84→224 via the
@@ -676,35 +723,51 @@ Actions:
            get_heldout_near_ood dispatch layer added to src/datasets/
            __init__.py, replacing 6 hardcoded get_cifar_fs(...) sites in
            scripts/train.py + evaluate.py + step45_val_sweep.py — verified
-           byte-identical for cifar_fs configs (regression tests).
+           byte-identical for cifar_fs configs (regression tests). The
+           Zenodo pkl schema (_load_pkl_cache) decoded 3 real staged pkls
+           correctly on the real run (see 9.3b).
   [x] 9.3  10 configs/exp_phase5_mini_*.yaml (2 backbones x 2 placements x
            2 heads + ResNet-18 linear-probe reference x 2 heads) —
            Phase-2-style episodic train/val/test, same recipe as the
-           CIFAR-FS siblings. All 10 verified to load through the real
-           config merger with distinct run_tag/result filenames (zero
-           collisions checked against the existing results/ directory).
-           NOT YET RUN.
-  [ ] 9.3b RUN notebooks/step9_mini.ipynb on Kaggle/Colab — NOT DONE (no
-           GPU/data environment was available to the implementing session;
-           this is the actual blocking action left for Step 9).
-  [ ] 9.4  results/phase5_mini_<adapter>_<head>_metrics.json — NOT DONE,
-           code + notebook ready, awaiting the run above.
-  [x] 9.5  step_writeups/step9.txt written — §0-3, 5-6 complete; §4
-           (results) is an explicit TEMPLATE pending the run (honesty rule:
-           no number fabricated).
+           CIFAR-FS siblings. All 10 RAN end-to-end with distinct run_tag/
+           result filenames (zero collisions).
+  [x] 9.3b RUN notebooks/step9-mini(1).ipynb on Kaggle T4 — DONE 2026-07-30,
+           log timestamps 00:54:55-03:17 UTC (~142 min), RUN STATUS 10/10 OK,
+           no evidential run's collapse guard (0.25) fired. Artifacts (10
+           result JSONs + phase5_dataset_table.json + 2 plots + a sha256
+           MANIFEST; checkpoints listed in the manifest but NOT committed —
+           checkpoints/ is gitignored) committed under
+           results/step9_mini_artifacts/ (commit 2dd71ab "step 9 complete").
+  [x] 9.4  results/step9_mini_artifacts/results/phase5_mini_<adapter>_
+           <head>_metrics.json (10) — DONE.
+  [x] 9.5  step_writeups/step9.txt — §4 transcribed VERBATIM from
+           phase5_dataset_table.json (honesty rule respected: spot-checked
+           field-for-field against the individual metrics JSONs and the
+           reused CIFAR-FS reference JSONs), §4.3's five questions answered
+           with numbers, §5/§6 updated post-run.
   Extras beyond the original 9.1-9.5 spec: TinyImageNet exclude_wnids
   (25 wnids shared with MiniImageNet, 5 of them MiniImageNet TEST classes —
-  filtered only for mini_imagenet runs, byte-identical default for cifar_fs);
+  filtered only for mini_imagenet runs, byte-identical default for cifar_fs;
+  the FILTERING LOGIC's real-run correctness rests on code inspection, not
+  an independently logged exclusion count — see step9.txt §5);
   scripts/step9_dataset_compare.py (cross-dataset consolidation, mirrors
   step8_backbone_compare.py); 35 new tests (tests/test_mini_imagenet.py,
-  test_dataset_dispatch.py, + test_tinyimagenet_ood.py extensions) — written,
-  syntax-checked, NOT YET RUN.
+  test_dataset_dispatch.py, + test_tinyimagenet_ood.py extensions) — RUN:
+  208 passed / 6 failed (214 collected) full-suite; all 6 failures trace to
+  one environment cause (a real Kaggle dataset attached under /kaggle/input
+  during the test run), zero are logic bugs — see step9.txt §5 for the full
+  trace, including the one Step-9-authored failure
+  (test_exclude_wnids_drops_the_named_classes).
 
 Exit criteria:
-  [ ] MiniImageNet split JSON committed, disjoint asserted BY AN ACTUAL RUN
-      (code path ready; not yet executed)
-  [ ] Bottleneck × {evidential, softmax} runs on MiniImageNet
-      end-to-end                                          NOT DONE — run pending
+  [x] MiniImageNet split JSON committed, disjoint asserted BY AN ACTUAL RUN
+  [x] Bottleneck × {evidential, softmax} runs on MiniImageNet end-to-end —
+      r18/post_pool 0.9459 evid / 0.9424 softmax, r18/parallel 0.9601 evid /
+      0.9550 softmax (600 episodes each)
+  [ ] (carried, optional) byte-identical rerun spot-check — STILL NOT DONE;
+      also the standing item carried over from Step 8 (never closed there
+      either). Requires a fresh Kaggle session or the pushed-checkpoint
+      artifact, since checkpoints/ is gitignored — see step9.txt §5.
 
 --------------------------------------------------------------------------------
 STEP 10 — MVT GRID EXECUTION                                    [ ] NOT STARTED
@@ -1064,17 +1127,104 @@ NOTES / DECISIONS LOG
             conditional — the evaluator already generates summary keys
             dynamically per pool name.
 
-2026-07-27  Status note (Step 9): this step was implemented in a session with
-            no GPU, no torch/numpy/PIL/torchvision, and no package manager
+2026-07-27  Status note (Step 9, historical — superseded by the 2026-07-30
+            entries below): this step was implemented in a session with no
+            GPU, no torch/numpy/PIL/torchvision, and no package manager
             available (verified before starting) — every file was written,
             syntax-checked (python -m py_compile across the whole repo) and,
             for configs, validated through the real load_config deep-merge;
-            none of it has been executed against real data. The Zenodo pkl
-            schema assumption in particular (src/datasets/mini_imagenet.py:
-            _load_pkl_cache) is only unit-tested against synthetic pickles.
-            step_writeups/step9.txt §4 is an explicit template, not a result.
-            NEXT ACTION for whoever picks this up: run
-            notebooks/step9_mini.ipynb on Kaggle/Colab, then transcribe.
+            none of it had been executed against real data yet.
+            step_writeups/step9.txt §4 was, at this point, an explicit
+            template, not a result.
+
+2026-07-30  Result (Step 9, run): the 10-config Kaggle T4 run completed
+            (00:54:55-03:17 UTC, ~142 min, 10/10 OK, no collapse). The
+            Zenodo pkl schema assumption flagged 2026-07-27
+            (_load_pkl_cache) decoded 3 real staged pkls correctly (test
+            20/train 64/val 16 classes, all "OK") — CLOSED, no longer a
+            caveat. The Zenodo-403/user_agent download fix from the same
+            entry was NOT exercised end-to-end this run (pkls arrived
+            pre-staged via the attached Kaggle dataset, so
+            ensure_archive()'s download path was never called) — remains
+            code-review-verified only, not execution-verified.
+
+2026-07-30  Result (Step 9, RQ2/RQ3): the ImageNet-pretraining-overlap
+            confound flagged at design time is now MEASURED: the
+            parallel-minus-linear-probe accuracy uplift shrinks from
+            CIFAR-FS's +3.84 pp (softmax) / +4.05 pp (evidential) to
+            MiniImageNet's +1.39 pp / +1.90 pp. Evidential vacuity beats
+            softmax MSP/TS-MSP on all 16 of 16 MiniImageNet (pool, config)
+            comparisons (the probabilistic claim now survives both the
+            Step 8 backbone swap and this dataset swap), but against ENERGY
+            it wins only 7 of 16 — a further erosion of the "on par with
+            energy" line, which should now be scoped to CIFAR-FS/ResNet-18
+            specifically wherever it appears in the thesis text, not just
+            "ResNet-18" as Step 8 concluded. Evidential ECE is essentially
+            flat across BOTH datasets (0.267-0.318 here vs 0.264-0.307 on
+            CIFAR-FS) while TS-softmax ECE reaches new thesis-wide lows on
+            MiniImageNet (0.0047-0.0053, ResNet-18) — pushing the
+            evidential-vs-TS-softmax gap to 55-57x, the strongest evidence
+            yet for Step 4.5's "the ECE surface is flat" conclusion.
+
+2026-07-30  Finding to flag, NOT to bury (Step 9, RQ4-adjacent, unexpected):
+            Step 8's backbone-cost finding (MobileNetV3 costs only 0.3-1.6
+            pp vs ResNet-18 on CIFAR-FS) does NOT replicate on MiniImageNet
+            — the same gap there is 4.7-5.7 pp, 2.9-19x larger and outside
+            CI95. Nothing in Step 9's paper-grounded reasoning (step9.txt §0)
+            predicts this; it was written before any MiniImageNet number
+            existed. Two untested candidate explanations (backbone-capacity
+            interaction with the pretraining-overlap confound vs. the
+            untuned-recipe caveat hitting MobileNetV3 harder here) are named
+            in step9.txt §4.3e but NOT adjudicated — Step 10's per-cell VAL
+            tuning is what will distinguish them. Do not repeat "MobileNetV3
+            is almost free" as a dataset-independent claim.
+
+2026-07-30  Open question (Step 8 -> Step 9 -> Step 10, now 2-for-2):
+            mbnet/parallel evidential's checkpoint-selected-during-KL-
+            warm-up pattern (Step 8: epoch 3/30, kl_w=0.030, worst
+            evidential ECE 0.3069 on CIFAR-FS) REPRODUCED on MiniImageNet
+            (epoch 6/30, kl_w=0.060, again the worst evidential ECE of its
+            dataset, 0.3176). Two independent datasets now show the same
+            cell hitting the same failure mode — this raises the priority
+            of Step 10 testing a longer KL warm-up / patience>5 specifically
+            for mbnet/parallel, though it remains a plausible, UNTESTED
+            explanation, not a proven cause.
+
+2026-07-30  Caveat (Step 9, test suite, traced not just flagged): the full
+            pytest suite on the Step 9 Kaggle session returned 208 passed /
+            6 failed (214 collected, more than the ~170 pre-run estimate —
+            the estimate counted test FILES, not post-parametrization pytest
+            nodes). All 6 failures trace to ONE root cause: this session had
+            a real, persistent Kaggle dataset attached under /kaggle/input,
+            which shadows tests written assuming nothing is staged. 5 of 6
+            predate Step 9 (test_cifar_fs.py x4, test_svhn_ood.py x1). The
+            6th, new in Step 9
+            (test_tinyimagenet_ood.py::test_exclude_wnids_drops_the_named_
+            classes), fails via the identical mechanism:
+            _find_extracted_tin_root's deliberate /kaggle/input recursive
+            search finds a real, attached 200-class TinyImageNet before the
+            test's synthetic tmp_path fixture, so the test's fake wnids
+            match nothing real and exclude nothing. Traced by code
+            inspection to be a TEST-ISOLATION bug, not a defect in the
+            exclude_wnids filtering logic itself (the real evaluate.py path
+            filters real wnids against real wnids, which should collide
+            correctly) — but this conclusion is NOT independently confirmed
+            by a logged exclusion count from the real run; the notebook's
+            overlap-report cell ran too early (before TinyImageNet data was
+            touched) and was never re-run. Full trace: step_writeups/
+            step9.txt §5. Recommended fix for whoever revisits this: add a
+            one-line kept/excluded print inside get_tinyimagenet_ood, and
+            isolate the test from /kaggle/input (monkeypatch or use wnids
+            that collide with a real synset).
+
+2026-07-30  Reproducibility note (Step 9): byte-identical rerun spot-check
+            is STILL NOT DONE — carried over from Step 8 (never closed
+            there either) and now also blocked structurally: the 10
+            checkpoints from this run are listed (with sha256) in
+            results/step9_mini_artifacts/MANIFEST.txt but were NOT
+            committed (checkpoints/ is gitignored), so this git checkout
+            cannot do the spot-check without either a fresh Kaggle run or
+            recovering the pushed-checkpoint artifact.
 
 
 ================================================================================
