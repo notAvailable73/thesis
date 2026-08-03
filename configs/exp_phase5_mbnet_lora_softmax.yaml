@@ -1,0 +1,17 @@
+# Step 10 (MVT grid) — MobileNetV3-Small + LoRA + softmax prototype head.
+# Softmax sibling of exp_phase5_mbnet_lora_evidential.yaml — see that file's
+# header for the LoRA-target auto-detection reasoning.
+extends: exp_phase5_mbnet_bottleneck_softmax.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+
+output:
+  run_tag: mbnet_lora
+
+wandb:
+  tags: [phase5, step10, mobilenetv3_small, lora, softmax, prototype,
+         cifar_fs_bertinetto]

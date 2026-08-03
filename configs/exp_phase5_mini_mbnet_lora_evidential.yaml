@@ -1,0 +1,21 @@
+# Step 10 (MVT grid) — MiniImageNet + MobileNetV3-Small + LoRA + evidential
+# prototype head. The grid cell combining BOTH never-run risks (plan.md Step
+# 10 risks #2 and #3) in a single config: LoRA on MobileNetV3-Small AND on
+# MiniImageNet at once. Same auto-detected LoRA target as
+# exp_phase5_mbnet_lora_evidential.yaml (features.11.block.3.0), only the
+# dataset differs. Covered by the Step 10 pre-flight smoke test before the
+# full grid runs.
+extends: exp_phase5_mini_mbnet_postpool_evidential.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+
+output:
+  run_tag: mini_mbnet_lora
+
+wandb:
+  tags: [phase5, step10, mini_imagenet, mobilenetv3_small, lora, evidential,
+         prototype, ravi_larochelle]

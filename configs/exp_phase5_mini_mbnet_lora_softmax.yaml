@@ -1,0 +1,16 @@
+# Step 10 (MVT grid) — MiniImageNet + MobileNetV3-Small + LoRA + softmax
+# prototype head. Softmax sibling of exp_phase5_mini_mbnet_lora_evidential.yaml.
+extends: exp_phase5_mini_mbnet_postpool_softmax.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+
+output:
+  run_tag: mini_mbnet_lora
+
+wandb:
+  tags: [phase5, step10, mini_imagenet, mobilenetv3_small, lora, softmax,
+         prototype, ravi_larochelle]
