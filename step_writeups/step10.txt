@@ -246,9 +246,11 @@ DEVIATION / LIMITATION CARRIED INTO THE CODE
        parallel with 10b on a separate Kaggle account; drop first if short
        on compute (does not touch the mandatory baselines).
   Settings for all three: Accelerator = GPU T4, Internet = ON, attach the
-  Kaggle dataset `bpeft-step10-data` (plan.md Section 4 for the exact upload
-  structure). Each is resumable top-to-bottom (`--resume` skips any cell
-  whose results JSON already exists).
+  Kaggle dataset `beft-thesis-data` (owner notavailable73 -- NOT the
+  `bpeft-step10-data` slug plan.md originally specified; see plan.md
+  Section 4.1 for the naming history and Section 4.2 for the dataset's real
+  upload structure, verified 2026-08-03). Each is resumable top-to-bottom
+  (`--resume` skips any cell whose results JSON already exists).
 
   Equivalent manual invocation for any subset (what the notebooks wrap):
     python scripts/build_grid_configs.py

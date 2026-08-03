@@ -90,81 +90,99 @@ Per-cell VAL tuning is **not** folded into the grid. Instead:
 
 ### 4.1 One Kaggle dataset
 
-**Slug:** `bpeft-step10-data` (owner `notavailable73`)
+**Slug:** `beft-thesis-data` (owner `notavailable73`) — note this is NOT the
+`bpeft-step10-data` slug this section originally planned. The dataset was
+actually created as `beft-thesis-data` (the display title reads
+"bpeft-thesis-data", but the slug lost the "p" — a pre-existing typo in how
+Kaggle derived it; slugs are frozen once a dataset has data). Verified
+present and populated via the Kaggle API on 2026-08-03 (see 4.2 for its
+real structure, confirmed to differ from what this section originally
+specified). There is also a leftover duplicate, `bpeft-thesiss-data` (extra
+"s"), same byte size — likely an accidental double-create; not used by any
+notebook, flagged for the user to clean up or ignore.
 
 Attach the same dataset to all three notebooks / all three accounts — no
 need to split it per notebook.
 
-### 4.2 Exact folder structure to upload
+### 4.2 Actual uploaded structure (verified via the Kaggle API, 2026-08-03)
 
 ```
-bpeft-step10-data/
-├── cifar100/
-│   └── cifar-100-python/          <- folder, has: meta, train, test
+bpeft-data/                          <- top-level folder inside the dataset
+├── cifar-100-python/                <- meta, train, test (torchvision layout)
 ├── svhn/
 │   └── test_32x32.mat
 ├── tinyimagenet/
-│   └── tiny-imagenet-200/         <- folder, has: wnids.txt, train/, val/, test/
-└── miniimagenet/
-    ├── mini_imagenet_84_train.npy
-    ├── mini_imagenet_84_train.json
-    ├── mini_imagenet_84_val.npy
-    ├── mini_imagenet_84_val.json
-    ├── mini_imagenet_84_test.npy
-    └── mini_imagenet_84_test.json
+│   └── tiny-imagenet-200/
+│       └── tiny-imagenet-200/       <- Kaggle's auto-unzip double-wrapper;
+│                                       has wnids.txt, train/<wnid>/images/,
+│                                       val/, test/images/ (standard layout,
+│                                       train+test images spot-checked, val/
+│                                       and wnids.txt inferred from the
+│                                       dataset's total byte size matching
+│                                       the full ~120k-image archive)
+├── miniimagenet/
+│   ├── mini-imagenet-cache-train.pkl        (1,145,461,190 B)
+│   ├── mini-imagenet-cache-validation.pkl   (292,661,258 B)
+│   └── mini-imagenet-cache-test.pkl         (353,647,539 B)
+└── splits/                          <- unused by the notebooks; cifar_fs_split.json
+    ├── cifar_fs_split.json             + mini_imagenet_split.json are regenerated
+    └── mini_imagenet_split.json        fresh by scripts/build_*_split.py instead
 ```
 
-Exact paths the notebooks will hardcode:
+This differs from the original plan in two ways, both fine as-is (no
+re-upload needed):
+- No `cifar100/` wrapper directory — `cifar-100-python/` sits directly
+  under the dataset's top-level `bpeft-data/` folder.
+- MiniImageNet shipped as the 3 Zenodo pkl caches (learn2learn record
+  7978538), not the `.npy`/`.json` 84×84 format this section originally
+  assumed. `src/datasets/mini_imagenet.py`'s `_find_zenodo_pkls` already
+  supports this layout natively (it is in fact the SAME cache format the
+  module downloads from Zenodo itself if nothing is staged) — the file
+  sizes above match `_ZENODO_FILES` in that module exactly, byte for byte.
 
-```
-<ROOT>/cifar100/cifar-100-python
-<ROOT>/svhn/test_32x32.mat
-<ROOT>/tinyimagenet/tiny-imagenet-200
-<ROOT>/miniimagenet/mini_imagenet_84_{train,val,test}.npy   (+ .json)
-```
+The `tinyimagenet/tiny-imagenet-200/tiny-imagenet-200/` double-wrapper
+confirms the note below still applies — Kaggle's auto-unzip really does add
+an extra layer here, same as observed in Step 9.
 
-**Two things to watch (learned in Step 9):**
+**Two things to watch (learned in Step 9, still true):**
 - Kaggle auto-unzips `.zip` uploads and sometimes adds an extra wrapper
-  folder (e.g. `tiny-imagenet-200/tiny-imagenet-200/`). The notebook's
-  verify cell prints the resolved path — if it shows a doubled folder,
-  that's fine; just paste the printed path into the `DATA_PATHS` dict.
-- The `.npy` / `.json` files are **not** zips — upload them as-is, do not
-  zip them.
+  folder (confirmed above for TinyImageNet). The notebooks' staging cell
+  (Section 4.4) now handles this by reusing the pipeline's own
+  any-depth staged-path finders instead of hardcoding a fixed depth, so no
+  manual path-pasting is needed even if Kaggle's mount nesting changes
+  between sessions.
+- Pkl / mat / json files are **not** zips — they were uploaded as-is.
 
-### 4.3 Producing the 6 MiniImageNet cache files once (no local download needed)
+### 4.3 Producing the 6 MiniImageNet cache files — NOT NEEDED
 
-1. New Kaggle notebook, GPU off, Internet ON. Attach your existing
-   `miniimagenet-beft` dataset.
-2. Clone the repo, then:
-   ```python
-   from src.datasets.mini_imagenet import get_mini_imagenet
-   for s in ("train", "val", "test"):
-       get_mini_imagenet(data_root="data", split=s)
-   ```
-   (~1.27 GB total, ~8 min) — this is exactly the cache-build logic in
-   `src/datasets/mini_imagenet.py:_ensure_cache`.
-3. Copy the 6 resulting files into
-   `/kaggle/working/bpeft-step10-data/miniimagenet/`, add the other three
-   folders, push with `kaggle datasets create` (reuse the code from
-   Step 9's notebook Section 9b, which already works).
+Originally planned as a manual pre-processing step, but moot: the dataset
+already ships the 3 Zenodo pkl caches directly (see 4.2), which
+`src/datasets/mini_imagenet.py` reads natively. Skip this section.
 
 ### 4.4 What each notebook does with these paths
 
 Symlinks them into the repo's `data/` folder (not copies — instant, saves
-~2 GB of the 20 GB `/kaggle/working` budget):
+~2 GB of the 20 GB `/kaggle/working` budget), by calling the exact same
+staged-path finder functions `scripts/train.py`/`evaluate.py` use at
+runtime (`_find_staged_cifar100_root`, `_find_staged_svhn_root`,
+`_find_extracted_tin_root`, `_find_zenodo_pkls`) rather than a hardcoded
+`ROOT`/`DATA_PATHS` dict — this way the symlink cell always matches
+whatever those modules would discover themselves, regardless of the exact
+Kaggle mount depth or unzip wrapping in a given session:
 
 ```
-data/cifar-100-python              -> <ROOT>/cifar100/cifar-100-python
-data/svhn/test_32x32.mat           -> <ROOT>/svhn/test_32x32.mat
-data/tiny-imagenet-200             -> <ROOT>/tinyimagenet/tiny-imagenet-200
-data/mini_imagenet_84_*.npy/.json  -> <ROOT>/miniimagenet/...
+data/cifar-100-python                       -> <discovered>/cifar-100-python
+data/svhn/test_32x32.mat                    -> <discovered>/test_32x32.mat
+data/tiny-imagenet-200                      -> <discovered tiny-imagenet-200 root>
+data/mini-imagenet-cache-{train,validation,test}.pkl -> <discovered>/...
 ```
 
 This matters for speed: `src/datasets/mini_imagenet.py`,
-`src/datasets/svhn_ood.py`, and `src/datasets/tinyimagenet_ood.py` all check
-`data_root` first and only fall back to walking `/kaggle/input`. Without
-symlinks, all 120 eval runs would each recursively glob TinyImageNet's
-~120,000 files. The verify cell falls back to a real copy if a symlink fails.
+`src/datasets/svhn_ood.py`, `src/datasets/cifar_fs.py`, and
+`src/datasets/tinyimagenet_ood.py` all check `data_root` first and only
+fall back to walking `/kaggle/input`. Without symlinks, all 120 eval runs
+would each recursively glob TinyImageNet's ~120,000 files. If a symlink
+can't be created, the cell falls back to a real copy.
 
 ---
 
@@ -413,9 +431,9 @@ MiniImageNet symlink/cache-check.
 
 | # | Type | Content |
 |---|---|---|
-| 0 | markdown | Settings: GPU T4, Internet ON, attach `bpeft-step10-data`. Link to `step_writeups/step10.txt`. |
+| 0 | markdown | Settings: GPU T4, Internet ON, attach `beft-thesis-data`. Link to `step_writeups/step10.txt`. |
 | 1 | code | GPU check + clone repo + `pip install -r requirements.txt` |
-| 2 | code | `DATA_PATHS` dict (§4.2 paths) → symlink into `data/` → print OK/MISSING per item |
+| 2 | code | Reuse `_find_staged_*`/`_find_zenodo_pkls` (§4.4) → symlink into `data/` → print OK/MISSING per item |
 | 3 | code | `!python scripts/build_cifar_fs_split.py && python scripts/build_mini_imagenet_split.py` |
 | 4 | code | `!python scripts/build_grid_configs.py && python -m pytest -q tests/test_grid_configs.py` |
 | 5 | code | **Smoke test** (§2) — 10a only, first run; skippable after |

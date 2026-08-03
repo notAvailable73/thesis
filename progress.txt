@@ -61,15 +61,17 @@ In progress: Step 10 (MVT grid execution — all 4 RQs, the thesis's central
              written into notebook 10a but has never executed — treat all
              three combinations as genuinely unverified until it has.
 Next:        Run notebooks/step10a_cifar_5shot.ipynb on Kaggle FIRST (T4,
-             Internet ON, attach the `bpeft-step10-data` dataset per plan.md
-             §4) — it alone satisfies the proposal's mandatory minimum and
+             Internet ON, attach the `beft-thesis-data` dataset, owner
+             notavailable73 -- corrected 2026-08-03 from the `bpeft-step10-
+             data` slug plan.md originally specified; see plan.md §4.1 for
+             why) — it alone satisfies the proposal's mandatory minimum and
              includes the pre-flight smoke test. Then 10b/10c (can run in
              parallel on separate accounts). Then, once all three finish:
              scripts/aggregate_grid.py → make_master_tables.py →
              grid_plots.py (no GPU needed), then transcribe results into
              step_writeups/step10.txt §4 verbatim and tick the boxes below.
 Blocker:     none (compute/Kaggle access, not a code blocker).
-Today:       2026-08-02
+Today:       2026-08-02 (dataset path correction: 2026-08-03)
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
