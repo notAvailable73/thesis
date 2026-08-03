@@ -136,7 +136,10 @@ def _run_cell(cell: dict, args) -> dict:
     status, error = "ok", None
     try:
         if not checkpoint.exists():
-            _run_module_main(["train.py", "--config", str(config_path)])
+            train_argv = ["train.py", "--config", str(config_path)]
+            if args.wandb_mode:
+                train_argv += ["--wandb-mode", args.wandb_mode]
+            _run_module_main(train_argv)
         else:
             print(f"[grid] checkpoint exists, skipping train: {checkpoint}")
 
