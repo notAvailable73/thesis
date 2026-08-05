@@ -5,7 +5,8 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-07-30 (Step 9 CLOSED — run completed, results transcribed)
+Updated:   2026-08-02 (Step 10 IN PROGRESS — grid plumbing built + offline-
+           tested, 120 runs pending an actual Kaggle GPU session)
 ================================================================================
 
 
@@ -16,40 +17,61 @@ CURRENT STATUS  (read this first)
 Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result);
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
-             config, no open caveats; see below)
-Just closed: Step 9 (Phase 5: MiniImageNet as a 2nd in-distribution dataset,
-             RQ2/RQ3 breadth) — 10 configs trained + evaluated on Kaggle T4
-             (2026-07-30, log timestamps 00:54:55-03:17 UTC, ~142 min), N=600,
-             no collapse; results/step9_mini_artifacts/results/phase5_mini*_
-             metrics.json (10) + phase5_dataset_table.json +
-             step9_dataset_comparison.png + step9_adapter_uplift.png; pytest
-             208 passed / 6 failed (214 collected — all 6 failures traced to
-             one environment root cause, a real Kaggle dataset attached under
-             /kaggle/input during the test run, zero are logic bugs — see
-             step9.txt §5); step9.txt §4 filled and §4.3's five questions
-             answered. Headline below. Byte-identical rerun spot-check STILL
-             NOT DONE (optional, carried over from Step 8 too).
-             (Step 8 closed just before — MobileNetV3-Small backbone, RQ4 prep;
-             Step 7 — RQ3 far-vs-near OOD; Step 6 — RQ1 placement; Step 5 —
-             PEFT baselines.)
-Next:        Step 10 (MVT grid execution — all 4 RQs, the thesis's central
-             results table). Three carry-overs into Step 10's grid:
-             (i) per-backbone/per-dataset VAL tuning — the whole recipe (LR,
-             rank, KL schedule, evidence affine) was inherited from a single
-             ResNet-18/CIFAR-FS sweep and never re-tuned for MobileNetV3 OR
-             MiniImageNet; (ii) the mbnet/parallel evidential cell's
-             checkpoint-selected-during-KL-warm-up issue (Step 8: epoch 3,
-             kl_w=0.030) REPRODUCED on MiniImageNet too (Step 9: epoch 6,
-             kl_w=0.060) — a 2-for-2 pattern across independent datasets, now
-             a higher-priority target for a longer warm-up / patience>5 test;
-             (iii) NEW from Step 9: the MobileNetV3-vs-ResNet-18 accuracy gap
-             that was only 0.3-1.6 pp on CIFAR-FS (Step 8) balloons to
-             4.7-5.7 pp on MiniImageNet — untested whether this is a
-             backbone-capacity effect or just the same untuned-recipe problem
-             (i) hitting MobileNetV3 harder on this dataset; Step 10's
-             per-cell VAL tuning is what will distinguish them.
-Blocker:     none.
-Today:       2026-08-02
+             config, no open caveats; see below); Step 9 (MiniImageNet 2nd
+             in-distribution dataset, CLOSED — see below).
+In progress: Step 10 (MVT grid execution — all 4 RQs, the thesis's central
+             results table). As of 2026-08-02: PLUMBING COMPLETE, EXECUTION
+             PENDING — this session had no GPU/Kaggle available, so every
+             file was written and offline/smoke-tested (never against real
+             data) but none of the 120 grid cells have actually run. Built:
+             6 new LoRA parent configs (mbnet x LoRA, mini x LoRA, mini+mbnet
+             x LoRA — the two grid cells with no prior parent config);
+             scripts/build_grid_configs.py (generates the 120 grid configs +
+             configs/grid/_index.json — verified: exactly 120, zero filename
+             collisions with any Steps 1-9 result); scripts/run_mvt_grid.py
+             (+ .sh wrapper) — resumable, priority-ordered, in-process driver
+             (dry-run/--only/--resume logic verified: 36/36/48 cells select
+             correctly for the 10a/10b/10c buckets); scripts/aggregate_grid.py,
+             scripts/make_master_tables.py, scripts/grid_plots.py — all three
+             smoke-tested against hand-fabricated fixture data (deleted after
+             use), never against real results; tests/test_grid_configs.py (19
+             new tests, plan.md §10.7's five assertions, all passing — 233/233
+             full suite, zero regressions vs the pre-Step-10 214); notebooks/
+             step10{a,b,c}_*.ipynb (lean, ~14-16 cells each, JSON+syntax
+             validated) — WRITTEN, NOT YET RUN. Full detail: step_writeups/
+             step10.txt (its §4 Results is an explicit unfilled template —
+             see step10.txt's own STATUS header for exactly what's pending).
+             Four carry-overs into Step 10's actual grid run, once it
+             happens: (i) per-backbone/per-dataset VAL tuning — the whole
+             recipe (LR, rank, KL schedule, evidence affine) was inherited
+             from a single ResNet-18/CIFAR-FS sweep and never re-tuned for
+             MobileNetV3 OR MiniImageNet, and is being carried FROZEN across
+             the whole grid on purpose (plan.md §3) — Step 10.9's bounded
+             VAL-only side-study is the mitigation, not yet run; (ii) the
+             mbnet/parallel evidential cell's checkpoint-selected-during-
+             KL-warm-up issue (Step 8: epoch 3, kl_w=0.030) REPRODUCED on
+             MiniImageNet too (Step 9: epoch 6, kl_w=0.060) — a 2-for-2
+             pattern across independent datasets, likely to reproduce again
+             in the grid's own mbnet/parallel/evidential cells since the
+             recipe is unchanged; (iii) the MobileNetV3-vs-ResNet-18 accuracy
+             gap that was only 0.3-1.6 pp on CIFAR-FS (Step 8) balloons to
+             4.7-5.7 pp on MiniImageNet — untested under 1-shot; (iv) NEW,
+             Step 10-specific: the pre-flight smoke test covering 1-shot /
+             LoRA-on-MobileNetV3 / LoRA-on-MiniImageNet (plan.md §2) is
+             written into notebook 10a but has never executed — treat all
+             three combinations as genuinely unverified until it has.
+Next:        Run notebooks/step10a_cifar_5shot.ipynb on Kaggle FIRST (T4,
+             Internet ON, attach the `beft-thesis-data` dataset, owner
+             notavailable73 -- corrected 2026-08-03 from the `bpeft-step10-
+             data` slug plan.md originally specified; see plan.md §4.1 for
+             why) — it alone satisfies the proposal's mandatory minimum and
+             includes the pre-flight smoke test. Then 10b/10c (can run in
+             parallel on separate accounts). Then, once all three finish:
+             scripts/aggregate_grid.py → make_master_tables.py →
+             grid_plots.py (no GPU needed), then transcribe results into
+             step_writeups/step10.txt §4 verbatim and tick the boxes below.
+Blocker:     none (compute/Kaggle access, not a code blocker).
+Today:       2026-08-02 (dataset path correction: 2026-08-03)
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -770,23 +792,43 @@ Exit criteria:
       artifact, since checkpoints/ is gitignored — see step9.txt §5.
 
 --------------------------------------------------------------------------------
-STEP 10 — MVT GRID EXECUTION                                    [ ] NOT STARTED
+STEP 10 — MVT GRID EXECUTION                          [~] IN PROGRESS (plumbing
+                                                        complete, 120 runs pending)
 --------------------------------------------------------------------------------
 Phase: 5     RQ: all four                             Est: 2-3 weeks
+Full plan: plan.md (detailed, read first) ; writeup: step_writeups/step10.txt
 
-Actions:
-  [ ] 10.1 scripts/run_mvt_grid.sh — loops 120 runs (96 PEFT + 24
-           baseline); skip on existing metrics JSON for resume
-  [ ] 10.2 scripts/build_grid_configs.py + configs/grid/*.yaml
-           (auto-generated, then committed)
-  [ ] 10.3 scripts/aggregate_grid.py → results/mvt_results.json
-           with schema
-           {dataset}.{kshot}.{backbone}.{adapter}.{head}.{metric}
-           = {mean, std, ci95}
-  [ ] 10.4 Three master tables (accuracy, calibration, OOD AUROC) in
-           LaTeX booktabs + 300 dpi PNG; baselines as separate
-           subsection of the accuracy table
-  [ ] 10.5 step_writeups/step10.txt
+Actions (plan.md's numbering, not implementation.txt's — plan.md supersedes
+it with a more detailed, three-notebook split):
+  [ ] 10.0  Pre-flight smoke test (1-shot, LoRA×mbnet, LoRA×mini) — WRITTEN
+            into notebook 10a §4; NOT YET RUN.
+  [x] 10.1  6 new parent configs (LoRA × {mbnet, mini, mini+mbnet}) — DONE,
+            load + build_model verified (2026-08-02).
+  [x] 10.2  scripts/build_grid_configs.py + configs/grid/*.yaml (120) +
+            _index.json — DONE, generated + verified (exactly 120, zero
+            collisions with Steps 1-9 results).
+  [x] 10.3  scripts/run_mvt_grid.py (+ .sh wrapper) — DONE; dry-run/--only/
+            --resume logic verified offline (36/36/48 cells per bucket).
+  [x] 10.4  scripts/aggregate_grid.py → results/mvt_results.json — CODE
+            DONE, smoke-tested against synthetic fixtures; NOT YET RUN
+            against real results (none exist yet).
+  [x] 10.5  scripts/make_master_tables.py → 3 tables, LaTeX + 300 dpi PNG —
+            CODE DONE, smoke-tested; NOT YET RUN against real results.
+  [x] 10.6  scripts/grid_plots.py → up to 16 plots @ 300 dpi — CODE DONE,
+            smoke-tested; NOT YET RUN against real results.
+  [x] 10.7  tests/test_grid_configs.py — DONE, 19/19 passing (233/233 full
+            suite, zero regressions vs the pre-Step-10 214).
+  [ ] 10.8a notebooks/step10a_cifar_5shot.ipynb (36 runs, RUN FIRST) —
+            WRITTEN, JSON+syntax validated; NOT YET RUN.
+  [ ] 10.8b notebooks/step10b_cifar_1shot.ipynb (36 runs) — WRITTEN; NOT
+            YET RUN.
+  [ ] 10.8c notebooks/step10c_mini.ipynb (48 runs) — WRITTEN; NOT YET RUN.
+  [ ] 10.9  VAL-only side-study: KL warm-up / patience for mbnet-parallel-
+            evidential — NOT STARTED.
+  [~] 10.10 step_writeups/step10.txt — Sections 0-3, 5-6 complete; Section 4
+            (Results) is an explicit unfilled template.
+  [~] 10.11 progress.txt updated — this entry (boxes reflect "plumbing
+            complete, runs pending", not CLOSED).
 
 Exit criteria:
   [ ] All 96 PEFT cells + 24 baseline cells have a metrics JSON
@@ -795,7 +837,9 @@ Exit criteria:
   [ ] Wandb dashboard groups runs by (dataset, shots); baselines
       tagged "baseline"
   [ ] 16 plots (reliability + OOD histogram per dataset × head)
-      at 300 dpi
+      at 300 dpi — reading note: 16 = dataset(2) × shots(2) × head(2) ×
+      plot-type(2), collapsing backbone/adapter to one data-driven "best"
+      cell per (dataset, shot, head); see step_writeups/step10.txt §5.
 
 --------------------------------------------------------------------------------
 STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)                    [ ] NOT STARTED
@@ -1225,6 +1269,21 @@ NOTES / DECISIONS LOG
             committed (checkpoints/ is gitignored), so this git checkout
             cannot do the spot-check without either a fresh Kaggle run or
             recovering the pushed-checkpoint artifact.
+
+2026-08-02  Decision (Step 10 plumbing session, no GPU/Kaggle available):
+            build every Step 10 artifact that is testable WITHOUT real
+            data or a GPU (configs, generator, grid runner, aggregator,
+            tables, plots, tests, notebooks) and leave the 120 actual runs
+            for whoever next has Kaggle access — same division of labor
+            Step 9 used successfully (instructions.txt §1A). Verified
+            everything offline/smoke-tested against synthetic fixtures
+            (deleted after use; nothing under results/ or checkpoints/ was
+            left behind), never against real results. Full detail in
+            step_writeups/step10.txt's STATUS header and §0/§5. Zero
+            changes made to scripts/train.py, scripts/evaluate.py, or any
+            pre-Step-10 config/notebook — every new naming convention is
+            IMPORTED from scripts.train, never re-derived, so old
+            notebooks stay reproducible exactly as before.
 
 
 ================================================================================

@@ -1,0 +1,25 @@
+# Step 10 (MVT grid) — MobileNetV3-Small + LoRA + evidential prototype head.
+#
+# Backbone-axis complement to exp_phase3_lora_evidential.yaml (ResNet-18): the
+# grid's other LoRA cell on CIFAR-FS. LoRA targets are NOT set explicitly —
+# src/adapters/lora.py:default_lora_targets() auto-detects the MobileNetV3
+# family and routes to _mobilenetv3_default_lora_target() (the deepest 1x1
+# projection conv, features.11.block.3.0, 576->96 at rank 16: 16*(576+96) =
+# 10,752 params), the same mechanism exp_phase5_mbnet_bottleneck_evidential.yaml
+# relies on for its placement sites. This config has never been run before
+# (plan.md Step 10 risk #2: "LoRA on MobileNetV3-Small has never run") — the
+# Step 10 pre-flight smoke test covers it first.
+extends: exp_phase5_mbnet_bottleneck_evidential.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+
+output:
+  run_tag: mbnet_lora
+
+wandb:
+  tags: [phase5, step10, mobilenetv3_small, lora, evidential, prototype,
+         cifar_fs_bertinetto]
