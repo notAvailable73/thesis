@@ -119,10 +119,20 @@ Per `progress.txt`: on real CIFAR-FS (Bertinetto split, 600 test episodes, 5-way
 uncertainty (vacuity) decisively beats every softmax-based confidence score (plain max-prob, temperature-scaled
 max-prob) on far-OOD (SVHN) and both near-OOD sets (CIFAR-100-heldout, TinyImageNet) tested, by +0.076 to +0.141
 AUROC — but is still ~7x worse calibrated (ECE) than temperature-scaled softmax, and a real VAL-only hyperparameter
-sweep confirmed that calibration gap doesn't close easily (the ECE surface is flat ~0.285-0.296). Against the
-non-probabilistic "energy" OOD score specifically, evidential wins on far-OOD and CIFAR-100-near but loses on
-TinyImageNet-near by -0.013. This is the Tier-3 verdict from `scripts/step45_verdict.py` / `step_writeups/step4_5.txt`.
-Treat this as the current baseline any new PEFT method (LoRA, BitFit, Full-FT, Linear-Probe — Step 5) is compared
-against, not something to reprove from scratch.
+sweep confirmed that calibration gap doesn't close easily (the ECE surface is flat ~0.285-0.296). This is the
+Tier-3 verdict from `scripts/step45_verdict.py` / `step_writeups/step4_5.txt`. Treat this as the current baseline
+any new PEFT method (LoRA, BitFit, Full-FT, Linear-Probe — Step 5) is compared against, not something to reprove
+from scratch.
+
+**Correction (2026-08-06, superseding the paragraph above's energy comparison — see `progress.txt`'s Step 10 entry
+and `docs/RESULTS_MASTER.md` Table 5 / RQ3):** the Step 4.5 finding that evidential vacuity is roughly on par with
+the non-probabilistic energy score (winning far-OOD and CIFAR-100-near, losing only TinyImageNet-near) was a
+single-configuration result and does **not** generalise. The Step 10 MVT grid (120 runs, 40 aggregated
+`(dataset, shot, backbone, adapter, head)` cells) found vacuity beats energy in only 10/40 far-OOD and 14/40
+near-OOD matched comparisons — energy is the better default OOD score in **most** cells (~70% of comparisons),
+reversing the earlier read. The probabilistic-score claim (vacuity vs. MSP/TS-MSP) is unaffected and strengthens at
+grid scale: 37–38/40 wins on every pool. Do not cite "evidential is on par with energy" anywhere in the thesis text
+without this correction; the defensible claim is narrower — vacuity is a substantially better OOD ranker than
+softmax-probability scores, but a well-chosen logit-space score (energy) still beats it.
 
 Always Read `thesis_implementation_instructions.txt` before any implementation step.

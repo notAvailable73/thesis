@@ -14,6 +14,11 @@ JSON and writes the result.
 Edit the TEMPLATE, never docs/RESULTS_MASTER.md itself -- the next run of this
 script overwrites it. Run scripts/aggregate_grid.py first if the grid changed.
 
+Table 8 (Step 11, RQ4) additionally reads results/efficiency_table.json and
+results/pareto_frontier.json if present; it renders a "not yet measured" stub
+otherwise (Step 11's canonical Kaggle GPU+CPU session has not necessarily
+run), so this script stays regenerable at every point in Step 11's lifecycle.
+
 Prints a set of derived summary statistics to stdout as well; those are the
 numbers the template's prose quotes, so re-read them if the grid is re-run.
 """
@@ -260,6 +265,86 @@ for ds, ks, bb, ad, hd, mm in cells():
         + ", ".join(f"{k}:{int(v)}" for k, v in sorted(ps.items()))
         + " |"
     )
+A("")
+
+# ---------------------------------------------------------------- Table 8 (Step 11)
+A("### Table 8 — Efficiency and Pareto frontier (Step 11, RQ4)\n")
+EFF_PATH = ROOT / "results" / "efficiency_table.json"
+FRONTIER_PATH = ROOT / "results" / "pareto_frontier.json"
+if not EFF_PATH.exists():
+    A(
+        "**Not yet measured.** `results/efficiency_table.json` does not exist "
+        "-- Step 11's canonical Kaggle T4 GPU + Kaggle CPU session has not "
+        "run yet. Code is complete (`src/utils/efficiency.py`, "
+        "`scripts/efficiency_table.py`, `scripts/pareto_plots.py`); see "
+        "`step_writeups/step11.txt` for status.\n"
+    )
+else:
+    EFF = json.loads(EFF_PATH.read_text())
+    FRONTIER = json.loads(FRONTIER_PATH.read_text()) if FRONTIER_PATH.exists() else None
+    frontier_labels = set()
+    if FRONTIER:
+        for stem_panels in FRONTIER.values():
+            if not isinstance(stem_panels, dict):
+                continue
+            for panel in stem_panels.values():
+                if isinstance(panel, dict) and "strict_front" in panel:
+                    frontier_labels.update(panel["strict_front"])
+
+    eff_envs = sorted(EFF.get("environments", {}).keys())
+    A(
+        f"Environments measured: {', '.join(eff_envs) if eff_envs else '(none)'}. "
+        "Params/MACs are deterministic (byte-identical across sessions, per "
+        "`efficiency_table.json`'s `reproducibility` block); latency/memory "
+        "are measured and session-dependent by design -- see step_writeups/"
+        "step11.txt Section 5. Cost figures below use the pre-registered "
+        "primary profile (CPU, 1 thread, median latency) where available.\n"
+    )
+    A(
+        "| Backbone | Adapter | Head | Trainable params | Total params | GMACs | "
+        "CPU ms/img (1 thr) | CPU ms/img (all thr) | GPU ms/img | Peak GPU MB | On frontier? |"
+    )
+    A("|---|---|---|---:|---:|---:|---:|---:|---:|---:|:---:|")
+
+    EFF_KEY_ORDER = [
+        ("resnet18", "bottleneck_parallel"), ("resnet18", "lora"),
+        ("resnet18", "full_ft"), ("resnet18", "linear_probe"),
+        ("mobilenetv3_small", "bottleneck_parallel"), ("mobilenetv3_small", "lora"),
+    ]
+
+    def _eff_lat(key, prefix):
+        per_image = EFF.get("measured", {}).get(key, {}).get("per_image", {})
+        for profile, timing in per_image.items():
+            if profile.startswith(prefix):
+                return f"{timing['latency_ms']['median']:.2f}"
+        return "--"
+
+    for bb, ad in EFF_KEY_ORDER:
+        for hd in ("evidential", "softmax"):
+            key = f"{bb}|{ad}|{hd}"
+            static = EFF.get("static", {}).get(key)
+            gpu_mem_node = EFF.get("measured", {}).get(key, {}).get("memory", {}).get("per_image")
+            gpu_mem = (
+                f"{gpu_mem_node['peak_allocated_bytes'] / (1024 * 1024):.1f}"
+                if gpu_mem_node and gpu_mem_node.get("status") == "ok" else "--"
+            )
+            on_front = (
+                "--" if not frontier_labels else
+                ("yes" if any(lbl.startswith(f"{bb}/{ad}/{hd}") for lbl in frontier_labels)
+                 else "no")
+            )
+            if static is None:
+                A(f"| {BB_LABEL[bb]} | {AD_LABEL[ad]} | {HD_LABEL[hd]} | "
+                  "-- | -- | -- | -- | -- | -- | -- | -- |")
+                continue
+            params = static["params"]
+            macs = static["flops"]["per_image"]["macs"]
+            A(
+                f"| {BB_LABEL[bb]} | {AD_LABEL[ad]} | {HD_LABEL[hd]} | "
+                f"{params['trainable']:,} | {params['total']:,} | {macs / 1e9:.4f} | "
+                f"{_eff_lat(key, 'cpu_1thread_')} | {_eff_lat(key, 'cpu_allthreads_')} | "
+                f"{_eff_lat(key, 'cuda_')} | {gpu_mem} | {on_front} |"
+            )
 A("")
 
 tables = "\n".join(lines)

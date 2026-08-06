@@ -16,6 +16,20 @@ aggregated across seeds. A missing cell renders as "-" rather than raising,
 since a partial grid (a session that hasn't finished yet) still produces a
 readable partial table.
 
+Step 11 (RQ4) ADDS a 4th table, sourced from results/efficiency_table.json
+(one row per (backbone, adapter, head) measurement key, dataset/shot-
+independent) and — if present — results/pareto_frontier.json for the
+"On frontier?" column:
+
+  4. Efficiency     — trainable/total params, GMACs, CPU latency (1 thread /
+                      all threads), GPU latency, peak GPU memory.
+
+This 4th table is skipped with a printed warning (not an error) when
+results/efficiency_table.json does not exist yet, so re-running this script
+before Step 11's measurement session still produces the original three
+tables unchanged (verified: the 3 accuracy/calibration/ood_auroc .tex files
+are byte-identical with or without this extension).
+
 Usage:
     python scripts/make_master_tables.py
 """
@@ -172,6 +186,86 @@ def build_ood_auroc_table(mvt: dict) -> tuple[list[str], list[list[str]], set[in
 
 
 # --------------------------------------------------------------------------
+# Step 11 — efficiency table (12 measurement keys: backbone/adapter/head,
+# dataset- and shot-independent)
+# --------------------------------------------------------------------------
+_EFF_KEY_ORDER = [
+    ("resnet18", "bottleneck_parallel"), ("resnet18", "lora"),
+    ("resnet18", "full_ft"), ("resnet18", "linear_probe"),
+    ("mobilenetv3_small", "bottleneck_parallel"), ("mobilenetv3_small", "lora"),
+]
+
+
+def _eff_key(backbone: str, adapter: str, head: str) -> str:
+    return f"{backbone}|{adapter}|{head}"
+
+
+def _eff_primary_latency(effic: dict, key: str, prefix: str) -> str:
+    per_image = effic.get("measured", {}).get(key, {}).get("per_image", {})
+    for profile, timing in per_image.items():
+        if profile.startswith(prefix):
+            return f"{timing['latency_ms']['median']:.2f}"
+    return "-"
+
+
+def _eff_gpu_latency(effic: dict, key: str) -> str:
+    per_image = effic.get("measured", {}).get(key, {}).get("per_image", {})
+    for profile, timing in per_image.items():
+        if profile.startswith("cuda_"):
+            return f"{timing['latency_ms']['median']:.2f}"
+    return "-"
+
+
+def _eff_peak_gpu_mb(effic: dict, key: str) -> str:
+    mem = effic.get("measured", {}).get(key, {}).get("memory", {}).get("per_image")
+    if not mem or mem.get("status") != "ok":
+        return "-"
+    return f"{mem['peak_allocated_bytes'] / (1024 * 1024):.1f}"
+
+
+def build_efficiency_table(effic: dict, frontier: dict | None
+                           ) -> tuple[list[str], list[list[str]], set[int]]:
+    header = ["Backbone", "Adapter", "Head", "Trainable params", "Total params",
+             "GMACs", "CPU ms/img (1 thr)", "CPU ms/img (all thr)",
+             "GPU ms/img", "Peak GPU MB", "On frontier?"]
+    frontier_labels: set[str] = set()
+    if frontier:
+        for stem_panels in frontier.values():
+            if not isinstance(stem_panels, dict):
+                continue
+            for panel in stem_panels.values():
+                if isinstance(panel, dict) and "strict_front" in panel:
+                    frontier_labels.update(panel["strict_front"])
+
+    rows = []
+    section_breaks: set[int] = set()
+    for backbone, adapter in _EFF_KEY_ORDER:
+        for head in ("evidential", "softmax"):
+            key = _eff_key(backbone, adapter, head)
+            static = effic.get("static", {}).get(key)
+            params = static["params"] if static else None
+            macs = (static["flops"]["per_image"]["macs"] if static else None)
+            on_front = any(lbl.startswith(f"{backbone}/{adapter}/{head}")
+                          for lbl in frontier_labels) if frontier_labels else None
+            rows.append([
+                BACKBONE_LABEL.get(backbone, backbone),
+                ADAPTER_LABEL.get(adapter, adapter),
+                "Evid." if head == "evidential" else "Softmax",
+                f"{params['trainable']:,}" if params else "-",
+                f"{params['total']:,}" if params else "-",
+                f"{macs / 1e9:.4f}" if macs is not None else "-",
+                _eff_primary_latency(effic, key, "cpu_1thread_"),
+                _eff_primary_latency(effic, key, "cpu_allthreads_"),
+                _eff_gpu_latency(effic, key),
+                _eff_peak_gpu_mb(effic, key),
+                ("-" if on_front is None else ("yes" if on_front else "no")),
+            ])
+        if adapter == "linear_probe":
+            section_breaks.add(len(rows))
+    return header, rows, section_breaks
+
+
+# --------------------------------------------------------------------------
 # Renderers
 # --------------------------------------------------------------------------
 def _escape_tex(s: str) -> str:
@@ -223,6 +317,8 @@ def write_png(path: Path, title: str, header: list[str], rows: list[list[str]],
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="in_path", default=str(DEFAULT_IN))
+    ap.add_argument("--efficiency", default=str(REPO_ROOT / "results" / "efficiency_table.json"))
+    ap.add_argument("--frontier", default=str(REPO_ROOT / "results" / "pareto_frontier.json"))
     ap.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
     args = ap.parse_args()
 
@@ -242,6 +338,21 @@ def main() -> None:
         ("mvt_table_ood_auroc", "MVT Grid — OOD AUROC (far: SVHN, near: TinyImageNet)",
          build_ood_auroc_table(mvt)),
     ]
+
+    eff_path = Path(args.efficiency)
+    if eff_path.exists():
+        effic = json.load(open(eff_path))
+        frontier_path = Path(args.frontier)
+        frontier = json.load(open(frontier_path)) if frontier_path.exists() else None
+        tables.append((
+            "mvt_table_efficiency",
+            "Step 11 — Efficiency (params / MACs / latency / peak memory)",
+            build_efficiency_table(effic, frontier),
+        ))
+    else:
+        print(f"[make_master_tables] {eff_path} not found — skipping the "
+             f"efficiency table (run scripts/efficiency_table.py first).")
+
     for stem, title, (header, rows, breaks) in tables:
         tex_path = out_dir / f"{stem}.tex"
         png_path = out_dir / f"{stem}.png"

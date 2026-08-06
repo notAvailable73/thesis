@@ -1,0 +1,644 @@
+{
+  "generated_from": {
+    "efficiency": "results/efficiency_table.json",
+    "mvt": "results/mvt_results.json"
+  },
+  "pareto_latency_vs_auroc": {
+    "cifar_fs__1shot": {
+      "cost_axis": "latency",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential"
+      ],
+      "n_baseline_points": 4,
+      "n_points": 12,
+      "points": [
+        {
+          "cost": 80.43494199955603,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.8311188592592593
+        },
+        {
+          "cost": 54.633783000099356,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.7377936888888889
+        },
+        {
+          "cost": 56.75985599918931,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.7712689185185185
+        },
+        {
+          "cost": 47.77121599909151,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.7098272444444444
+        },
+        {
+          "cost": 6.729951001034351,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.8698453111111112
+        },
+        {
+          "cost": 7.749590999083011,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.7870541259259259
+        },
+        {
+          "cost": 8.276381999166915,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.7468433481481482
+        },
+        {
+          "cost": 7.081662999553373,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.697559325925926
+        },
+        {
+          "cost": 53.62852600046608,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/evidential",
+          "quality": 0.8310391777777778
+        },
+        {
+          "cost": 58.214454000335536,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/softmax",
+          "quality": 0.7925122666666665
+        },
+        {
+          "cost": 49.866651999764144,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/evidential",
+          "quality": 0.8677490444444443
+        },
+        {
+          "cost": 47.97022399998241,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/softmax",
+          "quality": 0.7277742000000001
+        }
+      ],
+      "quality_axis": "near_tin_native",
+      "recommended_point": "mobilenetv3_small/bottleneck_parallel/evidential",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential"
+      ]
+    },
+    "cifar_fs__5shot": {
+      "cost_axis": "latency",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential"
+      ],
+      "n_baseline_points": 4,
+      "n_points": 12,
+      "points": [
+        {
+          "cost": 80.43494199955603,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.9256299185185185
+        },
+        {
+          "cost": 54.633783000099356,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.8518452222222223
+        },
+        {
+          "cost": 56.75985599918931,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.8489377185185184
+        },
+        {
+          "cost": 47.77121599909151,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.7820596814814814
+        },
+        {
+          "cost": 6.729951001034351,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.9185602148148148
+        },
+        {
+          "cost": 7.749590999083011,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.8859462962962962
+        },
+        {
+          "cost": 8.276381999166915,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.8798058777777777
+        },
+        {
+          "cost": 7.081662999553373,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.8099146962962962
+        },
+        {
+          "cost": 53.62852600046608,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/evidential",
+          "quality": 0.8973977999999999
+        },
+        {
+          "cost": 58.214454000335536,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/softmax",
+          "quality": 0.8669550888888887
+        },
+        {
+          "cost": 49.866651999764144,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/evidential",
+          "quality": 0.8856360888888889
+        },
+        {
+          "cost": 47.97022399998241,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/softmax",
+          "quality": 0.8428717555555555
+        }
+      ],
+      "quality_axis": "near_tin_native",
+      "recommended_point": "mobilenetv3_small/bottleneck_parallel/evidential",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential"
+      ]
+    },
+    "mini_imagenet__1shot": {
+      "cost_axis": "latency",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential"
+      ],
+      "n_baseline_points": 0,
+      "n_points": 8,
+      "points": [
+        {
+          "cost": 80.43494199955603,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.8703673111111111
+        },
+        {
+          "cost": 54.633783000099356,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.8104278222222222
+        },
+        {
+          "cost": 56.75985599918931,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.7736292666666666
+        },
+        {
+          "cost": 47.77121599909151,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.7744849259259259
+        },
+        {
+          "cost": 6.729951001034351,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.8563440518518518
+        },
+        {
+          "cost": 7.749590999083011,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.7427835037037037
+        },
+        {
+          "cost": 8.276381999166915,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.7895738
+        },
+        {
+          "cost": 7.081662999553373,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.6894001703703703
+        }
+      ],
+      "quality_axis": "near_tin_native",
+      "recommended_point": "resnet18/bottleneck_parallel/evidential",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential"
+      ]
+    },
+    "mini_imagenet__5shot": {
+      "cost_axis": "latency",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential"
+      ],
+      "n_baseline_points": 0,
+      "n_points": 8,
+      "points": [
+        {
+          "cost": 80.43494199955603,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.9581903925925926
+        },
+        {
+          "cost": 54.633783000099356,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.9124468814814817
+        },
+        {
+          "cost": 56.75985599918931,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.8692451185185185
+        },
+        {
+          "cost": 47.77121599909151,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.8488146444444444
+        },
+        {
+          "cost": 6.729951001034351,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.9110327555555555
+        },
+        {
+          "cost": 7.749590999083011,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.8441923703703704
+        },
+        {
+          "cost": 8.276381999166915,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.8895021185185185
+        },
+        {
+          "cost": 7.081662999553373,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.7915834370370369
+        }
+      ],
+      "quality_axis": "near_tin_native",
+      "recommended_point": "resnet18/bottleneck_parallel/evidential",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/softmax"
+      ]
+    }
+  },
+  "pareto_params_vs_accuracy": {
+    "cifar_fs__1shot": {
+      "cost_axis": "params",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/full_ft/softmax",
+        "resnet18/linear_probe/softmax"
+      ],
+      "n_baseline_points": 4,
+      "n_points": 12,
+      "points": [
+        {
+          "cost": 31746.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.7918889076511065
+        },
+        {
+          "cost": 31744.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.78567409220669
+        },
+        {
+          "cost": 12290.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.7375703875223795
+        },
+        {
+          "cost": 12288.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.7544370542135503
+        },
+        {
+          "cost": 6930.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.7887555733819802
+        },
+        {
+          "cost": 6928.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.7880148332152102
+        },
+        {
+          "cost": 10754.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.7402889058987299
+        },
+        {
+          "cost": 10752.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.7542814992037083
+        },
+        {
+          "cost": 11176514.0,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/evidential",
+          "quality": 0.8036000184218088
+        },
+        {
+          "cost": 11176512.0,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/softmax",
+          "quality": 0.8113555745283763
+        },
+        {
+          "cost": 2.0,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/evidential",
+          "quality": 0.7025111271440982
+        },
+        {
+          "cost": 0.0,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/softmax",
+          "quality": 0.7025111271440982
+        }
+      ],
+      "quality_axis": "accuracy",
+      "recommended_point": "resnet18/full_ft/softmax",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/full_ft/softmax",
+        "resnet18/linear_probe/softmax"
+      ]
+    },
+    "cifar_fs__5shot": {
+      "cost_axis": "params",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/softmax",
+        "resnet18/linear_probe/softmax"
+      ],
+      "n_baseline_points": 4,
+      "n_points": 12,
+      "points": [
+        {
+          "cost": 31746.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.9158222466376094
+        },
+        {
+          "cost": 31744.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.9144444684518708
+        },
+        {
+          "cost": 12290.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.8332666876249842
+        },
+        {
+          "cost": 12288.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.8625481695267889
+        },
+        {
+          "cost": 6930.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.902377800974581
+        },
+        {
+          "cost": 6928.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.9074370610051684
+        },
+        {
+          "cost": 10754.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.8697333580255507
+        },
+        {
+          "cost": 10752.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.8804592818021774
+        },
+        {
+          "cost": 11176514.0,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/evidential",
+          "quality": 0.8881778005758921
+        },
+        {
+          "cost": 11176512.0,
+          "is_baseline": true,
+          "label": "resnet18/full_ft/softmax",
+          "quality": 0.9046666893362999
+        },
+        {
+          "cost": 2.0,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/evidential",
+          "quality": 0.8741333555181822
+        },
+        {
+          "cost": 0.0,
+          "is_baseline": true,
+          "label": "resnet18/linear_probe/softmax",
+          "quality": 0.8741333555181822
+        }
+      ],
+      "quality_axis": "accuracy",
+      "recommended_point": "mobilenetv3_small/bottleneck_parallel/softmax",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/softmax",
+        "resnet18/linear_probe/softmax"
+      ]
+    },
+    "mini_imagenet__1shot": {
+      "cost_axis": "params",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/softmax",
+        "resnet18/lora/softmax"
+      ],
+      "n_baseline_points": 0,
+      "n_points": 8,
+      "points": [
+        {
+          "cost": 31746.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.8480740942557653
+        },
+        {
+          "cost": 31744.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.8503481691082319
+        },
+        {
+          "cost": 12290.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.7915629809598128
+        },
+        {
+          "cost": 12288.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.8028889074093767
+        },
+        {
+          "cost": 6930.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.7561333505643738
+        },
+        {
+          "cost": 6928.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.7491852023369736
+        },
+        {
+          "cost": 10754.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.7247703863845931
+        },
+        {
+          "cost": 10752.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.7245037194424205
+        }
+      ],
+      "quality_axis": "accuracy",
+      "recommended_point": "resnet18/bottleneck_parallel/softmax",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/bottleneck_parallel/softmax",
+        "resnet18/lora/softmax"
+      ]
+    },
+    "mini_imagenet__5shot": {
+      "cost_axis": "params",
+      "eps_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/lora/softmax"
+      ],
+      "n_baseline_points": 0,
+      "n_points": 8,
+      "points": [
+        {
+          "cost": 31746.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/evidential",
+          "quality": 0.9588000246551301
+        },
+        {
+          "cost": 31744.0,
+          "is_baseline": false,
+          "label": "resnet18/bottleneck_parallel/softmax",
+          "quality": 0.9555852098597422
+        },
+        {
+          "cost": 12290.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/evidential",
+          "quality": 0.8832222447130414
+        },
+        {
+          "cost": 12288.0,
+          "is_baseline": false,
+          "label": "resnet18/lora/softmax",
+          "quality": 0.9155555790993902
+        },
+        {
+          "cost": 6930.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/evidential",
+          "quality": 0.9064148375723097
+        },
+        {
+          "cost": 6928.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/bottleneck_parallel/softmax",
+          "quality": 0.9009629864825143
+        },
+        {
+          "cost": 10754.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/evidential",
+          "quality": 0.8796074290076893
+        },
+        {
+          "cost": 10752.0,
+          "is_baseline": false,
+          "label": "mobilenetv3_small/lora/softmax",
+          "quality": 0.8796296514074008
+        }
+      ],
+      "quality_axis": "accuracy",
+      "recommended_point": "resnet18/bottleneck_parallel/softmax",
+      "strict_front": [
+        "mobilenetv3_small/bottleneck_parallel/evidential",
+        "mobilenetv3_small/bottleneck_parallel/softmax",
+        "resnet18/bottleneck_parallel/evidential",
+        "resnet18/bottleneck_parallel/softmax",
+        "resnet18/lora/softmax"
+      ]
+    }
+  },
+  "tol_accuracy": 0.01,
+  "tol_auroc": 0.01
+}

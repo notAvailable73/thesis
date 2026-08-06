@@ -5,8 +5,8 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-08-06 (Step 10 CLOSED — all 120 grid cells ran; results
-           transcribed; 10.9 side-study deferred to Step 11's backlog)
+Updated:   2026-08-07 (Step 11 CODE COMPLETE, measurement pending — see
+           below; Step 10 CLOSED 2026-08-06 — all 120 grid cells ran)
 ================================================================================
 
 
@@ -20,7 +20,9 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              config, no open caveats; see below); Step 9 (MiniImageNet 2nd
              in-distribution dataset, CLOSED — see below); Step 10 (MVT grid,
              CLOSED 2026-08-06 — all 120 cells ran; see below).
-In progress: none. Step 11 (RQ4, efficiency/Pareto) is next and NOT STARTED.
+In progress: Step 11 (RQ4, efficiency/Pareto) — CODE COMPLETE 2026-08-07, the
+             canonical Kaggle T4 GPU + Kaggle CPU measurement session has not
+             yet run. See below and step_writeups/step11.txt.
 
 Step 10 headline (CLOSED 2026-08-06). All 120 grid cells trained and
              evaluated on real data: results/mvt_results.json reports
@@ -65,27 +67,63 @@ Step 10 headline (CLOSED 2026-08-06). All 120 grid cells trained and
              STILL open by design: the recipe stayed FROZEN across all 120
              cells (plan.md §3) so the grid is a controlled comparison, and
              10.9 is deferred, not dropped.
-Next:        Step 11 (RQ4): latency/FLOPs/memory on edge hardware. The grid
-             already supplies the parameter-count axis of the Pareto
-             frontier for every cell. Backlog carried into it: 10.9
-             (VAL-only KL-warmup/patience side-study — motivating symptom no
-             longer reproduces, see above); updating CLAUDE.md's "Known
-             state of the science" paragraph for the energy-score
-             correction; and the from-scratch-backbone control run that
-             would make any accuracy number here comparable to published
-             few-shot SOTA (docs/RESULTS_MASTER.md §4.8).
+Step 11 headline (CODE COMPLETE 2026-08-07, measurement PENDING). Every
+             piece of infrastructure exists and was verified against real
+             (non-canonical) data this session: src/utils/efficiency.py +
+             src/utils/pareto.py (56 new tests, zero regressions to the
+             pre-existing 233-test suite — see the exact count in the
+             decisions log below); scripts/efficiency_table.py (12
+             (backbone, adapter, head) measurement keys derived from
+             configs/grid/_index.json, covering all 40 mvt_results.json
+             cells; `--check-params-only` reproduced 40/40 mvt cells'
+             n_params from a fresh build_model(cfg), independent of Step
+             10's training run); scripts/pareto_plots.py (strict + eps
+             Pareto frontiers, baseline-eligible, six PNGs +
+             results/pareto_frontier.json + the quality-axis audit family);
+             scripts/make_master_tables.py / make_results_master.py
+             extended additively (verified: the 3 pre-existing
+             mvt_table_*.tex files and docs/RESULTS_MASTER.md's pre-Step-11
+             content are BYTE-IDENTICAL before/after); notebooks/
+             step11_efficiency.ipynb (NOT YET RUN). A real local-CPU run
+             (env_id `local_cpu`, this repo's own dev machine) exercised
+             the full 12-key pipeline end-to-end as a development artifact
+             — explicitly NOT the reported edge-latency figure (Section 5
+             of step_writeups/step11.txt explains why). What remains: one
+             ~15-20 min Kaggle T4 session (notebooks/step11_efficiency.ipynb)
+             and transcribing its output into step_writeups/step11.txt §4
+             and docs/RESULTS_MASTER.md's Table 8 / RQ4 section. Reference
+             gate (measured MACs vs published Howard 2019 / ResNet-18
+             figures) PASSES for both backbones. Full reasoning, the
+             pre-registered axes/tolerances (fixed BEFORE any number
+             exists, per thesis_implementation_instructions.txt §5), and
+             every honest caveat: step_writeups/step11.txt.
+Next:        Finish Step 11: run notebooks/step11_efficiency.ipynb on
+             Kaggle (GPU T4, Internet ON, no dataset attach — build_model
+             needs no data), merge its artifact zip into results/, then
+             locally run scripts/pareto_plots.py → make_master_tables.py →
+             make_results_master.py in that order and transcribe
+             step_writeups/step11.txt §4's placeholders from the committed
+             JSON. This closes all four RQs.
+             Backlog re-carried (now explicitly Step 12 items, per
+             step_writeups/step11.txt §7): 10.9 (VAL-only KL-warmup/
+             patience side-study — motivating symptom still does not
+             reproduce); energy score on evidential logits (the cheapest
+             open follow-up — no retraining, just a re-run of the 120-cell
+             eval); the from-scratch-backbone control run that would make
+             any accuracy number here comparable to published few-shot SOTA
+             (docs/RESULTS_MASTER.md §4.8); and a trained ViT-Tiny/
+             DeiT-Small arm (Step 11's `--include-reference-backbones` only
+             gives the architecture-only params/MACs/latency for this, not
+             a trained accuracy number).
              Also new: docs/DEFENCE_BRIEF.md answers the pre-defence
              objection that CNN backbones are outdated -- see the
              2026-08-06 entry in the decisions log.
-             ORDERING (2026-08-06): Step 11 (RQ4) comes BEFORE Step 12.
-             12.F (baseline coverage for MobileNetV3-Small + MiniImageNet,
-             ~19 GPU-h, full scoping in Step 12's section below) is real,
-             supervisor-requested work but explicitly deferred until after
-             Step 11 -- it fills a coverage gap in an already-answered
-             story, where Step 11 answers the one research question that
-             currently has no answer at all.
+             ORDERING (2026-08-06, unchanged): Step 12 (incl. 12.F baseline
+             coverage for MobileNetV3-Small + MiniImageNet, ~19 GPU-h) stays
+             deferred until Step 11 fully closes (canonical measurement +
+             transcription), not just code-complete.
 Blocker:     none.
-Today:       2026-08-06
+Today:       2026-08-07
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -876,23 +914,52 @@ Exit criteria:
       cell per (dataset, shot, head); see step_writeups/step10.txt §5.
 
 --------------------------------------------------------------------------------
-STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)                    [ ] NOT STARTED
+STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)          [~] CODE COMPLETE 2026-08-07
+                                                       (canonical measurement PENDING)
 --------------------------------------------------------------------------------
 Phase: 5     RQ: RQ4 (primary)                        Est: 1 week
+Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending the
+         Kaggle session; §0/§1/§2/§3/§5/§6/§7 complete)
 
 Actions:
-  [ ] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
-           (fvcore), latency (T4 + Colab CPU), peak memory
-  [ ] 11.2 scripts/efficiency_table.py → results/efficiency_table.json
-  [ ] 11.3 results/pareto_latency_vs_auroc.png (one per dataset)
-  [ ] 11.4 results/pareto_params_vs_accuracy.png
-  [ ] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted
+  [x] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
+           (fvcore), latency (T4 + Colab CPU), peak memory. DONE + 30 tests
+           (tests/test_efficiency.py); also src/utils/pareto.py (26 tests,
+           tests/test_pareto.py, incl. 2 scientific regressions against the
+           committed grid) and an ADDITION beyond spec:
+           measure_train_step_peak_memory (flagged in every record).
+  [x] 11.2 scripts/efficiency_table.py → results/efficiency_table.json —
+           DONE; 12 keys derived from configs/grid/_index.json (never
+           hardcoded), architecture-homogeneity asserted per key, reference
+           gate (measured MACs vs published Howard 2019/ResNet-18 figures)
+           runs first, `--check-params-only` reproduced 40/40 mvt cells'
+           n_params. Exercised against real (non-canonical) local-CPU data
+           this session; the canonical Kaggle GPU+CPU run has not happened.
+  [x] 11.3 results/pareto_latency_vs_auroc.png (one per dataset) —
+           scripts/pareto_plots.py DONE; renders correctly against real
+           mvt_results.json + local-CPU efficiency data (0 points until the
+           canonical session exists, by design — no efficiency_table.json
+           committed yet).
+  [x] 11.4 results/pareto_params_vs_accuracy.png — DONE, needs NO new
+           measurement; fully populated from the already-committed
+           results/mvt_results.json (see step_writeups/step11.txt §4.6).
+  [x] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted — TEMPLATE
+           written with the pre-registered axes/tolerances (§0) and every
+           §4 placeholder named; the RQ4 paragraph itself is NOT YET
+           FILLED (needs the canonical session).
 
 Exit criteria:
-  [ ] efficiency_table.json complete for all MVT cells + baselines
-  [ ] Two Pareto plots saved at 300 dpi
-  [ ] RQ4 paragraph: numerical Pareto-optimal point
-  [ ] Limitation noted: "no Jetson Nano access; CPU as edge proxy"
+  [~] efficiency_table.json complete for all MVT cells + baselines —
+      pipeline verified end-to-end against real local-CPU data; canonical
+      Kaggle GPU+CPU session not yet run.
+  [~] Two Pareto plots saved at 300 dpi — script verified, real (non-final)
+      PNGs rendered; committed canonical versions pending the session above.
+  [ ] RQ4 paragraph: numerical Pareto-optimal point — NOT FILLED (the
+      params-only half IS filled, §4.6, and needs no further measurement).
+  [x] Limitation noted: "no Jetson Nano access; CPU as edge proxy" —
+      present verbatim in step_writeups/step11.txt §5 and
+      docs/RESULTS_MASTER_template.md's RQ4 section; quantification (the
+      two-environment ratio) pending the canonical CPU session.
 
 --------------------------------------------------------------------------------
 STEP 12 — OPTIONAL EXTENSIONS                                   [ ] NOT STARTED
@@ -973,6 +1040,40 @@ Drop order (priority top → bottom):
            convergence, but MobileNetV3-Small's real number could still
            differ from the extrapolation since neither baseline has ever
            actually been measured on it.
+
+  [ ] 12.G VAL-only KL-warmup/patience side-study (mbnet-parallel-
+           evidential) — re-carried from Step 10 (deferred there, 2026-08-06)
+           and again from Step 11 (step_writeups/step11.txt §7, 2026-08-07):
+           needs ~9 GPU training runs on VAL seeds only (never the 600 test
+           seeds), answering an RQ2 calibration question. Scope: plan.md §3.
+           Motivating symptom (checkpoint selected mid-KL-warm-up) has now
+           failed to reproduce across both the Step 10 grid's four
+           mbnet/parallel/evidential cells AND is unrelated to Step 11
+           (a pure measurement step), so priority stays low but the item is
+           re-carried explicitly rather than silently dropped a second time.
+  [ ] 12.H Energy score computed on evidential logits — the cheapest open
+           follow-up in the whole backlog (step_writeups/step11.txt §5/§7):
+           no retraining, just a re-run of the 120-cell eval adding the
+           energy score to the evidential side, closing the asymmetry that
+           Step 10's RQ3 comparison (and Step 11's `near_tin_best_score`
+           frontier variant) currently only documents (3 softmax-side
+           scores vs 1 evidential-side score) rather than fixes.
+  [ ] 12.I Trained ViT-Tiny/DeiT-Small arm inside the existing grid, same
+           protocol — the "NEW HIGHEST-PRIORITY EXPERIMENT" from the
+           2026-08-06 decisions-log entry below, ranked above the
+           from-scratch control there. Step 11's
+           `--include-reference-backbones` opt-in (scripts/efficiency_table.py)
+           already gives the ARCHITECTURE-ONLY half for free (params/MACs/
+           latency for ViT-B/16 via torchvision + DeiT-Tiny via timm if
+           installed, never trained, every row labelled
+           "architecture-only, not a thesis result") — this item is the
+           remaining trained-accuracy half.
+  [ ] 12.J From-scratch-backbone control run — trains the SAME grid from a
+           randomly-initialised backbone on the 64 base classes, giving one
+           number in the "Regime A" from-scratch protocol table
+           (docs/RESULTS_MASTER.md §4.2/§4.8 item 1) and removing the
+           "your accuracy is contaminated by ImageNet pretraining overlap"
+           objection entirely. Now ranked BELOW 12.I (2026-08-06 decision).
 
 Exit criteria: per extension, a result JSON + one paragraph in step12.txt.
   12.F specifically: 24/24 new configs present in configs/grid/_index.json
@@ -1551,6 +1652,94 @@ NOTES / DECISIONS LOG
             already stated as such in those documents, not a new caveat,
             but worth remembering this is WHY, and that 12.F would let
             those comparisons become same-backbone.
+
+2026-08-07  Decision (Step 11, FLOPs backend): fvcore, exactly as
+            implementation.txt 11.1 specifies, chosen over a torch-native
+            zero-dependency alternative that was verified to also work
+            locally. Reason: the user directed this session to follow the
+            spec literally rather than deviate for convenience. Consequence
+            handled explicitly rather than absorbed silently: fvcore is not
+            preinstalled on Kaggle/Colab, so it is now a line in
+            requirements.txt AND pyproject.toml (every notebook installs
+            from requirements.txt, so no bespoke pip cell was needed
+            anywhere). Verified locally: fvcore's FlopCountAnalysis.total()
+            returns MACs directly (not 2x), matching the "FLOPs" figures
+            quoted in PAPER SUMMARIES/CNN_paper_summaries.txt and
+            src/backbones/mobilenetv3.py's docstring, which are themselves
+            MAC counts despite the naming.
+
+2026-08-07  Bug found + fixed (Step 11, fvcore tracing): wrapping a bound
+            method (e.g. `model.adapter_features`) as a plain python closure
+            and passing that closure to fvcore's FlopCountAnalysis crashes
+            on MobileNetV3-Small with "Cannot insert a Tensor that requires
+            grad as a constant" — reproduced deterministically. Root cause:
+            fvcore traces via torch.jit.trace, which requires the model
+            whose weights are being counted to be a REGISTERED SUBMODULE of
+            the traced wrapper; a bound method stored as a closure does not
+            register its owner. Fix: src/utils/efficiency.py's
+            `_TracedForward` holds the model as a genuine child module
+            (`self.inner = model`) rather than a closed-over bound method.
+            Verified against both backbones after the fix. Does not affect
+            LoRA (which replaces a submodule INSIDE the backbone directly,
+            so tracing the bare backbone already worked) — only affects
+            adapters like PlacementAdapter that wire trainable modules in
+            via a forward-hook closure instead of module insertion.
+
+2026-08-07  Decision (Step 11, extras beyond spec, user-selected): three
+            additions beyond implementation.txt 11.1, each flagged at every
+            point of use so they can never be mistaken for a spec'd number:
+            (1) measure_train_step_peak_memory — a forward+backward+Adam
+            step on a synthetic episode, because inference-only memory
+            barely separates the adapters (same frozen trunk +-1%) and
+            understates PEFT's real advantage, which is in gradient +
+            optimizer-state memory (full_ft's 11.18M trainable params vs
+            bottleneck_parallel's 31,744 is where the difference actually
+            shows up). (2) score_stage_{1,5}shot timing units, isolating
+            the head + uncertainty-scoring cost from cached features, so
+            "evidential uncertainty is free at inference" becomes a
+            measured millisecond figure rather than an assertion. (3) an
+            opt-in `--include-reference-backbones` flag (ViT-B/16 via
+            torchvision, DeiT-Tiny via timm if installed) giving an
+            architecture-only params/MACs/latency row for the transformer
+            question docs/DEFENCE_BRIEF.md argues from published figures —
+            gated so a missing `timm` can never break the run, and every
+            such row carries the disclaimer "architecture-only, never
+            trained here, not a thesis result" verbatim.
+
+2026-08-07  Decision (Step 11, pre-registration): the cost/quality axes and
+            the recommended-point tolerance were fixed BEFORE any Section-4
+            number exists (step_writeups/step11.txt §0.4), because they
+            change the answer — verified on the committed grid data that
+            "cheapest within 1.0 pp accuracy" and "cheapest within one
+            combined CI95" pick DIFFERENT CIFAR-FS-5-shot configurations
+            (mbnet/parallel/softmax @6,928 vs r18/parallel/softmax
+            @31,744). Primary quality axis is `ood_auroc__tin_near__
+            <native>` (the only near-OOD pool present on both datasets);
+            `ood_auroc_mean` in mvt_results.json is NEVER used as a quality
+            axis because it silently aliases the svhn_far value. All
+            secondary axis variants are computed and committed to
+            results/pareto_frontier.json regardless, so the primary choice
+            is auditable, not asserted.
+
+2026-08-07  Housekeeping (Step 11): docs/RESULTS_MASTER_template.md was
+            MISSING from disk and from git — scripts/make_results_master.py
+            had been silently broken (FileNotFoundError) since whenever it
+            went missing; nobody had re-run the script since. Reconstructed
+            mechanically: each of the 7 table chunks the script generates
+            occurs exactly once in the committed docs/RESULTS_MASTER.md;
+            replacing each with its {{TABLEn}} marker and re-running the
+            (at-that-point-unmodified) script reproduced the committed
+            document BYTE-IDENTICALLY — verified before any Step-11 content
+            was added, and before scripts/make_master_tables.py /
+            make_results_master.py were extended with the new efficiency
+            table (that extension was ALSO gated: the three pre-existing
+            mvt_table_*.tex files stayed byte-identical before/after).
+            CLAUDE.md's "Known state of the science" paragraph was also
+            corrected in this step for the energy-score finding (Step 10's
+            2026-08-06 correction) — Step 11's quality axis turns on
+            exactly this fact, so leaving CLAUDE.md's old text would have
+            made this step's own write-up contradict the repo's standing
+            brief.
 
 ================================================================================
 END OF PROGRESS.TXT
