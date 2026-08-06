@@ -1,0 +1,33 @@
+\begin{table}[t]
+\centering
+\caption{MVT Grid — Calibration (ECE / Brier)}
+\begin{tabular}{lllllllll}
+\toprule
+Dataset & Shots & Backbone & Adapter & ECE (evidential) & ECE (softmax) & ECE-TS (softmax) & Brier (evidential) & Brier (softmax) \\
+\midrule
+CIFAR-FS & 5-shot & ResNet-18 & Bottleneck (parallel) & 0.301$\pm$0.026 & 0.067$\pm$0.009 & 0.015$\pm$0.002 & 0.251$\pm$0.020 & 0.133$\pm$0.003 \\
+CIFAR-FS & 5-shot & ResNet-18 & LoRA & 0.329$\pm$0.020 & 0.102$\pm$0.011 & 0.016$\pm$0.002 & 0.389$\pm$0.003 & 0.216$\pm$0.001 \\
+CIFAR-FS & 5-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.304$\pm$0.002 & 0.070$\pm$0.004 & 0.007$\pm$0.002 & 0.271$\pm$0.001 & 0.146$\pm$0.001 \\
+CIFAR-FS & 5-shot & MobileNetV3-Small & LoRA & 0.288$\pm$0.019 & 0.062$\pm$0.015 & 0.006$\pm$0.006 & 0.299$\pm$0.010 & 0.179$\pm$0.002 \\
+CIFAR-FS & 1-shot & ResNet-18 & Bottleneck (parallel) & 0.277$\pm$0.004 & 0.056$\pm$0.032 & 0.030$\pm$0.011 & 0.405$\pm$0.009 & 0.308$\pm$0.009 \\
+CIFAR-FS & 1-shot & ResNet-18 & LoRA & 0.297$\pm$0.038 & 0.097$\pm$0.018 & 0.025$\pm$0.004 & 0.496$\pm$0.029 & 0.358$\pm$0.003 \\
+CIFAR-FS & 1-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.254$\pm$0.002 & 0.050$\pm$0.015 & 0.032$\pm$0.008 & 0.397$\pm$0.005 & 0.307$\pm$0.005 \\
+CIFAR-FS & 1-shot & MobileNetV3-Small & LoRA & 0.216$\pm$0.008 & 0.029$\pm$0.013 & 0.040$\pm$0.005 & 0.436$\pm$0.003 & 0.346$\pm$0.001 \\
+MiniImageNet & 5-shot & ResNet-18 & Bottleneck (parallel) & 0.294$\pm$0.030 & 0.085$\pm$0.001 & 0.006$\pm$0.001 & 0.188$\pm$0.025 & 0.086$\pm$0.001 \\
+MiniImageNet & 5-shot & ResNet-18 & LoRA & 0.405$\pm$0.012 & 0.193$\pm$0.008 & 0.019$\pm$0.003 & 0.398$\pm$0.007 & 0.191$\pm$0.003 \\
+MiniImageNet & 5-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.318$\pm$0.000 & 0.111$\pm$0.006 & 0.021$\pm$0.001 & 0.282$\pm$0.001 & 0.170$\pm$0.003 \\
+MiniImageNet & 5-shot & MobileNetV3-Small & LoRA & 0.305$\pm$0.001 & 0.095$\pm$0.001 & 0.022$\pm$0.001 & 0.309$\pm$0.004 & 0.194$\pm$0.002 \\
+MiniImageNet & 1-shot & ResNet-18 & Bottleneck (parallel) & 0.307$\pm$0.013 & 0.101$\pm$0.006 & 0.007$\pm$0.001 & 0.352$\pm$0.010 & 0.235$\pm$0.006 \\
+MiniImageNet & 1-shot & ResNet-18 & LoRA & 0.371$\pm$0.009 & 0.175$\pm$0.008 & 0.008$\pm$0.002 & 0.491$\pm$0.005 & 0.328$\pm$0.007 \\
+MiniImageNet & 1-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.253$\pm$0.005 & 0.065$\pm$0.005 & 0.006$\pm$0.002 & 0.440$\pm$0.002 & 0.355$\pm$0.000 \\
+MiniImageNet & 1-shot & MobileNetV3-Small & LoRA & 0.219$\pm$0.007 & 0.024$\pm$0.007 & 0.012$\pm$0.003 & 0.456$\pm$0.004 & 0.380$\pm$0.004 \\
+\midrule
+\multicolumn{9}{l}{\textit{Baselines}} \\
+\midrule
+CIFAR-FS & 5-shot & ResNet-18 & Full-FT & 0.338$\pm$0.000 & 0.073$\pm$0.000 & 0.014$\pm$0.000 & 0.322$\pm$0.000 & 0.154$\pm$0.000 \\
+CIFAR-FS & 5-shot & ResNet-18 & Linear-Probe & 0.623$\pm$0.000 & 0.448$\pm$0.000 & 0.030$\pm$0.000 & 0.708$\pm$0.000 & 0.455$\pm$0.000 \\
+CIFAR-FS & 1-shot & ResNet-18 & Full-FT & 0.321$\pm$0.000 & 0.085$\pm$0.000 & 0.022$\pm$0.000 & 0.425$\pm$0.000 & 0.285$\pm$0.000 \\
+CIFAR-FS & 1-shot & ResNet-18 & Linear-Probe & 0.440$\pm$0.000 & 0.282$\pm$0.000 & 0.064$\pm$0.000 & 0.704$\pm$0.000 & 0.528$\pm$0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
