@@ -1,0 +1,150 @@
+{
+  "n_expected": 16,
+  "n_rendered": 16,
+  "plots": [
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_5shot_evidential",
+      "dest": "results/grid_plots/cifar_fs_5shot_evidential_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_cifar_5shot_r18_parallel_seed42_bottleneck_prototype-evidential_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_5shot_evidential",
+      "dest": "results/grid_plots/cifar_fs_5shot_evidential_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_cifar_5shot_r18_parallel_seed42_bottleneck_prototype-evidential_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_5shot_softmax",
+      "dest": "results/grid_plots/cifar_fs_5shot_softmax_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_cifar_5shot_r18_parallel_seed42_bottleneck_prototype-softmax_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_5shot_softmax",
+      "dest": "results/grid_plots/cifar_fs_5shot_softmax_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_cifar_5shot_r18_parallel_seed42_bottleneck_prototype-softmax_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_1shot_evidential",
+      "dest": "results/grid_plots/cifar_fs_1shot_evidential_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_cifar_1shot_r18_parallel_seed42_bottleneck_prototype-evidential_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "cifar_fs_1shot_evidential",
+      "dest": "results/grid_plots/cifar_fs_1shot_evidential_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_cifar_1shot_r18_parallel_seed42_bottleneck_prototype-evidential_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "mobilenetv3_small",
+      "combo": "cifar_fs_1shot_softmax",
+      "dest": "results/grid_plots/cifar_fs_1shot_softmax_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_cifar_1shot_mbnet_parallel_seed42_bottleneck_prototype-softmax_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "mobilenetv3_small",
+      "combo": "cifar_fs_1shot_softmax",
+      "dest": "results/grid_plots/cifar_fs_1shot_softmax_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_cifar_1shot_mbnet_parallel_seed42_bottleneck_prototype-softmax_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_5shot_evidential",
+      "dest": "results/grid_plots/mini_imagenet_5shot_evidential_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_mini_5shot_r18_parallel_seed42_bottleneck_prototype-evidential_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_5shot_evidential",
+      "dest": "results/grid_plots/mini_imagenet_5shot_evidential_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_mini_5shot_r18_parallel_seed42_bottleneck_prototype-evidential_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_5shot_softmax",
+      "dest": "results/grid_plots/mini_imagenet_5shot_softmax_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_mini_5shot_r18_parallel_seed42_bottleneck_prototype-softmax_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_5shot_softmax",
+      "dest": "results/grid_plots/mini_imagenet_5shot_softmax_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_mini_5shot_r18_parallel_seed42_bottleneck_prototype-softmax_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_1shot_evidential",
+      "dest": "results/grid_plots/mini_imagenet_1shot_evidential_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_mini_1shot_r18_parallel_seed42_bottleneck_prototype-evidential_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_1shot_evidential",
+      "dest": "results/grid_plots/mini_imagenet_1shot_evidential_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_mini_1shot_r18_parallel_seed42_bottleneck_prototype-evidential_ood_histogram.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_1shot_softmax",
+      "dest": "results/grid_plots/mini_imagenet_1shot_softmax_reliability.png",
+      "kind": "reliability",
+      "source": "results/grid/grid_mini_1shot_r18_parallel_seed42_bottleneck_prototype-softmax_reliability.png",
+      "status": "rendered"
+    },
+    {
+      "adapter": "bottleneck_parallel",
+      "backbone": "resnet18",
+      "combo": "mini_imagenet_1shot_softmax",
+      "dest": "results/grid_plots/mini_imagenet_1shot_softmax_ood_histogram.png",
+      "kind": "ood_histogram",
+      "source": "results/grid/grid_mini_1shot_r18_parallel_seed42_bottleneck_prototype-softmax_ood_histogram.png",
+      "status": "rendered"
+    }
+  ]
+}
