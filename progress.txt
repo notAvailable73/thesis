@@ -915,11 +915,40 @@ Exit criteria:
 
 --------------------------------------------------------------------------------
 STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)          [~] CODE COMPLETE 2026-08-07
-                                                       (canonical measurement PENDING)
+                                                       (canonical measurement
+                                                       ATTEMPTED, CRASHED
+                                                       BEFORE WRITING, FIX
+                                                       APPLIED, RE-RUN NEEDED)
 --------------------------------------------------------------------------------
 Phase: 5     RQ: RQ4 (primary)                        Est: 1 week
-Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending the
-         Kaggle session; §0/§1/§2/§3/§5/§6/§7 complete)
+Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending a
+         successful Kaggle session; §0/§1/§2/§3/§5/§6/§7 complete; §8 is
+         the 2026-08-07 crash incident + root cause + fix, see below)
+
+2026-08-07 UPDATE: the first real canonical Kaggle T4 session ran and
+  actually completed the FULL 12-key GPU+CPU measurement correctly
+  (confirmed line-by-line from the session log) — then crashed in the
+  optional `--include-reference-backbones` bonus feature (a device-
+  placement bug: count_flops() traced a model already moved to CUDA against
+  a CPU-only trace tensor) BEFORE the script's one-shot write to
+  results/efficiency_table.json. Because nothing is written until the very
+  end, the entire correct 12-key measurement was computed and then
+  discarded — three times over (same crash, 3 retries, ~45-50 min of GPU
+  time each). results/efficiency_table.json in this repo is STILL the
+  local_cpu development artifact from Section 3, unchanged.
+  FIXED this session (offline, NOT yet GPU-verified — see caveat below):
+  (a) reordered _reference_backbones() to count FLOPs on the CPU-resident
+  model before .to(device_t), matching the pattern the 12 real grid keys
+  already use; (b) wrapped the --include-reference-backbones call in
+  main() in try/except so a future failure there can degrade one JSON
+  field instead of costing the whole session's primary measurement again.
+  Full incident, root cause, and fix: step_writeups/step11.txt §8.
+  HONEST GAP: this fix could not be executed or tested here — no GPU, no
+  torch installed in this environment, and the bug is a device-placement
+  error that is structurally invisible to this repo's CPU-only test suite
+  (tests/test_efficiency.py has zero coverage of _reference_backbones).
+  Do not treat this as closed until re-run on Kaggle confirms it actually
+  gets past the point it previously crashed.
 
 Actions:
   [x] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
@@ -1740,6 +1769,50 @@ NOTES / DECISIONS LOG
             exactly this fact, so leaving CLAUDE.md's old text would have
             made this step's own write-up contradict the repo's standing
             brief.
+
+2026-08-07  Step 11 canonical Kaggle run crashed before writing; root cause
+            found and fixed offline; re-run required. User reported "Step
+            11 is done, results are here" and asked to copy them in. Audit
+            found: (1) the file the user had on Desktop
+            (configs_only/thesis/results/efficiency_table.json) is BYTE-
+            IDENTICAL to what was already committed in this repo — nothing
+            to copy; (2) that committed file is the `local_cpu` DEVELOPMENT
+            artifact from Step 11's implementation session (generated_utc
+            2026-08-06T19:30, environments block has only `local_cpu`, no
+            GPU key) — NOT the canonical Kaggle measurement; (3) a session
+            log at Desktop/configs_only/step11.log, dated LATER than the
+            committed file, showed the actual canonical Kaggle T4 attempt:
+            it completed the real 12-key GPU+CPU measurement correctly
+            (verified line-by-line: 12x "measured [cuda]", 12x "measured
+            [cpu]", train_step timings for both), then crashed in the
+            opt-in --include-reference-backbones bonus feature on a
+            device-placement bug (count_flops() traced a CUDA-resident
+            model against a CPU-only trace tensor,
+            src/utils/efficiency.py:266/292) — and because
+            scripts/efficiency_table.py writes its output only once, at the
+            very end of main(), the crash discarded the entire correct
+            measurement before it could be saved. Retried 3x in the same
+            session, same crash each time, ~45-50 GPU-minutes lost per
+            attempt, nothing ever written.
+            FIXED offline (scripts/efficiency_table.py): reordered
+            _reference_backbones() to count FLOPs before moving the model
+            to its target device (matching the pattern the 12 real keys
+            already use); wrapped the --include-reference-backbones call in
+            try/except so this class of failure can only degrade one JSON
+            field, never again cost the primary measurement its write.
+            NOT test-verified — no GPU/torch available in this session, and
+            tests/test_efficiency.py is explicitly CPU-only by convention
+            with zero prior coverage of _reference_backbones (exactly why
+            this bug reached Kaggle uncaught). Full incident:
+            step_writeups/step11.txt §8.
+            ANSWER TO "did we answer RQ4 perfectly / did we fail": neither
+            — RQ4 is NOT YET ANSWERED (no canonical measurement is saved to
+            disk, Section 4 of step11.txt is still placeholders), but this
+            is a software bug in an optional bonus feature, not a failure
+            of the underlying measurement or the science — the log
+            confirms the actual 12-key measurement pipeline works
+            correctly end-to-end on real Kaggle hardware. Re-run is the
+            next action, not a redesign.
 
 ================================================================================
 END OF PROGRESS.TXT
