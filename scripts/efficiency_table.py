@@ -367,10 +367,16 @@ def _reference_backbones(*, device: str) -> dict:
 
     from torchvision.models import vit_b_16
     vit = vit_b_16(weights=None)
-    vit.eval().to(device_t)
-    x = torch.zeros(1, 3, 224, 224, device=device_t)
+    vit.eval()
+    # count_flops traces on a CPU-resident model (its internal input tensor
+    # has no device= — matches how the 12 real grid keys are counted, in the
+    # "static" section, before any .to(device) happens). Must run BEFORE the
+    # model is moved to device_t, or fvcore's trace input (CPU) and the
+    # model's weights (device_t) mismatch and crash.
     pr = params_report(vit)
     macs = count_flops(vit, forward="forward")
+    vit.to(device_t)
+    x = torch.zeros(1, 3, 224, 224, device=device_t)
     timing = time_callable(lambda: vit(x), device=device_t, n_warmup=2, n_measure=5,
                            grad_mode="inference")
     out["vit_b_16"] = {
@@ -383,9 +389,10 @@ def _reference_backbones(*, device: str) -> dict:
     try:
         import timm
         deit = timm.create_model("deit_tiny_patch16_224", pretrained=False)
-        deit.eval().to(device_t)
+        deit.eval()
         pr2 = params_report(deit)
         macs2 = count_flops(deit, forward="forward")
+        deit.to(device_t)
         timing2 = time_callable(lambda: deit(x), device=device_t, n_warmup=2,
                                 n_measure=5, grad_mode="inference")
         out["deit_tiny_patch16_224"] = {
@@ -667,8 +674,22 @@ def main() -> None:
             }
 
     if args.include_reference_backbones:
+        # Fault-isolated on purpose: this is an ADDITION beyond implementation.txt
+        # 11.1 (Section 0.6c), not part of the required 12-key measurement above.
+        # A bug here must never cost the (expensive, already-correct) primary
+        # measurement its write to disk -- it did exactly that once (see
+        # step_writeups/step11.txt Section 8 for the incident), so this can no
+        # longer raise past this point.
         ref_device = "cuda" if ("cuda" in devices and torch.cuda.is_available()) else "cpu"
-        result["reference_backbones"] = _reference_backbones(device=ref_device)
+        try:
+            result["reference_backbones"] = _reference_backbones(device=ref_device)
+        except Exception as e:  # noqa: BLE001 - deliberately broad, see comment above
+            print(f"[efficiency] WARNING: --include-reference-backbones failed "
+                  f"({type(e).__name__}: {e}); primary measurement is unaffected "
+                  f"and will still be written.")
+            result["reference_backbones"] = {
+                "status": "failed", "error": f"{type(e).__name__}: {e}",
+            }
 
     result["limitations"] = [
         "No Jetson Nano or any ARM edge device was available; CPU latency is "
