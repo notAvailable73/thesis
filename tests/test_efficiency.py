@@ -14,6 +14,8 @@ values are measured on whatever hardware pytest happens to run on.
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -30,6 +32,7 @@ from src.utils import params as params_mod
 from src.utils.efficiency import (
     FLOP_CONVENTION,
     PUBLISHED_REFERENCE_MACS,
+    _module_device,
     params_report,
     count_frozen_params,
     param_bytes,
@@ -222,6 +225,44 @@ def test_reference_gate_fails_a_wrong_number():
 
 def test_flops_backend_available_reports_fvcore_true_here():
     assert flops_backend_available()["fvcore"] is True
+
+
+# --------------------------------------------------------------------------
+# Trace-device regression (step_writeups/step11.txt Section 8)
+#
+# count_flops_detailed builds its own fvcore trace tensor. When that tensor
+# was unconditionally CPU, any caller holding a CUDA-resident model crashed
+# inside fvcore -- which discarded a whole canonical Kaggle measurement. The
+# device half of that bug is only reachable with real CUDA, so it is gated;
+# the two CPU tests below pin the invariant that makes it unreachable.
+# --------------------------------------------------------------------------
+def test_module_device_falls_back_through_params_buffers_then_cpu():
+    assert _module_device(nn.Linear(4, 4)).type == "cpu"      # from a parameter
+
+    buffers_only = nn.Module()
+    buffers_only.register_buffer("b", torch.zeros(2))
+    assert not list(buffers_only.parameters())
+    assert _module_device(buffers_only).type == "cpu"          # from a buffer
+
+    assert _module_device(nn.Module()).type == "cpu"           # from neither
+
+
+def test_count_flops_traces_on_the_models_own_device_not_an_assumed_cpu():
+    m = nn.Linear(1000, 1000, bias=False)
+    detail = count_flops_detailed(m, input_shape=(1, 1000), forward="forward")
+    assert detail["trace_device"] == str(_module_device(m))
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs real CUDA")
+def test_count_flops_on_a_cuda_resident_model_matches_cpu_and_does_not_crash():
+    # The exact crash from Section 8.1: model on cuda, trace tensor on cpu.
+    m_cpu = _bare_frozen_resnet18()
+    macs_cpu = count_flops(m_cpu, forward="forward")
+
+    m_cuda = _bare_frozen_resnet18().to("cuda")
+    detail = count_flops_detailed(m_cuda, forward="forward")
+    assert detail["trace_device"].startswith("cuda")
+    assert detail["macs"] == macs_cpu  # MACs are device-independent
 
 
 # --------------------------------------------------------------------------
@@ -441,3 +482,79 @@ def test_efficiency_key_arity_matches_grid_axes():
     cells = json.loads(INDEX_PATH.read_text())["cells"]
     keys = {(c["backbone"], c["adapter"], c["head"]) for c in cells}
     assert len(keys) == 12
+
+
+# --------------------------------------------------------------------------
+# scripts/efficiency_table.py::_reference_backbones — fault isolation
+#
+# The opt-in --include-reference-backbones rows had ZERO coverage before
+# 2026-08-09, which is how a crash in them discarded an entire canonical
+# Kaggle measurement (step_writeups/step11.txt Section 8). Real ViT-B/16 /
+# DeiT-Tiny are far too heavy for this suite, so the backbone constructors
+# are stubbed: what is under test is the ISOLATION contract, not the models.
+# --------------------------------------------------------------------------
+def _tiny_224_model():
+    return nn.Sequential(
+        nn.Conv2d(3, 2, kernel_size=3, stride=16),
+        nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(2, 2),
+    )
+
+
+def _reference_backbones_fn():
+    from scripts.efficiency_table import _reference_backbones
+    return _reference_backbones
+
+
+def test_reference_backbones_returns_measured_rows_for_a_working_backbone(monkeypatch):
+    import torchvision.models
+    monkeypatch.setattr(torchvision.models, "vit_b_16",
+                        lambda **kw: _tiny_224_model())
+    out = _reference_backbones_fn()(device="cpu")
+    row = out["vit_b_16"]
+    assert row["params"]["trainable"] > 0
+    assert row["flops"]["macs"] > 0
+    assert "disclaimer" in row  # never mistakable for a thesis result
+    json.dumps(out)  # must be JSON-safe -- it is written straight to the table
+
+
+def test_a_failing_reference_backbone_degrades_one_row_not_the_whole_block(monkeypatch):
+    """The Section 8.1 failure mode, in miniature: whatever blows up in a
+    bonus row must be captured as data, so the other row still survives."""
+    import torchvision.models
+
+    def _boom(**kw):
+        raise RuntimeError("Input type (torch.FloatTensor) and weight type "
+                           "(torch.cuda.FloatTensor) should be the same")
+
+    monkeypatch.setattr(torchvision.models, "vit_b_16", _boom)
+    fake_timm = types.ModuleType("timm")
+    fake_timm.create_model = lambda *a, **kw: _tiny_224_model()
+    monkeypatch.setitem(sys.modules, "timm", fake_timm)
+
+    out = _reference_backbones_fn()(device="cpu")
+    assert out["vit_b_16"]["status"] == "failed"
+    assert "RuntimeError" in out["vit_b_16"]["error"]
+    # ...and the independent row is unaffected:
+    assert out["deit_tiny_patch16_224"]["flops"]["macs"] > 0
+
+
+def test_missing_timm_is_reported_as_unavailable_not_failed(monkeypatch):
+    # A missing optional dependency is a known, benign state -- it must stay
+    # distinguishable from a real failure in the merged JSON.
+    import builtins
+    real_import = builtins.__import__
+
+    def _no_timm(name, *a, **kw):
+        # Raised before sys.modules is consulted, so this holds whether or
+        # not timm happens to be installed in the running environment.
+        if name == "timm":
+            raise ImportError("No module named 'timm'")
+        return real_import(name, *a, **kw)
+
+    monkeypatch.setattr(builtins, "__import__", _no_timm)
+    import torchvision.models
+    monkeypatch.setattr(torchvision.models, "vit_b_16",
+                        lambda **kw: _tiny_224_model())
+
+    out = _reference_backbones_fn()(device="cpu")
+    assert out["deit_tiny_patch16_224"]["status"] == "unavailable"

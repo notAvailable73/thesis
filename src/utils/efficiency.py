@@ -259,6 +259,28 @@ def flops_backend_available() -> dict:
         return {"fvcore": False}
 
 
+def _module_device(model: nn.Module) -> torch.device:
+    """The device a trace input for `model` must live on — taken from the
+    model's first parameter, then its first buffer, else CPU.
+
+    Exists because `count_flops_detailed` builds its OWN fvcore trace tensor.
+    Until 2026-08-09 that tensor was unconditionally CPU, so ANY caller that
+    had already moved its model to CUDA crashed inside fvcore's trace with
+    "Input type (torch.FloatTensor) and weight type (torch.cuda.FloatTensor)
+    should be the same". That is exactly what killed the first canonical
+    Step-11 Kaggle session (step_writeups/step11.txt Section 8), and it was
+    structurally unreachable from this CPU-only test module — so the fix
+    belongs HERE, in the function that owns the tensor, rather than in each
+    caller's `.to(device)` ordering. MAC counts are device-independent, so
+    following the model's device changes no reported number.
+    """
+    for p in model.parameters():
+        return p.device
+    for b in model.buffers():
+        return b.device
+    return torch.device("cpu")
+
+
 def count_flops(model: nn.Module, input_shape: Sequence[int] = DEFAULT_INPUT_SHAPE,
                 *, forward: str | Callable = "auto") -> int:
     """SPEC SIGNATURE (implementation.txt 11.1). Returns MACs (see module
@@ -284,7 +306,10 @@ def count_flops_detailed(model: nn.Module,
         ) from e
 
     wrapper = _resolve_forward_module(model, forward)
-    x = torch.zeros(*input_shape)
+    # Device taken from the model, never assumed to be CPU -- see
+    # _module_device. The MAC count itself is unaffected by the device.
+    trace_device = _module_device(model)
+    x = torch.zeros(*input_shape, device=trace_device)
     wrapper.eval()
     fca = FlopCountAnalysis(wrapper, (x,))
     fca.unsupported_ops_warnings(False)
@@ -306,6 +331,7 @@ def count_flops_detailed(model: nn.Module,
         "backend": "fvcore.nn.FlopCountAnalysis",
         "backend_version": str(backend_version),
         "input_shape": list(input_shape),
+        "trace_device": str(trace_device),
         "uncounted_ops": unsupported,
         "uncounted_note": (
             "BatchNorm / ReLU / h-swish / pooling / residual-add are not "

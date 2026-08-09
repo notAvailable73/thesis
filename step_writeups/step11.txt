@@ -646,7 +646,12 @@ transcription of Section 4's placeholders from its output.
 8.1  WHAT HAPPENED, IN ORDER (reconstructed from the session log, every
      line below independently confirmed against it, nothing inferred):
        1. notebooks/step11_efficiency.ipynb ran on a Kaggle T4 session
-          (env_id kaggle_t4), invoking:
+          (env_id kaggle_t4) -- its executed copy was committed separately
+          as notebooks/step11.ipynb in 87f2ca8, so the repo now carries TWO
+          notebooks with byte-identical sources, one with the crashed
+          session's outputs and one without. They are kept in sync by hand;
+          collapsing them to one file is worth doing but is a human call,
+          not something a fix session should decide. Invoking:
             scripts/efficiency_table.py --device both --cpu-threads 1,0
               --env-id kaggle_t4 --include-reference-backbones
               --out results/efficiency_table.json
@@ -725,18 +730,18 @@ transcription of Section 4's placeholders from its output.
          reference-backbone path can degrade that one JSON field; they can
          no longer cost an entire Kaggle session's real measurement.
 
-8.4  VERIFICATION STATUS -- HONEST GAP. `python -m py_compile` passes and
-     the change was re-read against the crash trace line-by-line, but this
-     fix is NOT test-verified: the bug is a device-placement error only
-     reachable when device_t is a real CUDA device, and
-     tests/test_efficiency.py is explicitly CPU-only by convention (its own
-     module docstring: "CPU-only, offline, no CUDA assumed anywhere") with
-     zero existing coverage of `_reference_backbones` (confirmed by grep).
-     This repo's implementing session has no GPU and no torch installed at
-     all, so the fix could not be executed here. Do not treat this as
-     closed until a GPU session actually runs
-     `--include-reference-backbones --device cuda` past the point it
-     previously crashed. Adding a CUDA-gated regression test for
+8.4  VERIFICATION STATUS -- HONEST GAP (as written 2026-08-07; superseded in
+     part by 8.6). `python -m py_compile` passes and the change was re-read
+     against the crash trace line-by-line, but this fix is NOT
+     test-verified: the bug is a device-placement error only reachable when
+     device_t is a real CUDA device, and tests/test_efficiency.py is
+     explicitly CPU-only by convention (its own module docstring: "CPU-only,
+     offline, no CUDA assumed anywhere") with zero existing coverage of
+     `_reference_backbones` (confirmed by grep). This repo's implementing
+     session has no GPU and no torch installed at all, so the fix could not
+     be executed here. Do not treat this as closed until a GPU session
+     actually runs `--include-reference-backbones --device cuda` past the
+     point it previously crashed. Adding a CUDA-gated regression test for
      `_reference_backbones` alongside the re-run (Section 7) would prevent
      this exact class of bug -- device-only-reachable code path with
      CPU-only test coverage -- from recurring silently.
@@ -749,4 +754,78 @@ transcription of Section 4's placeholders from its output.
      GPU+CPU measurement work end-to-end on real Kaggle hardware) is now
      CONFIRMED yes, from the crashed session's own log, even though nothing
      from that confirmation is saved to disk.
+
+8.6  FOLLOW-UP FIX (2026-08-09, a later session WITH torch, still no GPU).
+     8.3 fixed the one caller that crashed; the helper that actually owns
+     the bad assumption was left as-is, so the next caller to hand
+     count_flops a non-CPU model would have hit the identical crash. Four
+     changes, all verified by execution this time:
+
+       (a) ROOT CAUSE, src/utils/efficiency.py `count_flops_detailed`: its
+           fvcore trace tensor was `torch.zeros(*input_shape)` --
+           unconditionally CPU. It now takes its device from the model
+           itself via a new `_module_device(model)` (first parameter, then
+           first buffer, else CPU). This makes the whole CLASS of bug
+           unreachable rather than fixing one call site, and it is the
+           right place for it: the function that creates the tensor is the
+           only one that can know what device it must be on. MACs are
+           device-independent, so no reported number changes -- VERIFIED by
+           recomputing the static block for all 12 keys against the
+           committed results/efficiency_table.json: 12/12 identical in both
+           trainable params and per-image MACs. (This matters beyond
+           tidiness: main() hard-exits on a static mismatch, so a fix that
+           perturbed MACs would have failed the re-run at the gate.) The
+           provenance dict gained a `trace_device` field recording where
+           each count was traced.
+       (b) scripts/efficiency_table.py `_reference_backbones`: the two
+           bonus rows are now isolated FROM EACH OTHER, not just from the
+           primary measurement. Previously a non-ImportError failure in the
+           DeiT block escaped to main()'s handler and discarded the
+           already-computed ViT row with it; each row now records its own
+           `{"status": "failed", "error": ...}`. A missing `timm` stays
+           `"unavailable"` -- a benign optional-dependency state must
+           remain distinguishable from a real failure in the merged JSON.
+           The shared measurement body was factored into one local helper,
+           so the two rows cannot drift apart again. 8.3's FLOP-before-
+           `.to()` ordering is kept (it mirrors the primary path) but is no
+           longer load-bearing after (a).
+       (c) tests/test_efficiency.py, +6 tests (289 -> 294 passing, 1
+           skipped), closing 8.4's gap in both directions:
+             - CPU-reachable: `_module_device` fallback chain; count_flops
+               records the model's own device; `_reference_backbones`
+               returns measured rows; a failing row degrades to data while
+               the OTHER row still survives; missing timm reports
+               "unavailable" not "failed". These use stub backbones (real
+               ViT-B/16 is far too heavy for the suite) because what is
+               under test is the isolation contract, not the models.
+             - CUDA-gated (skips on this host, RUNS on Kaggle since the
+               notebook's Section 3 invokes this file): count_flops on a
+               CUDA-resident ResNet-18 does not crash and returns MACs
+               equal to the CPU count. This is the direct regression for
+               8.1's traceback, and it now executes on the very session
+               that would otherwise reproduce the bug.
+       (d) notebooks/step11_efficiency.ipynb + notebooks/step11.ipynb
+           Sections 5/6: the measurement subprocess is TEED through a
+           `run_logged` helper into both the notebook and
+           results/step11_session.log (added to the artifact zip).
+           `subprocess.run(cmd, check=True)` without capture writes to the
+           kernel's real stdout, not IPython's, so NONE of the crashed
+           session's 3 tracebacks reached the saved .ipynb -- the committed
+           notebook shows an empty cell, and 8.1 was only reconstructable
+           because a side-channel step11.log happened to survive. Diagnosing
+           the next failure should not depend on that luck. Section 5 also
+           now prints the environments/measured-key counts and each
+           reference-backbone status after the run, because (b) means a
+           bonus-row failure is no longer loud on its own.
+
+     STILL NOT VERIFIED ON A GPU. Executed here: the full suite (294
+     passed, 1 skipped), the static-block equality check above, and a real
+     end-to-end `--include-reference-backbones` run on CPU (1 filtered key,
+     reduced warmup/measure) which wrote its JSON and measured ViT-B/16 at
+     86,567,656 params / 16.87 GMACs with DeiT correctly reported
+     "unavailable" (timm is not installed locally). What no CPU host can
+     execute is the CUDA branch itself -- that is precisely what the gated
+     test in (c) is for, and it will run automatically inside the re-run's
+     own Section 3. Step 11 stays open until that session writes
+     results/efficiency_table.json.
 ================================================================================

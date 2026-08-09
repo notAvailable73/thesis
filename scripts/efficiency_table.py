@@ -364,48 +364,55 @@ def _reference_backbones(*, device: str) -> dict:
 
     out: dict = {}
     device_t = torch.device(device)
-
-    from torchvision.models import vit_b_16
-    vit = vit_b_16(weights=None)
-    vit.eval()
-    # count_flops traces on a CPU-resident model (its internal input tensor
-    # has no device= — matches how the 12 real grid keys are counted, in the
-    # "static" section, before any .to(device) happens). Must run BEFORE the
-    # model is moved to device_t, or fvcore's trace input (CPU) and the
-    # model's weights (device_t) mismatch and crash.
-    pr = params_report(vit)
-    macs = count_flops(vit, forward="forward")
-    vit.to(device_t)
     x = torch.zeros(1, 3, 224, 224, device=device_t)
-    timing = time_callable(lambda: vit(x), device=device_t, n_warmup=2, n_measure=5,
-                           grad_mode="inference")
-    out["vit_b_16"] = {
-        "source": "torchvision.models.vit_b_16, weights=None",
-        "disclaimer": "architecture-only, never trained here, not a thesis result",
-        "params": pr, "flops": {"macs": macs},
-        "latency_ms": timing["latency_ms"],
-    }
+
+    def _measure_one(model, *, source: str) -> dict:
+        # FLOPs first (on the CPU-resident model, matching how the 12 real
+        # grid keys are counted in the "static" section), then move to
+        # device_t for timing. Since 2026-08-09 count_flops takes its trace
+        # tensor from the model's own device (src/utils/efficiency.py
+        # _module_device), so this order is no longer load-bearing -- it is
+        # kept only because it mirrors the primary path.
+        model.eval()
+        pr = params_report(model)
+        macs = count_flops(model, forward="forward")
+        model.to(device_t)
+        timing = time_callable(lambda: model(x), device=device_t, n_warmup=2,
+                               n_measure=5, grad_mode="inference")
+        return {
+            "source": source,
+            "disclaimer": "architecture-only, never trained here, not a thesis result",
+            "params": pr, "flops": {"macs": macs},
+            "latency_ms": timing["latency_ms"],
+        }
+
+    # Each reference row is isolated from the other: these are two
+    # independent bonus rows, so a failure in one must not discard the
+    # other's (already computed) result. main() adds a further layer so
+    # neither can ever cost the primary 12-key measurement its write.
+    try:
+        from torchvision.models import vit_b_16
+        out["vit_b_16"] = _measure_one(
+            vit_b_16(weights=None),
+            source="torchvision.models.vit_b_16, weights=None")
+    except Exception as e:  # noqa: BLE001 - bonus row, see comment above
+        out["vit_b_16"] = {"status": "failed", "error": f"{type(e).__name__}: {e}"}
 
     try:
         import timm
-        deit = timm.create_model("deit_tiny_patch16_224", pretrained=False)
-        deit.eval()
-        pr2 = params_report(deit)
-        macs2 = count_flops(deit, forward="forward")
-        deit.to(device_t)
-        timing2 = time_callable(lambda: deit(x), device=device_t, n_warmup=2,
-                                n_measure=5, grad_mode="inference")
-        out["deit_tiny_patch16_224"] = {
-            "source": "timm.create_model('deit_tiny_patch16_224', pretrained=False)",
-            "disclaimer": "architecture-only, never trained here, not a thesis result",
-            "params": pr2, "flops": {"macs": macs2},
-            "latency_ms": timing2["latency_ms"],
-        }
     except ImportError:
         out["deit_tiny_patch16_224"] = {
             "status": "unavailable",
             "reason": "timm not installed; not a project dependency, gated behind --include-reference-backbones",
         }
+    else:
+        try:
+            out["deit_tiny_patch16_224"] = _measure_one(
+                timm.create_model("deit_tiny_patch16_224", pretrained=False),
+                source="timm.create_model('deit_tiny_patch16_224', pretrained=False)")
+        except Exception as e:  # noqa: BLE001 - bonus row, see comment above
+            out["deit_tiny_patch16_224"] = {
+                "status": "failed", "error": f"{type(e).__name__}: {e}"}
     return out
 
 

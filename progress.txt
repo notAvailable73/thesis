@@ -950,6 +950,40 @@ Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending a
   Do not treat this as closed until re-run on Kaggle confirms it actually
   gets past the point it previously crashed.
 
+2026-08-09 FOLLOW-UP FIX (session WITH torch, still no GPU; full detail in
+  step_writeups/step11.txt §8.6). The 08-07 fix repaired the one caller
+  that crashed but left the helper that held the bad assumption unchanged,
+  so the next caller to hand count_flops a CUDA model would have hit the
+  identical crash. Four changes, all executed and verified here:
+  (a) ROOT CAUSE — src/utils/efficiency.py count_flops_detailed built its
+  fvcore trace tensor as torch.zeros(*input_shape), unconditionally CPU; it
+  now takes the device from the model itself (new _module_device helper),
+  making the whole class of bug unreachable instead of fixing one call
+  site. VERIFIED no reported number moves: the static block recomputes
+  12/12 keys byte-identical (params AND MACs) against the committed
+  results/efficiency_table.json — which matters because main() hard-exits
+  on a static mismatch, so a fix that perturbed MACs would have failed the
+  re-run at its own gate.
+  (b) _reference_backbones' two bonus rows are now isolated from EACH
+  OTHER, not just from the primary measurement (a non-ImportError failure
+  in the DeiT block used to discard the already-computed ViT row too);
+  missing timm stays "unavailable", distinct from a real "failed".
+  (c) +6 tests (289 → 294 passing, 1 skipped) closing §8.4's stated gap:
+  five CPU-reachable ones covering _reference_backbones, which had ZERO
+  coverage, plus a CUDA-gated regression that runs count_flops on a
+  CUDA-resident ResNet-18 — it skips locally but RUNS on Kaggle, since the
+  notebook's Section 3 invokes tests/test_efficiency.py.
+  (d) The notebook's measurement subprocess is now teed into both the
+  notebook and results/step11_session.log. subprocess.run without capture
+  writes to the kernel's real stdout, not IPython's, which is why all 3 of
+  the crashed session's tracebacks are absent from the committed notebook
+  and the incident was only reconstructable from a side-channel log that
+  happened to survive.
+  STILL NOT GPU-VERIFIED — no CPU host can execute the CUDA branch. A real
+  CPU end-to-end run with --include-reference-backbones did pass (wrote its
+  JSON; ViT-B/16 = 86,567,656 params / 16.87 GMACs). Step 11 stays open
+  until a Kaggle session writes results/efficiency_table.json.
+
 Actions:
   [x] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
            (fvcore), latency (T4 + Colab CPU), peak memory. DONE + 30 tests
@@ -1813,6 +1847,31 @@ NOTES / DECISIONS LOG
             confirms the actual 12-key measurement pipeline works
             correctly end-to-end on real Kaggle hardware. Re-run is the
             next action, not a redesign.
+
+2026-08-09  Step 11 crash fixed at the root, not just at the call site;
+            §8.4's "not test-verified" gap closed as far as a GPU-less host
+            can. PRINCIPLE WORTH KEEPING: the 08-07 fix corrected the
+            caller that happened to crash, which leaves the next caller to
+            hit the same landmine. The bad assumption lived in
+            count_flops_detailed — it builds its own fvcore trace tensor
+            and hardcoded it to CPU — so that is where it was fixed (the
+            tensor now follows the model's device). Prefer fixing the
+            function that OWNS an assumption over fixing each caller that
+            trips on it, especially when the trip is only reachable on
+            hardware the test suite never sees.
+            Also: a bonus feature that can crash the run is a bonus
+            feature that can cost the run. Fault isolation now runs
+            per-reference-row, not just around the whole block, and the
+            notebook tees subprocess output to disk so the NEXT failure is
+            diagnosable from the committed .ipynb rather than from a log
+            that survived by luck.
+            Verified here: 294 passed / 1 skipped (the CUDA-gated
+            regression, which will run on Kaggle); static block recomputes
+            12/12 keys byte-identical, so main()'s static gate will not
+            trip on the re-run; a real CPU end-to-end run with
+            --include-reference-backbones wrote its JSON. NOT verified:
+            the CUDA branch itself — unreachable without a GPU. Full
+            detail: step_writeups/step11.txt §8.6.
 
 ================================================================================
 END OF PROGRESS.TXT
