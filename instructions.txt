@@ -1,7 +1,7 @@
 ================================================================================
 INSTRUCTIONS FOR THE TEAMMATE PICKING UP THIS REPO
 ================================================================================
-Written:   2026-07-07
+Written:   2026-07-07   ·   Updated: 2026-07-27 (sections 1-2, 1A only)
 Purpose:   You just pulled this repo. This file tells you what's already done,
            what's next, and the non-obvious things that will save you time.
 Read order BEFORE touching code:
@@ -10,11 +10,97 @@ Read order BEFORE touching code:
                                                  (reasoning-first process; read
                                                  this before implementing ANY
                                                  new component)
-  3. progress.txt            <- current status, one line per step
-  4. implementation.txt §5   <- the exact spec for what you're building next
-                                 (Step 5, see below)
-  5. step_writeups/step4_5.txt  <- the most recent finished result + why it
-                                    matters for how you should evaluate Step 5
+  3. progress.txt            <- current status, one line per step (CANONICAL)
+  4. implementation.txt §9   <- the exact spec for the step whose CODE is done
+                                 but whose RUN is pending (Step 9, see 1A below)
+  5. step_writeups/step9.txt <- Step 9's writeup — §4 (results) is an explicit
+                                 TEMPLATE, not yet filled; read STATUS at its top
+  6. step_writeups/step8.txt <- the most recent CLOSED result (MobileNetV3)
+
+NOTE: sections 2-5 below were written when Step 5 was next. Steps 5, 6, 7 and 8
+are CLOSED since; Step 9 is CODE COMPLETE but NOT YET RUN (section 1A). Sections
+3-5 (reuse list, gotchas, quick commands) are still accurate and still worth
+reading. Trust progress.txt over any other file if they disagree.
+
+
+================================================================================
+1A.  CURRENT TASK (as of 2026-07-27): STEP 9 IS CODE-COMPLETE — RUN IT NEXT
+================================================================================
+Steps 1-8 are CLOSED. Step 9 (MiniImageNet as a 2nd in-distribution dataset,
+Phase 5, RQ2/RQ3 breadth) was IMPLEMENTED on 2026-07-27 by a session with no
+GPU, no torch/numpy/PIL/torchvision, and no package manager available — every
+file was written and syntax/config-validated but NOTHING was executed against
+real data. If you are picking this up: your job is to RUN
+notebooks/step9_mini.ipynb on Kaggle or Colab, then transcribe the results.
+
+WHAT STEP 9 BUILT (read step_writeups/step9.txt §0/§1 for the full reasoning):
+  - src/datasets/mini_imagenet.py: a MiniImageNet loader mirroring cifar_fs.py's
+    contract exactly (frozen 64/16/20 Ravi & Larochelle wnid split, cross-
+    checked against a live CSV fetch during planning). It auto-discovers
+    whichever source layout is staged (3 Zenodo pkl caches / images+csv /
+    wnid-imagefolder) or downloads the Zenodo pkls (record 7978538, MD5-
+    checked, ~1.8 GB) if nothing is staged.
+  - get_id_split / get_heldout_near_ood (src/datasets/__init__.py) now dispatch
+    on cfg.dataset.name, replacing 6 hardcoded get_cifar_fs(...) calls in
+    scripts/train.py/evaluate.py/step45_val_sweep.py — proven byte-identical
+    for cifar_fs configs by regression tests (tests/test_dataset_dispatch.py).
+  - get_tinyimagenet_ood gained exclude_wnids (default None = byte-identical)
+    because TinyImageNet-200 shares 25 wnids with MiniImageNet (5 of them
+    MiniImageNet TEST classes) — evaluate.py filters them out only for
+    mini_imagenet runs.
+  - 10 new configs/exp_phase5_mini_*.yaml (ResNet-18 + MobileNetV3-Small x
+    post_pool + parallel x evidential + softmax, plus a ResNet-18 linear-probe
+    reference pair), scripts/step9_dataset_compare.py (cross-dataset
+    consolidation, mirrors step8_backbone_compare.py), 35 new tests, and
+    notebooks/step9_mini.ipynb (Kaggle, resumable 10-run driver + a timed
+    MiniImageNet cache-build cell + an off-by-default 1-shot path).
+
+YOUR JOB, IN ORDER:
+  1. Run notebooks/step9_mini.ipynb top to bottom on Kaggle (GPU T4, Internet
+     ON; attach CIFAR-100 — MiniImageNet/SVHN/TinyImageNet download at runtime
+     if not attached). Budget ~2-2.5h + ~8 min one-time for the MiniImageNet
+     cache build.
+  2. Watch Section 5's cache-build cell closely the FIRST time: the Zenodo pkl
+     schema src/datasets/mini_imagenet.py:_load_pkl_cache assumes
+     ({"image_data", "class_dict"}) was only unit-tested against SYNTHETIC
+     pickles (no real download was possible in the implementing session). If
+     it raises "unrecognized MiniImageNet cache format", read the printed
+     keys/shape and fix the loader — do not silently guess a different schema.
+  3. Confirm pytest passes (expect ~170 = 135 + 35 new) and no evidential run
+     collapses (collapse_threshold 0.25).
+  4. Transcribe results/phase5_dataset_table.json into step_writeups/step9.txt
+     §4 verbatim (never retype from memory), answer its §4.3 questions
+     (especially: is accuracy near-saturated as the ImageNet-pretraining-
+     overlap confound predicts, and what is the linear-probe uplift on
+     MiniImageNet vs CIFAR-FS's already-committed +4.1pp?).
+  5. Tick progress.txt's "STEP 9" boxes and its top CURRENT STATUS block.
+  6. THEN move to Step 10 (MVT grid) — see the two carry-overs below, both of
+     which now apply to MiniImageNet too, not just MobileNetV3.
+
+TWO CARRY-OVERS FROM STEP 8 (+ now Step 9) — they belong to STEP 10's grid:
+  1. Per-backbone/per-dataset VAL tuning. Step 8's whole recipe (LR 5e-3, rank
+     16, kl_weight_max 0.1, evidence affine scale 2 / bias -6) was inherited
+     from a ResNet-18/CIFAR-FS VAL sweep and deliberately never re-tuned for
+     MobileNetV3 OR MiniImageNet (Step 9 carries it over unchanged too, on
+     purpose, to isolate the dataset axis). Re-tune on the VAL seeds
+     (10000-10099) via the scripts/step45_val_sweep.py pattern.
+  2. mbnet/parallel evidential has the thesis's worst evidential ECE (0.3069)
+     and is the only evidential run whose checkpoint was picked DURING KL warm-up
+     (epoch 3, kl_w=0.030 of 0.100; patience 5 stopped it at epoch 8). Test a
+     longer warm-up / patience > 5 before saying anything about the loss here.
+
+STILL OPEN (optional) FROM STEP 8: no byte-identical rerun spot-check was done
+for a Step 8 config. Step 9's own reproducibility exit criterion needs the same
+check, so close both at once: re-run one evaluate.py cell (e.g.
+exp_phase5_mbnet_parallel_evidential, post-Step-9-refactor) against the saved
+checkpoint and diff the JSON against the committed result file.
+
+HARD CONSTRAINT carried into every step since Step 8: do not change anything
+that alters an earlier step's results. In practice that means the metrics-JSON
+schema is frozen (adding a key breaks every earlier config's byte-identical
+rerun), and any refactor of shared code must keep the CIFAR-FS path resolving
+to exactly what it resolved to before — assert it with a regression test, as
+tests/test_mobilenetv3.py and tests/test_dataset_dispatch.py do.
 
 
 ================================================================================
@@ -205,13 +291,17 @@ tests/test_lora.py: identity at init + analytical param count
 ================================================================================
 5.  QUICK COMMANDS
 ================================================================================
-  Setup:            python scripts/build_cifar_fs_split.py
-  Run tests:         python -m pytest -q          (expect 66 passed today)
+  Setup:             python scripts/build_cifar_fs_split.py
+                     python scripts/build_mini_imagenet_split.py   (Step 9+)
+  Run tests:         python -m pytest -q          (expect ~170 as of Step 9;
+                       run tests/test_mini_imagenet.py + test_dataset_dispatch.py
+                       first if you only want the Step 9 additions)
   Train a config:    python scripts/train.py    --config configs/<x>.yaml
   Evaluate:          python scripts/evaluate.py --config configs/<x>.yaml \
                        --num-episodes 600 --wandb-mode disabled
   Full eval matrix (needs a real GPU / Colab): add --use-tinyimagenet for the
                        strongest near-OOD comparison.
+  MiniImageNet consolidation (Step 9): python scripts/step9_dataset_compare.py
 
 ================================================================================
 END OF INSTRUCTIONS

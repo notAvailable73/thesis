@@ -1,0 +1,17 @@
+# Step 8 (Phase 5) — MobileNetV3-Small + PARALLEL in-block placement (the Step-6
+# winner) + softmax prototype head. Softmax sibling of
+# exp_phase5_mbnet_parallel_evidential; same placement / rank / block_ids.
+extends: exp_phase5_mbnet_bottleneck_softmax.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+output:
+  run_tag: mbnet_parallel
+
+wandb:
+  tags: [phase5, step8, mobilenetv3_small, bottleneck, parallel, softmax,
+         prototype, cifar_fs_bertinetto]

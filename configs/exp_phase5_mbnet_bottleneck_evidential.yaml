@@ -1,0 +1,32 @@
+# Step 8 (Phase 5, RQ4 prep) — MobileNetV3-Small backbone, POST-POOL Bottleneck
+# adapter + evidential prototype head.
+#
+# Everything except the backbone is held FIXED at the Step-4.5 retuned evidential
+# recipe (same adapter form/rank, same cosine metric + learnable evidence affine,
+# same R-EDL loss knobs, same LR, same episodic schedule, same frozen splits and
+# seeds), so the ResNet-18 -> MobileNetV3-Small comparison isolates the BACKBONE.
+#
+# feature_dim 576 = MobileNetV3-Small's pooled conv feature (6 * 96, i.e. the
+# width of features[12]) with torchvision's classifier replaced by Identity.
+# src/models/bpeft_model.py asserts this against the backbone, so a stale 512
+# fails loudly instead of silently mis-sizing the adapter.
+extends: exp_phase2_evidential_retuned.yaml
+
+backbone:
+  name: mobilenetv3_small
+  feature_dim: 576
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: post_pool
+
+output:
+  # Distinct checkpoint name: adapter.type alone ("bottleneck") is shared with
+  # the ResNet-18 runs AND with the mbnet parallel sibling, which would overwrite
+  # each other in checkpoints/. See configs/base.yaml's output.run_tag comment.
+  run_tag: mbnet_bottleneck
+
+wandb:
+  tags: [phase5, step8, mobilenetv3_small, bottleneck, post_pool, evidential,
+         prototype, cifar_fs_bertinetto]

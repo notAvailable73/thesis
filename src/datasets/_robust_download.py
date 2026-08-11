@@ -6,10 +6,18 @@ Colab clones (the `data/` dir is gitignored, so nothing is cached). We
 pre-fetch the archive with a browser User-Agent; torchvision's downloader
 then finds the verified file locally and skips the network entirely.
 
+Step 9 found the OPPOSITE problem on Zenodo (the MiniImageNet host): its WAF
+403s the exact browser UA string below while allowing both curl's and
+urllib's own default UA through (verified directly against the live host).
+There is no single User-Agent that satisfies every host this module talks to,
+so `user_agent` is a per-call parameter, not a fixed module behaviour --
+callers pass `user_agent=None` to send no custom header at all.
+
 If every mirror fails, raise a clear error telling the user to drop the file
 into `data/` manually (the function is a no-op once the file is present).
 """
 from __future__ import annotations
+import hashlib
 import os
 import shutil
 import time
@@ -27,13 +35,22 @@ _BROWSER_UA = (
 # for this) that can silently "run" for hours. This wall-clock cap bounds the
 # total time spent on any one mirror regardless of whether bytes are still
 # trickling in.
-_DEFAULT_TOTAL_TIMEOUT = 600.0  # 10 minutes per mirror
+#
+# Was 600s (10 min); Step 9 hit this on Kaggle against cs.toronto.edu at
+# ~150-200 KB/s (getting 40-90% through the 169 MB CIFAR-100 archive before
+# being abandoned each time), which needed ~15 min to complete. Tripled to
+# give 2x headroom over that observed worst case, not removed -- a genuinely
+# dead mirror should still be abandoned rather than hang for the whole
+# session (both mirrors failing now costs at most 2x this value per call).
+_DEFAULT_TOTAL_TIMEOUT = 1800.0  # 30 minutes per mirror
 
 
 def ensure_archive(data_root: str, filename: str, urls: list[str],
                    extracted_dirname: str | None = None,
-                   total_timeout: float = _DEFAULT_TOTAL_TIMEOUT) -> str:
-    """Make sure `data_root/filename` exists, fetching it with a browser UA.
+                   total_timeout: float = _DEFAULT_TOTAL_TIMEOUT,
+                   md5: str | None = None,
+                   user_agent: str | None = _BROWSER_UA) -> str:
+    """Make sure `data_root/filename` exists, fetching it from one of `urls`.
 
     Args:
         data_root: directory the archive belongs in.
@@ -45,6 +62,23 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
             top of the per-chunk idle timeout. A mirror that is technically
             alive but too slow to finish in time is abandoned in favor of
             the next one, instead of hanging indefinitely.
+        md5: optional expected MD5 of the downloaded file (Step 9: the Zenodo
+            mini-ImageNet caches publish one). Only checked against a FRESH
+            download in this call (not an already-cached file, so existing
+            CIFAR/SVHN/TinyImageNet callers that never pass this incur zero
+            extra hashing cost). A mismatch deletes the file and tries the
+            next mirror, same as a truncated download.
+        user_agent: header value to send, or None to send no custom
+            User-Agent at all (falls back to urllib's own default). Defaults
+            to the browser UA that unblocks CIFAR's host (cs.toronto.edu 403s
+            urllib's default UA). Step 9 found the OPPOSITE problem on
+            Zenodo: it 403s this exact browser UA string (a WAF heuristic
+            flagging a "Chrome" UA that arrives without the rest of a real
+            browser's fingerprint) while allowing both curl's and urllib's
+            own default UA through -- verified directly against the live
+            host. Different hosts, opposite blocking rules; there is no one
+            UA that satisfies both, hence this being a per-call parameter
+            rather than a single module constant.
 
     Returns the archive path. Raises RuntimeError if all mirrors fail and the
     file is absent.
@@ -62,9 +96,8 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
     last_err: Exception | None = None
     for url in urls:
         try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": _BROWSER_UA}
-            )
+            headers = {"User-Agent": user_agent} if user_agent else {}
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=180) as resp, \
                     open(dst, "wb") as fh:
                 total = resp.getheader("Content-Length")
@@ -105,6 +138,16 @@ def ensure_archive(data_root: str, filename: str, urls: list[str],
                     f"incomplete download: got {os.path.getsize(dst)} of "
                     f"{total} bytes"
                 )
+            if md5 is not None:
+                hasher = hashlib.md5()
+                with open(dst, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                        hasher.update(chunk)
+                got = hasher.hexdigest()
+                if got != md5:
+                    raise IOError(
+                        f"MD5 mismatch for {filename}: expected {md5}, got {got}"
+                    )
             if os.path.getsize(dst) > 0:
                 print(f"[download] done: {filename} "
                       f"({os.path.getsize(dst) / 1e6:.0f} MB)", flush=True)

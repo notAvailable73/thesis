@@ -38,7 +38,8 @@ from src.utils import (
     WandbRun, make_run_name,
 )
 from src.datasets import (
-    build_dataset, sample_episode, get_cifar_fs, EpisodicIterableDataset,
+    build_dataset, sample_episode, get_id_split,
+    EpisodicIterableDataset,
 )
 from src.models import build_model
 from src.losses import build_loss
@@ -97,8 +98,20 @@ def _head_descriptor(cfg) -> str:
 
 
 def _checkpoint_tag(cfg) -> str:
-    """Filesystem-safe tag identifying this training run."""
-    return f"{cfg.adapter.type}_{_head_descriptor(cfg)}_seed{cfg.seed}"
+    """Filesystem-safe tag identifying this training run.
+
+    Duplicated identically in scripts/evaluate.py (same convention as
+    _head_descriptor) — keep the two in sync or evaluate.py will look for a
+    checkpoint train.py never wrote.
+
+    cfg.output.run_tag (Step 8) replaces adapter.type in the tag when set, so
+    configs that differ only in backbone or adapter.placement get distinct
+    checkpoints instead of silently overwriting each other. Unset (the Step 1-7
+    default) reproduces the old `<adapter.type>_<head>_seed<seed>` name exactly.
+    """
+    run_tag = cfg.get("output", {}).get("run_tag") if isinstance(cfg, dict) else None
+    base = str(run_tag) if run_tag else cfg.adapter.type
+    return f"{base}_{_head_descriptor(cfg)}_seed{cfg.seed}"
 
 
 # =====================================================================
@@ -244,16 +257,11 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
         )
 
     # --- Datasets: train + val splits ---------------------------------
-    train_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size),
-        split="train",
-    )
-    val_split = get_cifar_fs(
-        data_root=cfg.dataset.data_root,
-        image_size=int(cfg.dataset.image_size),
-        split="val",
-    )
+    # Routed through get_id_split (Step 9) so cfg.dataset.name selects the
+    # in-distribution dataset; unset (or "cifar_fs") resolves to exactly the
+    # get_cifar_fs(...) call every pre-Step-9 config already made.
+    train_split = get_id_split(cfg.dataset, split="train")
+    val_split = get_id_split(cfg.dataset, split="val")
     n_way   = int(cfg.dataset.n_way)
     k_shot  = int(cfg.dataset.k_shot)
     q_query = int(cfg.dataset.q_query)
@@ -293,6 +301,21 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
     # --- Model + optimiser --------------------------------------------
     model = build_model(cfg).to(device)
     n_params = count_trainable_params(model)
+    logger.info(
+        f"backbone: {cfg.backbone.name} (feature_dim="
+        f"{cfg.backbone.get('feature_dim', 512)})  "
+        f"adapter: {cfg.adapter.type}"
+        f"/{cfg.adapter.get('placement', 'post_pool')}"
+    )
+    # Step 8: in-block placements resolve their sites from the backbone family,
+    # so log WHERE the adapters actually landed — the cheapest way to verify a
+    # new backbone's stage discovery from a Kaggle log.
+    if hasattr(model.adapter, "stage_paths"):
+        logger.info(
+            f"placement sites: " + ", ".join(
+                f"{p}({c}ch)" for p, c in zip(model.adapter.stage_paths,
+                                              model.adapter.stage_channels))
+        )
     logger.info(f"trainable params: {n_params:,}")
     wb.update_summary({"n_params": int(n_params)})
 

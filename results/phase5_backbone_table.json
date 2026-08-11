@@ -1,0 +1,337 @@
+{
+  "cells": {
+    "mbnet/parallel": {
+      "backbone": "mobilenetv3_small",
+      "heads": {
+        "evidential": {
+          "accuracy_ci95": 0.0052,
+          "accuracy_mean": 0.9048,
+          "best_val_epoch": 3,
+          "brier_mean": 0.2701,
+          "ece_pooled": 0.3069,
+          "f1_macro_mean": 0.9033,
+          "n_params": 6930,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.8752,
+              "fpr_at_95": 0.49,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.9492,
+              "fpr_at_95": 0.2104,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.9522,
+              "fpr_at_95": 0.2257,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.9133,
+              "fpr_at_95": 0.4054,
+              "regime": "near"
+            }
+          },
+          "ood_score": "vacuity"
+        },
+        "softmax": {
+          "accuracy_ci95": 0.0053,
+          "accuracy_mean": 0.909,
+          "best_val_epoch": 10,
+          "brier_mean": 0.1449,
+          "ece_pooled": 0.0726,
+          "ece_ts": 0.0088,
+          "f1_macro_mean": 0.9076,
+          "n_params": 6928,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.8338,
+              "fpr_at_95": 0.616,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.9342,
+              "fpr_at_95": 0.4062,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.8444,
+              "fpr_at_95": 0.5972,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.8857,
+              "fpr_at_95": 0.509,
+              "regime": "near"
+            }
+          },
+          "ood_auroc_energy": {
+            "cifar100_near": 0.8886,
+            "gaussian_far": 0.9976,
+            "svhn_far": 0.9484,
+            "tin_near": 0.9491
+          },
+          "ood_auroc_ts_msp": {
+            "cifar100_near": 0.8204,
+            "gaussian_far": 0.916,
+            "svhn_far": 0.8303,
+            "tin_near": 0.8699
+          },
+          "ood_score": "msp"
+        }
+      },
+      "placement": "parallel"
+    },
+    "mbnet/post_pool": {
+      "backbone": "mobilenetv3_small",
+      "heads": {
+        "evidential": {
+          "accuracy_ci95": 0.0057,
+          "accuracy_mean": 0.8672,
+          "best_val_epoch": 14,
+          "brier_mean": 0.2917,
+          "ece_pooled": 0.2639,
+          "f1_macro_mean": 0.8646,
+          "n_params": 19026,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.8683,
+              "fpr_at_95": 0.513,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.9789,
+              "fpr_at_95": 0.1553,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.9047,
+              "fpr_at_95": 0.4706,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.9016,
+              "fpr_at_95": 0.4463,
+              "regime": "near"
+            }
+          },
+          "ood_score": "vacuity"
+        },
+        "softmax": {
+          "accuracy_ci95": 0.0058,
+          "accuracy_mean": 0.872,
+          "best_val_epoch": 1,
+          "brier_mean": 0.19,
+          "ece_pooled": 0.0635,
+          "ece_ts": 0.0275,
+          "f1_macro_mean": 0.8698,
+          "n_params": 19024,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.7648,
+              "fpr_at_95": 0.7672,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.8181,
+              "fpr_at_95": 0.7631,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.8355,
+              "fpr_at_95": 0.6695,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.7979,
+              "fpr_at_95": 0.7095,
+              "regime": "near"
+            }
+          },
+          "ood_auroc_energy": {
+            "cifar100_near": 0.8682,
+            "gaussian_far": 0.9987,
+            "svhn_far": 0.9179,
+            "tin_near": 0.9191
+          },
+          "ood_auroc_ts_msp": {
+            "cifar100_near": 0.7587,
+            "gaussian_far": 0.8088,
+            "svhn_far": 0.8276,
+            "tin_near": 0.7907
+          },
+          "ood_score": "msp"
+        }
+      },
+      "placement": "post_pool"
+    },
+    "r18/parallel": {
+      "backbone": "resnet18",
+      "heads": {
+        "evidential": {
+          "accuracy_ci95": 0.0051,
+          "accuracy_mean": 0.9146,
+          "best_val_epoch": 19,
+          "brier_mean": 0.2424,
+          "ece_pooled": 0.2824,
+          "f1_macro_mean": 0.9133,
+          "n_params": 31746,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.9119,
+              "fpr_at_95": 0.3929,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.9799,
+              "fpr_at_95": 0.1306,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.9328,
+              "fpr_at_95": 0.3795,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.9286,
+              "fpr_at_95": 0.2956,
+              "regime": "near"
+            }
+          },
+          "ood_score": "vacuity"
+        },
+        "softmax": {
+          "accuracy_ci95": 0.0052,
+          "accuracy_mean": 0.9125,
+          "best_val_epoch": 10,
+          "brier_mean": 0.134,
+          "ece_pooled": 0.0631,
+          "ece_ts": 0.017,
+          "f1_macro_mean": 0.9111,
+          "n_params": 31744,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.8135,
+              "fpr_at_95": 0.667,
+              "regime": "near"
+            },
+            "gaussian_far": {
+              "auroc": 0.9315,
+              "fpr_at_95": 0.4246,
+              "regime": "far"
+            },
+            "svhn_far": {
+              "auroc": 0.8875,
+              "fpr_at_95": 0.5187,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.8483,
+              "fpr_at_95": 0.6065,
+              "regime": "near"
+            }
+          },
+          "ood_auroc_energy": {
+            "cifar100_near": 0.9029,
+            "gaussian_far": 0.9844,
+            "svhn_far": 0.9422,
+            "tin_near": 0.9266
+          },
+          "ood_auroc_ts_msp": {
+            "cifar100_near": 0.8035,
+            "gaussian_far": 0.9189,
+            "svhn_far": 0.8748,
+            "tin_near": 0.8372
+          },
+          "ood_score": "msp"
+        }
+      },
+      "placement": "parallel"
+    },
+    "r18/post_pool": {
+      "backbone": "resnet18",
+      "heads": {
+        "evidential": {
+          "accuracy_ci95": 0.0056,
+          "accuracy_mean": 0.8835,
+          "best_val_epoch": 8,
+          "brier_mean": 0.2849,
+          "ece_pooled": 0.2846,
+          "f1_macro_mean": 0.8819,
+          "n_params": 16914,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.8783,
+              "fpr_at_95": 0.4915,
+              "regime": "near"
+            },
+            "svhn_far": {
+              "auroc": 0.9141,
+              "fpr_at_95": 0.4785,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.9125,
+              "fpr_at_95": 0.408,
+              "regime": "near"
+            }
+          },
+          "ood_score": "vacuity"
+        },
+        "softmax": {
+          "accuracy_ci95": 0.0055,
+          "accuracy_mean": 0.8747,
+          "best_val_epoch": 2,
+          "brier_mean": 0.1905,
+          "ece_pooled": 0.0817,
+          "ece_ts": 0.0406,
+          "f1_macro_mean": 0.8729,
+          "n_params": 16912,
+          "num_episodes": 600,
+          "ood": {
+            "cifar100_near": {
+              "auroc": 0.7441,
+              "fpr_at_95": 0.7752,
+              "regime": "near"
+            },
+            "svhn_far": {
+              "auroc": 0.8378,
+              "fpr_at_95": 0.6613,
+              "regime": "far"
+            },
+            "tin_near": {
+              "auroc": 0.79,
+              "fpr_at_95": 0.7205,
+              "regime": "near"
+            }
+          },
+          "ood_auroc_energy": {
+            "cifar100_near": 0.8635,
+            "svhn_far": 0.9051,
+            "tin_near": 0.9254
+          },
+          "ood_auroc_ts_msp": {
+            "cifar100_near": 0.7373,
+            "svhn_far": 0.8281,
+            "tin_near": 0.7821
+          },
+          "ood_score": "msp"
+        }
+      },
+      "placement": "post_pool"
+    }
+  },
+  "protocol": "CIFAR-FS Bertinetto, 5-way 5-shot, frozen test seeds",
+  "score_per_head": {
+    "evidential": "vacuity",
+    "softmax": "msp"
+  }
+}

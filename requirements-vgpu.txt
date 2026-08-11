@@ -1,0 +1,5 @@
+-r requirements.txt
+
+Pillow>=9.0.0
+PyYAML>=6.0
+pytest>=7.0

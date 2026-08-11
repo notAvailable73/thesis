@@ -1,0 +1,29 @@
+Step 8 — MobileNetV3-Small backbone (Phase 5, RQ4 prep)
+repo commit: 1f3a001 Step 8 implementation: MobileNetV3-Small backbone
+protocol   : CIFAR-FS Bertinetto, 5-way 5-shot, 600 frozen test seeds (0..599)
+OOD pools  : svhn_far, gaussian_far, cifar100_near, tin_near (500 each)
+
+FILES (size / sha256):
+  checkpoints/model_phase2_mbnet_bottleneck_prototype-evidential_seed42.pt     3.94 MB  71404a3148102065
+  checkpoints/model_phase2_mbnet_bottleneck_prototype-softmax_seed42.pt      3.94 MB  41fd016c76df1e89
+  checkpoints/model_phase2_mbnet_parallel_prototype-evidential_seed42.pt     3.90 MB  722ee4ad7b609d3d
+  checkpoints/model_phase2_mbnet_parallel_prototype-softmax_seed42.pt        3.90 MB  0af427055b6d7704
+  results/phase5_mbnet_bottleneck_prototype-evidential_confusion_matrix.png     0.06 MB  f5d097147d8388cd
+  results/phase5_mbnet_bottleneck_prototype-evidential_metrics.json          0.00 MB  631affee0d5c488a
+  results/phase5_mbnet_bottleneck_prototype-evidential_ood_histogram.png     0.05 MB  0eff596c28c1299c
+  results/phase5_mbnet_bottleneck_prototype-evidential_reliability.png       0.08 MB  1e6adfb2c08dfed4
+  results/phase5_mbnet_bottleneck_prototype-softmax_confusion_matrix.png     0.06 MB  0ecb1d2056c81aca
+  results/phase5_mbnet_bottleneck_prototype-softmax_metrics.json             0.00 MB  fbc7c2dfe7e13443
+  results/phase5_mbnet_bottleneck_prototype-softmax_ood_histogram.png        0.05 MB  94cb8f058de96a11
+  results/phase5_mbnet_bottleneck_prototype-softmax_reliability.png          0.08 MB  5f679c77bec9d869
+  results/phase5_mbnet_parallel_bottleneck_prototype-evidential_confusion_matrix.png     0.06 MB  0794376489f53657
+  results/phase5_mbnet_parallel_bottleneck_prototype-evidential_metrics.json     0.00 MB  d0c9876f268822fa
+  results/phase5_mbnet_parallel_bottleneck_prototype-evidential_ood_histogram.png     0.06 MB  4e6fcafd5385d9b7
+  results/phase5_mbnet_parallel_bottleneck_prototype-evidential_reliability.png     0.08 MB  ce013da886199737
+  results/phase5_mbnet_parallel_bottleneck_prototype-softmax_confusion_matrix.png     0.06 MB  2dd2c157dceab5ac
+  results/phase5_mbnet_parallel_bottleneck_prototype-softmax_metrics.json     0.00 MB  beb9be63573d79f1
+  results/phase5_mbnet_parallel_bottleneck_prototype-softmax_ood_histogram.png     0.05 MB  cc08dddc1e22eebf
+  results/phase5_mbnet_parallel_bottleneck_prototype-softmax_reliability.png     0.08 MB  b6106060f1451b96
+  results/phase5_backbone_table.json                                         0.01 MB  90539c42dd77f1a1
+  results/step8_backbone_comparison.png                                      0.36 MB  ad7f159e5bc365ff
+  results/step8_params_vs_accuracy.png                                       0.21 MB  0c523b1465a33b9a

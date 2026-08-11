@@ -30,7 +30,7 @@ import torch
 import yaml
 
 from src.utils import set_seed, get_device, load_config, get_logger
-from src.datasets import get_cifar_fs, get_svhn_ood, EpisodicIterableDataset
+from src.datasets import get_id_split, get_svhn_ood, EpisodicIterableDataset
 from src.models import build_model
 from src.trainers import EpisodicTrainer
 from src.evaluators import evaluate_episodic
@@ -59,10 +59,8 @@ def _train_and_val(cfg, epochs, device, svhn_feats, logger=None):
     veps = int(cfg.trainer.val_episodes_per_epoch)
     tso = int(cfg.trainer.train_seed_offset)
 
-    train_split = get_cifar_fs(data_root=cfg.dataset.data_root,
-                               image_size=int(cfg.dataset.image_size), split="train")
-    val_split = get_cifar_fs(data_root=cfg.dataset.data_root,
-                             image_size=int(cfg.dataset.image_size), split="val")
+    train_split = get_id_split(cfg.dataset, split="train")
+    val_split = get_id_split(cfg.dataset, split="val")
     repo = Path(__file__).resolve().parents[1]
     val_seeds = yaml.safe_load(open(repo / cfg.eval.val_episodes_file))["seeds"]
     vso = int(val_seeds[0])

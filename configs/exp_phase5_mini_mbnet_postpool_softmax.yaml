@@ -1,0 +1,19 @@
+# Step 9 — MiniImageNet + MobileNetV3-Small + POST-POOL Bottleneck + softmax
+# head. Softmax sibling of exp_phase5_mini_mbnet_postpool_evidential.
+extends: exp_phase5_mini_base_softmax.yaml
+
+backbone:
+  name: mobilenetv3_small
+  feature_dim: 576
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: post_pool
+
+output:
+  run_tag: mini_mbnet_postpool
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, mobilenetv3_small, bottleneck,
+         post_pool, softmax, prototype, ravi_larochelle]

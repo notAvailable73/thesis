@@ -1,0 +1,21 @@
+# Step 8 (Phase 5) — MobileNetV3-Small + POST-POOL Bottleneck + softmax
+# prototype head. Softmax sibling of exp_phase5_mbnet_bottleneck_evidential;
+# only head.interpretation differs (same cosine metric / scale), so the
+# evidential-vs-softmax head-to-head is paired on this backbone too.
+extends: exp_phase2_softmax.yaml
+
+backbone:
+  name: mobilenetv3_small
+  feature_dim: 576
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: post_pool
+
+output:
+  run_tag: mbnet_bottleneck
+
+wandb:
+  tags: [phase5, step8, mobilenetv3_small, bottleneck, post_pool, softmax,
+         prototype, cifar_fs_bertinetto]

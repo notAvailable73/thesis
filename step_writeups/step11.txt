@@ -1,0 +1,831 @@
+================================================================================
+STEP 11 -- EFFICIENCY + PARETO FRONTIER (Phase 5, RQ4) -- IMPLEMENTATION
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     5 (full grid + backbones + edge efficiency)
+Scope:     measure trainable/total params, FLOPs (MACs), latency (GPU + CPU)
+           and peak memory for every (backbone, adapter, head) combination in
+           the CLOSED Step-10 grid, then produce the params-vs-accuracy and
+           latency-vs-uncertainty-quality Pareto frontiers that answer RQ4 --
+           the only research question with no answer at all before this step.
+           No training. The grid already supplies the parameter axis
+           (plan.md line 367: "n_params and best_val_epoch are carried
+           deliberately: Step 11 (Pareto)"); this step adds FLOPs/latency/
+           memory and the frontier analysis on top of it.
+Spec:      implementation.txt Section 11 ; progress.txt "STEP 11"
+Previous:  step_writeups/step10.txt (MVT grid execution, CLOSED 2026-08-06)
+
+STATUS OF THIS WRITEUP: TEMPLATE -- CODE COMPLETE, CANONICAL MEASUREMENT
+  ATTEMPTED ONCE (2026-08-07), CRASHED BEFORE WRITING, ROOT CAUSE FIXED,
+  RE-RUN NOT YET DONE. The first real Kaggle T4 attempt at the canonical
+  session actually completed the entire 12-key GPU + CPU measurement
+  correctly (confirmed line-by-line from the session log: all 12 keys
+  measured on cuda, all 12 on cpu, train_step timings for both) -- then
+  crashed in an unrelated opt-in bonus feature (--include-reference-
+  backbones) BEFORE the script reached its json write, so none of that
+  correctly-measured data was ever persisted. Full incident writeup,
+  root cause, and the fix: Section 8. Every piece of Step 11's
+  infrastructure exists, is tested offline, and was exercised against real
+  data during implementation (Section 3), but the CANONICAL session output
+  -- both the GPU numbers and the Kaggle-CPU edge-proxy numbers this
+  document is supposed to report -- still does not exist on disk. Section 4
+  below contains NAMED PLACEHOLDERS ONLY. Every number that eventually fills
+  them MUST be transcribed from the committed results/efficiency_table.json
+  + results/pareto_frontier.json after a successful session, never typed
+  from memory or estimated (thesis_implementation_instructions.txt Section
+  6's honesty rule).
+
+  One sub-section, 4.6 (the params-vs-accuracy frontier), needs NO new
+  measurement and is filled below from the already-committed
+  results/mvt_results.json -- marked explicitly where it appears.
+
+  A REAL, NON-CANONICAL local-CPU run of the full 12-key pipeline was
+  exercised during implementation (env_id `local_cpu`, this repo's own dev
+  machine) specifically to prove every script works end-to-end against real
+  numbers before the Kaggle session exists. Its results, if committed, live
+  alongside the canonical `kaggle_t4` block in the same
+  results/efficiency_table.json but are NEVER the reported edge-latency
+  figure -- see Section 3 and Section 5 caveat 1.
+
+
+================================================================================
+0.  PAPER-GROUNDED REASONING (per thesis_implementation_instructions Section 5)
+================================================================================
+Pre-registered BEFORE any measurement exists, because the axis/tolerance
+choices change the answer (verified while designing this step -- see the
+worked example in 0.4) and must not be tuned after looking at the numbers.
+
+0.1  Why latency, not just FLOPs, and why CPU is the primary edge axis.
+     MobileNetV3 (Howard 2019, PAPER SUMMARIES/CNN_paper_summaries.txt
+     Section 5-6) measures "MAdds, params, and real latency on Pixel 1/2/3
+     phones (single large core, TFLite)" -- FLOPs alone is explicitly not
+     what the paper that names this backbone treats as the deployment
+     metric, and this thesis has the same reason to distrust it: MAC
+     counters (fvcore included) do not count BatchNorm, ReLU, h-swish,
+     hard-sigmoid, pooling or residual adds, which systematically
+     understates depthwise/h-swish backbones. RQ4 asks about *edge*
+     hardware; the exit criterion mandates CPU as the edge proxy (no Jetson
+     Nano access); batch-1 is the edge inference regime (enrolled
+     prototypes, one arriving image at a time); single-thread is the
+     analogue of Howard 2019's own "single large core" methodology, so this
+     repo's numbers stay comparable in KIND to the paper that motivates the
+     small backbone.
+
+0.2  Why fvcore (implementation.txt 11.1's spec), not a torch-native
+     alternative. torch.utils.flop_counter.FlopCountMode exists and would
+     avoid a new dependency, but implementation.txt 11.1 names fvcore
+     explicitly, and the user directed this session to follow the spec
+     exactly rather than deviate. Consequence handled, not silently
+     absorbed: fvcore is not preinstalled on Kaggle/Colab, so it is now a
+     line in requirements.txt (every notebook installs from that file, so
+     no notebook needed a bespoke `!pip install fvcore` cell) and in
+     pyproject.toml. Verified locally (Section 3): fvcore's
+     FlopCountAnalysis.total() returns MACs directly (nn.Linear(1000,1000,
+     bias=False) at B=1 -> exactly 1,000,000, matching in*out, NOT 2x), so
+     `flops_2x_macs` is emitted alongside `macs` in every record purely so
+     a reader using the "FLOPs=2*MACs" convention can never misread the
+     table by a factor of two.
+
+0.3  Why the reference gate (check_reference_flops) exists and runs FIRST.
+     A gate whose failure is silently tolerated is not a gate. Published
+     figures used, with provenance (never asserted from general knowledge):
+     ResNet-18 "11.7M params / 1.8 GFLOPs" (src/backbones/mobilenetv3.py
+     docstring, itself citing PAPER SUMMARIES/CNN_paper_summaries.txt
+     Section 8); MobileNetV3-Small "~56-57 MAdds, 2.5M params" (Howard 2019,
+     PAPER SUMMARIES/CNN_paper_summaries.txt Section 6). Both figures are
+     MAC counts despite being called "FLOPs"/"MAdds" in their sources --
+     `check_reference_flops` records `convention_note` explicitly rather
+     than silently reconciling the terminology.
+
+0.4  PRE-REGISTERED AXES (written before any Section-4 number exists):
+       cost (11.3, Table "latency_vs_auroc")  : CPU, 1 thread, per-image
+           (B=1) MEDIAN latency in ms.
+       cost (11.4, Table "params_vs_accuracy"): trainable parameters
+           (log scale).
+       quality                                : ood_auroc__tin_near__<native>
+           (vacuity for evidential, msp for softmax) -- the only near-OOD
+           pool present in BOTH datasets (cifar100_near is CIFAR-FS-only,
+           mini_near is MiniImageNet-only), and the pool RQ3 (step10.txt
+           Section 4.6) found the low-data trend on. `ood_auroc_mean` in
+           mvt_results.json is NEVER used as the quality axis -- it silently
+           aliases the svhn_far value (verified against the committed JSON),
+           which is a trap this step deliberately avoids.
+       recommended-point rule: the cheapest configuration whose quality is
+           within 1.0 pp accuracy / 0.010 AUROC of the panel's best. Chosen
+           because it materially changes the answer -- verified on the
+           committed grid data that "cheapest within 1.0 pp" and "cheapest
+           within one combined CI95" pick DIFFERENT configurations on
+           CIFAR-FS 5-shot (mbnet/parallel/softmax @6,928 vs
+           r18/parallel/softmax @31,744) -- so the rule had to be fixed
+           before, not after, looking.
+     Secondary variants (far_svhn_native, near_dataset_native,
+     near_tin_best_score, plus the eps-widened frontier) are ALL computed
+     and committed to results/pareto_frontier.json, not just the primary,
+     so the axis choice is auditable rather than asserted -- see
+     scripts/pareto_plots.py's module docstring and the quality-axis audit
+     figures (results/pareto_audit/).
+
+0.5  The energy-score correction this step inherits and must not contradict.
+     Step 10 (step_writeups/step10.txt Section 4.6, docs/RESULTS_MASTER.md
+     Section 3 RQ3) found the non-probabilistic energy score beats
+     evidential vacuity in ~70% of matched comparisons across the 40-config
+     grid -- superseding the Step 4.5-era "evidential is on par with energy"
+     line. Because Step 11's quality axis is a head-vs-head comparison
+     (native score per head), this correction determines whether the
+     evidential head appears on the frontier at all under a
+     softmax-gets-its-best-score reading (`near_tin_best_score` in
+     results/pareto_frontier.json) -- Section 4.7/4.9 must report BOTH
+     readings, per the pre-registration above, not just the native-score one.
+
+0.6  Deviations from implementation.txt flagged explicitly, none hidden:
+     (a) FLOPs backend is fvcore exactly as specified (11.1) -- not a
+         deviation, but the dependency consequence (0.2) is recorded here
+         since it touches requirements.txt, a file no earlier step needed.
+     (b) 11.2's "8 of the 12 combos collapse" assumption is CHECKED, not
+         assumed: both heads of every (backbone, adapter) pair are measured
+         independently and compared (`collapse_check` in
+         efficiency_table.json) rather than measuring 6 model instances and
+         asserting the other 6. Against the closed grid the exact
+         arithmetic is 12 measurement keys -> 6 compute-identical
+         (backbone, adapter) pairs -> 5 distinct inference graphs (r18's
+         full_ft and linear_probe adapters are literally the identity on
+         the backbone, so their MACs and inference latency are the same
+         graph) -- neither number is 8; both are reported rather than
+         silently reconciled to the spec's estimate.
+     (c) ADDITIONS beyond 11.1, both flagged at the point of use in
+         Section 1 and in every JSON record they touch: a training-step
+         peak-memory/time measurement (`measure_train_step_peak_memory`,
+         `spec_status: "ADDITION beyond implementation.txt 11.1"`), and an
+         opt-in architecture-only reference row for ViT-B/16 / DeiT-Tiny
+         (never trained in this repo, gated behind
+         `--include-reference-backbones`, every record carries the
+         disclaimer string verbatim).
+
+
+================================================================================
+1.  WHAT WAS BUILT
+================================================================================
+  [x] 11.1  src/utils/efficiency.py -- params_report / count_frozen_params /
+            param_bytes (deterministic); count_flops / count_flops_detailed /
+            check_reference_flops (fvcore-backed MAC counting + the
+            reference gate); time_callable / measure_latency_gpu /
+            measure_latency_cpu / thread_count / episode_input_shapes
+            (latency harness); measure_peak_memory (spec) and
+            measure_train_step_peak_memory (ADDITION, flagged); collect_env /
+            device_profile_slug / session_id / gpu_clock_snapshot
+            (environment provenance). `count_total_params` (already existed
+            in src/utils/params.py but was never re-exported) is now
+            re-exported from src/utils/__init__.py alongside the new surface
+            -- additive only, no existing import path changed.
+  [x] 11.1b `_resolve_forward` / `_resolve_forward_module` / `_TracedForward`
+            -- the PrototypeHead contract (`model(x)` raises TypeError for
+            every grid config; the measurable path is
+            `model.adapter_features(x)`) plus a tracing-specific fix: fvcore
+            traces via torch.jit.trace, which requires the model whose
+            weights are being counted to be a REGISTERED SUBMODULE of the
+            traced wrapper. Wrapping a bound method as a bare closure (the
+            first implementation) crashed on MobileNetV3-Small with
+            "Cannot insert a Tensor that requires grad as a constant" --
+            reproduced and fixed during this session (verified against both
+            backbones); the fix is `_TracedForward`, which holds `model` as
+            a genuine child module (`self.inner = model`) rather than a
+            closed-over bound method.
+  [x] 11.2  scripts/efficiency_table.py -- in-process (never subprocess,
+            matching scripts/run_mvt_grid.py's documented reason: hosted
+            notebooks can silently swallow subprocess output), resumable,
+            `--only` filter, `--check-params-only` (rebuild all 12 models,
+            cross-check trainable params against results/mvt_results.json's
+            n_params for all 40 mvt cells), `--dry-run`,
+            `--include-reference-backbones`. `keys_from_index()` derives the
+            12 (backbone, adapter, head) measurement keys from
+            configs/grid/_index.json -- never hardcoded, the same discipline
+            scripts/aggregate_grid.py uses for its grouping key -- and
+            ASSERTS architecture homogeneity (one reference config per key
+            provably stands for all its cells: n_way/image_size/q_query/
+            lr/weight_decay/adapter+head specs identical across every cell
+            sharing a key). Reference gate (0.3) runs first and aborts
+            unless `--allow-reference-mismatch`. Writes
+            results/efficiency_table.json, MERGING onto any existing file
+            (a CPU session and a later GPU session both write to the same
+            file without clobbering each other's environment block).
+  [x] 11.3  scripts/pareto_plots.py -- src/utils/pareto.py's `pareto_front` /
+            `recommended_point` (pure Python, no torch/matplotlib
+            dependency, independently unit-tested) drives both frontier
+            families. Reads results/mvt_results.json (required) and
+            results/efficiency_table.json (optional; the params-vs-accuracy
+            half needs no new measurement and renders correctly with the
+            latency half showing "no data" until a session exists). Two
+            strict/eps frontiers per panel (the eps frontier exists because
+            evidential has exactly +2 trainable params over softmax at every
+            adapter -- a real-but-meaningless Pareto step against a
+            +-0.5pp CI95 without it). Writes the exit-criteria PNGs flat in
+            results/ and the audit family (quality-axis sensitivity small
+            multiples) under results/pareto_audit/.
+  [x] 11.4  scripts/make_master_tables.py extended (additive) with a 4th
+            table, results/mvt_table_efficiency.{tex,png}, skipped with a
+            printed warning when results/efficiency_table.json is absent.
+            VERIFIED (Section 3): the 3 pre-existing .tex files are
+            byte-identical before and after this edit, both with and
+            without efficiency data present.
+  [x] 11.5  docs/RESULTS_MASTER_template.md reconstructed (it was MISSING
+            from disk and from git -- scripts/make_results_master.py had
+            been silently broken since whenever it went missing, dying with
+            FileNotFoundError). Mechanical reconstruction: each of the 7
+            table chunks scripts/make_results_master.py generates occurs
+            exactly once in the committed docs/RESULTS_MASTER.md; replacing
+            each occurrence with its {{TABLEn}} marker yields a 406-line
+            template whose re-fill via the (unmodified at that point) script
+            reproduces the committed document BYTE-IDENTICALLY -- verified,
+            not assumed, before any Step-11 content was added (Section 3).
+            scripts/make_results_master.py then extended (additive) with
+            Table 8 (efficiency + frontier membership, same
+            "not yet measured" stub pattern as make_master_tables.py) and
+            the RQ4 section rewritten from its "Out of scope for Step 10"
+            stub to this step's pre-registration + status.
+  [x] 11.6  notebooks/step11_efficiency.ipynb -- mirrors
+            notebooks/step10a_cifar_5shot.ipynb's convention (numbered
+            `## N.` markdown before every code cell). Deliberately does NOT
+            copy step10a's `assert torch.cuda.is_available()` -- CPU latency
+            IS this step's edge-proxy deliverable, so the notebook degrades
+            to a CPU-only session with a printed warning rather than hard-
+            failing. No dataset attachment (build_model needs none). No W&B
+            cell (deliberate omission, Section 5 caveat 9). Includes the
+            stability re-run cell (Section 4.3) and the zip+sha256+push
+            artifact cell (ARTIFACT_STEM='step11_efficiency').
+  [x] 11.7  tests/test_pareto.py (26 tests) + tests/test_efficiency.py
+            (30 tests), both plain-function / no-class / CPU-only / offline
+            (`resnet18(weights=None)` per the tests/test_placement.py /
+            tests/test_mobilenetv3.py convention), fvcore gated behind
+            `pytest.importorskip`. Two SCIENTIFIC regression tests in
+            tests/test_pareto.py assert against the committed grid: Full-FT
+            is dominated on the params-vs-accuracy frontier at CIFAR-FS
+            5-shot and ON the frontier at 1-shot -- if a future data change
+            flips either, the suite is the alarm. Structural assertions
+            only in the latency/memory tests -- no test asserts a wall-clock
+            threshold. Full suite result: Section 3.
+
+  Housekeeping in scope for this step (user-selected, offline, zero
+  compute), NOT part of implementation.txt 11.1-11.5 but landing here
+  because they were blocking or load-bearing for Step 11's own artifacts:
+    - docs/RESULTS_MASTER_template.md reconstruction (11.5 above) --
+      strictly necessary before Table 8 or the RQ4 section could be added.
+    - CLAUDE.md's "Known state of the science" paragraph corrected for the
+      energy-score finding (0.5 above) -- Step 11's quality axis turns on
+      exactly this fact, so leaving CLAUDE.md's old text would make this
+      write-up contradict the repo's own standing brief.
+
+
+================================================================================
+2.  WHAT IS MEASURED AND WHAT COLLAPSES
+================================================================================
+Verified across all 120 grid configs (not assumed): dataset.image_size=224,
+dataset.n_way=5, dataset.q_query=15, trainer.type=episodic in EVERY config.
+Neither dataset choice nor shot regime changes the model that gets built --
+only `(backbone, adapter, head)` does. That is why 12 measurement keys cover
+all 40 mvt_results.json leaf cells (8 keys x 4 mvt cells for the PEFT
+adapters that run on both datasets/both shots; 4 keys x 2 mvt cells for the
+baselines, which exist only on cifar_fs/resnet18).
+
+Shot regime DOES change episode-shaped units (support batch 5 vs 25), so
+those are measured at both k_shot=1 and k_shot=5 regardless of which shot the
+key's seed-42 reference config happens to be (src/utils/efficiency.py
+episode_input_shapes() is called with an explicit override, never the loaded
+config's own fixed k_shot).
+
+Units measured per key: per_image (B=1, the headline edge number, via
+model.adapter_features); support_1shot / support_5shot (B=5/25, the
+amortisable-once enrollment cost); query_batch (B=75, shot-independent);
+score_stage_1shot / score_stage_5shot (head + native uncertainty score, from
+CACHED features -- this is what turns "evidential uncertainty is free at
+inference" from an assertion into a measured ms figure, Section 4.8);
+episode_1shot / episode_5shot (the full model.forward_proto, at the same
+warmup/measure settings as everything else in this run -- an additivity
+check on the component units above it).
+
+
+================================================================================
+3.  HOW TO REPRODUCE / WHAT WAS ACTUALLY EXERCISED THIS SESSION
+================================================================================
+Everything below ran on the implementing session's OWN machine (no GPU;
+12-core CPU) -- this is proof the pipeline is correct end-to-end against REAL
+data, NOT the canonical Step-11 measurement (that needs the Kaggle T4
+session, notebooks/step11_efficiency.ipynb, per Section 1).
+
+  1. `python scripts/efficiency_table.py --dry-run` -> 12 keys derived,
+     matching the manual enumeration in Section 2.
+  2. `python scripts/efficiency_table.py --check-params-only` ->
+     `40/40 mvt cells match` -- every one of the 40 mvt_results.json leaf
+     cells' committed `n_params` was independently reproduced by a fresh
+     `build_model(cfg)` + `count_trainable_params` in this session.
+  3. Reference gate verified standalone: ResNet-18 (with fc) 1,819,065,856
+     MACs vs published 1.8 GMACs (ratio 1.011, PASS); MobileNetV3-Small
+     (with classifier) 59,649,536 MACs vs published 56-57 MMACs range
+     (PASS, ratio 1.055 to the midpoint -- inside the 5% tolerance band
+     around the range bounds); the classifier-only delta
+     (59,649,536 - 58,035,712 = 1,613,824) equals the analytical
+     576*1024 + 1024*1000 EXACTLY.
+  4. A full local-CPU run of all 12 keys, both thread settings (1 and all),
+     every unit, plus the training-step measurement, completed successfully
+     and produced results/efficiency_table.json with an env_id `local_cpu`
+     block. This is a genuine measurement (not a fixture), useful as a
+     development artifact and for exercising scripts/pareto_plots.py /
+     scripts/make_master_tables.py / scripts/make_results_master.py against
+     real numbers -- but it is NOT the canonical CPU-edge-proxy number this
+     document reports, because the repo's dev machine is a laptop-class AMD
+     core, not the Kaggle host Section 4's numbers must come from (Section 5
+     caveat 1 quantifies the two-machine gap once both exist).
+  5. `python scripts/pareto_plots.py` ran against the real mvt_results.json
+     + local_cpu efficiency data and produced all six PNGs +
+     results/pareto_frontier.json + the audit family without error.
+  6. `python scripts/make_master_tables.py` run TWICE -- once with
+     results/efficiency_table.json absent (confirms the 3 pre-existing .tex
+     files are BYTE-IDENTICAL to their Step-10 committed versions, the
+     acceptance gate for this edit) and once with it present (Table 8
+     renders with real numbers).
+  7. `python scripts/make_results_master.py` run against the reconstructed
+     template: BEFORE any Step-11 content was added, `git diff --exit-code
+     docs/RESULTS_MASTER.md` was clean (the byte-identical round-trip proof
+     for the template reconstruction, Section 1's 11.5). After the Table-8 /
+     RQ4 edits, the diff contains only the intended new material (spot-
+     checked line-by-line).
+  8. Full test suite: 289 passed (233 pre-existing + 56 new: 26 in
+     tests/test_pareto.py, 30 in tests/test_efficiency.py), zero
+     regressions -- verified this session.
+
+Canonical reproduction path (NOT YET RUN):
+    Kaggle notebook, GPU T4, Internet ON, no dataset attachment:
+      notebooks/step11_efficiency.ipynb, top to bottom.
+    Locally afterwards (never in the notebook):
+      python scripts/pareto_plots.py
+      python scripts/make_master_tables.py
+      python scripts/make_results_master.py
+
+
+================================================================================
+4.  RESULTS -- PLACEHOLDERS ONLY (except 4.6)
+================================================================================
+Every <PLACEHOLDER> below must be transcribed verbatim from the committed
+results/efficiency_table.json / results/pareto_frontier.json after the
+Kaggle session -- never estimated, never carried over from the local_cpu
+development run described in Section 3.
+
+--------------------------------------------------------------------------------
+4.1  Hardware provenance
+--------------------------------------------------------------------------------
+  GPU session : <GPU_NAME>, driver <DRIVER>, CUDA <CUDA_VERSION>,
+                torch <TORCH_VERSION>, session id <KAGGLE_T4_SESSION_ID>
+  CPU session : <CPU_MODEL>, <N_VCPU> vCPUs, session id <KAGGLE_CPU_SESSION_ID>
+  Local dev   : AMD Ryzen 5 PRO 5650U (verified, env_id `local_cpu`) --
+                development artifact, not reported as an edge number.
+
+--------------------------------------------------------------------------------
+4.2  Efficiency table (12 rows -- also results/mvt_table_efficiency.tex/.png)
+--------------------------------------------------------------------------------
+  <EFF_TABLE_12_ROWS: backbone | adapter | head | trainable params |
+   total params | GMACs | CPU ms/img (1 thr) | CPU ms/img (all thr) |
+   GPU ms/img | peak GPU MB>
+
+--------------------------------------------------------------------------------
+4.3  Measurement stability (the stability re-run, notebook Section 6)
+--------------------------------------------------------------------------------
+  Max relative per-key per_image median difference across two back-to-back
+  measurements on the same Kaggle session: <MAX_REL_DIFF_PCT>%
+  (key: <MAX_REL_DIFF_KEY>). <N_KEYS_OVER_10PCT> of 12 keys exceeded the 10%
+  drift-warning threshold.
+
+--------------------------------------------------------------------------------
+4.4  Param cross-check vs the grid
+--------------------------------------------------------------------------------
+  `--check-params-only` on the Kaggle session: <N_MATCH>/40 mvt cells
+  matched (must be 40/40 -- Section 3 item 2 already reproduced this
+  offline; this re-confirms it on the canonical hardware/torch build).
+
+--------------------------------------------------------------------------------
+4.5  Latency-vs-AUROC frontier (primary axis: CPU 1-thread, tin_near native)
+--------------------------------------------------------------------------------
+  <FRONT_TIN_NATIVE: per (dataset, shot) panel -- n_points, n_baseline_points,
+   strict_front members, eps_front members, recommended_point>
+
+--------------------------------------------------------------------------------
+4.6  Params-vs-accuracy frontier -- PRE-FILLED, no Step-11 measurement
+     involved (source: results/mvt_results.json, already committed)
+--------------------------------------------------------------------------------
+  CIFAR-FS 5-shot strict frontier (ascending cost): linear_probe/softmax
+  (0 params, 87.41%) -> mbnet/parallel/softmax (6,928, 90.74%) ->
+  r18/parallel/softmax (31,744, 91.44%) -> r18/parallel/evidential
+  (31,746, 91.58%). Full-FT (11,176,512 params, 90.47% softmax / 11,176,514
+  params, 88.82% evidential) is STRICTLY DOMINATED at 5-shot (both heads) --
+  confirmed by tests/test_pareto.py::test_full_ft_is_dominated_at_cifar_fs_5shot.
+  The knee: 0 -> 6,928 params buys +3.33 pp; 6,928 -> 31,744 buys +0.70 pp
+  for 4.58x the parameters; beyond that, Full-FT pays 353x the parameters of
+  the 31,744-param point for -0.97 pp -- strictly worse on both axes.
+
+  CIFAR-FS 1-shot: Full-FT/softmax (11,176,512 params, 81.14%) IS on the
+  frontier -- confirmed by
+  tests/test_pareto.py::test_full_ft_is_on_the_frontier_at_cifar_fs_1shot.
+  It buys +2.34 pp over mbnet/parallel/softmax (78.80%) at 1,613x the
+  parameters, and +1.95 pp over r18/parallel/softmax (79.19% evidential) at
+  352x. The shot-regime flip (Full-FT dominated at 5-shot, competitive at
+  1-shot) is a genuine finding that only exists because baselines are
+  eligible frontier points (results/pareto_frontier.json,
+  scripts/pareto_plots.py Section 2.4's reasoning).
+
+  Recommended point under the pre-registered rule (Section 0.4), CIFAR-FS
+  5-shot: mbnet/parallel/softmax @ 6,928 params (cheapest within 1.0 pp of
+  the 91.58% best). Under the secondary "cheapest within one combined CI95"
+  reading the answer moves to r18/parallel/softmax @ 31,744 -- both rules
+  and both answers are committed in results/pareto_frontier.json, which is
+  why the primary rule had to be fixed in advance (Section 0.4).
+
+  MiniImageNet panels carry ZERO baseline points (Full-FT / Linear-Probe
+  never ran on MiniImageNet in the grid -- Step 12.F's gap) --
+  results/pareto_frontier.json records `n_baseline_points: 0` for every
+  MiniImageNet panel rather than leaving the absence implicit.
+
+--------------------------------------------------------------------------------
+4.7  Axis-choice sensitivity (results/pareto_audit/quality_axis_variants__*.png)
+--------------------------------------------------------------------------------
+  <STABILITY_TABLE: recommended point under each of far_svhn_native,
+   near_dataset_native, near_tin_best_score, vs the primary near_tin_native>
+  Mode-B counterpoint (0.5): under `near_tin_best_score` (softmax gets
+  max(msp, ts_msp, energy)), <N_FRONT_B> points are on the frontier and the
+  recommended point is <REC_B> -- consistent with Step 10's finding that
+  energy beats vacuity in ~70% of comparisons.
+
+--------------------------------------------------------------------------------
+4.8  Head cost delta -- "evidential uncertainty is free at inference"
+--------------------------------------------------------------------------------
+  Measured: <HEAD_DELTA_MS> ms difference between evidential and softmax
+  per_image latency at matched (backbone, adapter) -- <HEAD_DELTA_PCT>% of
+  the total, <inside/outside> the measurement's own CI. score_stage latency
+  (head + uncertainty computation from cached features) measured at
+  <SCORE_STAGE_MS> ms for a full <N_QUERY>-query episode, against
+  <PER_IMAGE_MS> ms for ONE image through the backbone -- <RATIO>% of a
+  single forward pass.
+  Analytical (NOT measured -- MC-dropout / a k-member deep ensemble would
+  cost k times the forward pass; at the measured per-image latency, k=10
+  means roughly 10x <PER_IMAGE_MS> ms/image, plus k times the weights for an
+  ensemble). Recommendation followed: measure the head delta, state the k-x
+  counterfactual analytically -- implementing MC-dropout/an ensemble is new
+  method surface this step deliberately does not add.
+
+--------------------------------------------------------------------------------
+4.9  ANSWERS TO SECTION 0'S QUESTIONS -- the RQ4 paragraph, filled
+--------------------------------------------------------------------------------
+  <RQ4_PARAGRAPH: numerical Pareto-optimal point + frontier shape + the
+   Step 8/10 consistency check (mbnet/parallel/softmax at 6,928 params
+   matching r18/full_ft/softmax's 90.47% at 11,176,512, +0.27 pp, inside
+   seed noise) + the parameter-vs-latency ordering comparison (does the
+   backbone that is cheaper in PARAMS also win in LATENCY? Step 8 found the
+   param ordering flips between backbones -- parallel is 2.75x cheaper than
+   post_pool on MobileNetV3-Small but 1.88x more expensive on ResNet-18;
+   latency is dominated by the 0.93M-vs-11.18M-param frozen trunk, not the
+   adapter delta, so this need not track the param ordering, and whether it
+   does is this step's most novel measurement) + the Mode-A/Mode-B
+   counterpoint from 4.7>
+
+
+================================================================================
+5.  HONEST CAVEATS
+================================================================================
+  1. "No Jetson Nano access; CPU latency is used as the edge proxy"
+     (verbatim, per the exit criterion) -- quantified, not just asserted:
+     <CPU_ENV_RATIO> is the ratio between the Kaggle-CPU and local-dev-CPU
+     per_image medians once both exist in results/efficiency_table.json.
+     The Kaggle CPU itself is a hosted-notebook server core, not an edge
+     SoC -- absolute milliseconds do not transfer to real edge hardware;
+     ONLY the ratios between backbones/adapters are portable, and even
+     those shift with kernel quality (Howard 2019: h-swish's latency win
+     depends on an optimised fused kernel and "largely disappears" without
+     one, so MobileNetV3-Small's real edge advantage is plausibly LARGER
+     than what PyTorch eager on a CPU measures here).
+  2. Latency and peak-memory are the ONLY numbers in this entire thesis that
+     are not byte-reproducible by design -- see
+     results/efficiency_table.json's `reproducibility` block, which asserts
+     byte-identical reproducibility for the `static` (params/FLOPs) block
+     only and states the exemption reason for `measured`. The stability
+     re-run (Section 4.3) is the honest substitute for the byte-identical
+     check every earlier step's config gets.
+  3. MAC counts systematically UNDERSTATE depthwise/h-swish backbones (no
+     MAC counter -- fvcore included -- counts BatchNorm/activations/pooling/
+     residual adds); the measured MAC ratio between ResNet-18 and
+     MobileNetV3-Small therefore OVERSTATES MobileNetV3's advantage relative
+     to what the latency measurement shows. Report both together, never the
+     MAC ratio alone.
+  4. Energy-score asymmetry (0.5): softmax gets 3 uncertainty scores (msp,
+     ts_msp, energy) in Step 10's grid; evidential gets 1 (vacuity). Energy
+     was never computed on evidential logits. This step's `near_tin_best_
+     score` variant is honest about that asymmetry rather than hiding it,
+     but does not fix it -- computing energy on evidential logits is the
+     cheapest open follow-up (Section 7), requiring no retraining, only a
+     re-run of the 120-cell eval.
+  5. TinyImageNet class-exclusion caveat, inherited from step_writeups/
+     step9.txt Section 5 (a test-isolation bug traced by code inspection,
+     never confirmed by a logged exclusion count from a real run): every
+     `tin_near` AUROC number this step's primary quality axis depends on
+     carries that caveat. `far_svhn_native` is therefore not optional
+     decoration in the audit family -- it is the required robustness check.
+  6. MiniImageNet panels have ZERO baseline points (Section 4.6) -- Step
+     12.F's coverage gap, not a Step 11 omission.
+  7. The eps-frontier depends on its eps values and the recommended point
+     depends on its tolerance -- both were pre-registered (Section 0.4)
+     specifically so this choice could not be tuned after seeing the
+     answer, and both the primary and secondary readings are committed.
+  8. FLOPs are analytical (fvcore) and correlate imperfectly with measured
+     latency (caveat 3) -- a finding this step reports, not a discrepancy it
+     hides.
+  9. No W&B logging in this step, deliberately: no training runs happen,
+     nothing groups by (dataset, shots), and no exit criterion mentions it.
+     Noted here so the omission reads as a decision, not an oversight.
+  10. `pretrained=True` (ImageNet weights) is used throughout, matching
+      every other step's convention; weight VALUES cannot affect any
+      measured quantity here (same architecture, same kernel shapes, no
+      data-dependent control flow) -- only the download/cache step depends
+      on it, and both checkpoints were already cached locally during
+      implementation.
+  11. The `local_cpu` development measurement (Section 3) is a REAL but
+      NON-CANONICAL data point. It must never be read as this step's
+      reported edge-latency figure -- results/efficiency_table.json's
+      `environments` block keeps it structurally separate from `kaggle_t4`,
+      and scripts/pareto_plots.py's `--env` flag defaults to the Kaggle
+      session id so a local-CPU number cannot become the headline by
+      accident.
+
+
+================================================================================
+6.  EXIT CRITERIA (implementation.txt Section 11 / progress.txt "STEP 11")
+================================================================================
+  [~] efficiency_table.json complete for all MVT cells + baselines --
+      SCHEMA + PIPELINE COMPLETE, exercised against real data (local_cpu);
+      the CANONICAL Kaggle GPU+CPU session has not run (Section 3/4).
+  [~] Two Pareto plots saved at 300 dpi -- SCRIPT COMPLETE, all six PNGs
+      (2 exit-criteria stems x {combined, cifar_fs, mini_imagenet}) render
+      correctly against real mvt_results.json + local_cpu efficiency data;
+      awaiting the canonical run for the committed versions.
+  [ ] RQ4 paragraph: numerical Pareto-optimal point -- NOT YET FILLED
+      (Section 4.9 placeholder); the params-only half (4.6) IS filled and
+      does not need the canonical session.
+  [x] Limitation noted: "No Jetson Nano access; CPU as edge proxy" --
+      present verbatim in Section 5 caveat 1 and in
+      docs/RESULTS_MASTER_template.md's RQ4 section; quantification pending
+      the canonical CPU session (same placeholder).
+
+  Additional infra this write-up commits to, beyond the four boxes above:
+  [x] src/utils/pareto.py + src/utils/efficiency.py, both fully tested
+      (Section 1, 11.1/11.1b/11.3).
+  [x] scripts/efficiency_table.py -- reference gate, 12-key derivation +
+      architecture-homogeneity assertion, collapse_check, drift_check,
+      merge-not-clobber write path (Section 1, 11.2).
+  [x] scripts/pareto_plots.py -- strict + eps frontiers, baseline
+      eligibility, quality-axis audit family (Section 1, 11.3).
+  [x] scripts/make_master_tables.py / scripts/make_results_master.py
+      extended additively; byte-identical gate on the 3 pre-existing tables
+      verified (Section 1, 11.4/11.5; Section 3 items 6-7).
+  [x] docs/RESULTS_MASTER_template.md reconstructed and round-trip-verified
+      BEFORE any Step-11 content landed (Section 1, 11.5; Section 3 item 7).
+  [x] notebooks/step11_efficiency.ipynb (Section 1, 11.6) -- NOT YET RUN.
+  [x] tests/test_pareto.py + tests/test_efficiency.py, 56 new tests, zero
+      regressions to the pre-existing suite (Section 1, 11.7; Section 3
+      item 8).
+
+Overall STEP 11 status: CODE COMPLETE, MEASUREMENT PENDING. Every script,
+test, table, plot and document edit exists and is verified against real
+(if non-canonical) data; what remains is a single ~15-20 minute Kaggle T4
+session (Section 3's canonical reproduction path) and the mechanical
+transcription of Section 4's placeholders from its output.
+
+
+================================================================================
+7.  WHAT THE NEXT STEP INHERITS
+================================================================================
+  - RE-RUN notebooks/step11_efficiency.ipynb on Kaggle (GPU T4, Internet ON,
+    no dataset attach). Section 8's fix is in place; the previous crash point
+    (--include-reference-backbones' ViT/DeiT FLOP count) is now fault-
+    isolated even if a different bug surfaces there later -- the 12-key
+    primary measurement's write to disk can no longer be blocked by it. Then
+    merge the artifact zip into results/, locally run scripts/pareto_plots.py
+    -> scripts/make_master_tables.py -> scripts/make_results_master.py in
+    that order, and fill every <PLACEHOLDER> in Section 4 above by
+    transcription. This closes Step 11 and, with it, all four RQs.
+  - Run `pytest -q` on the Kaggle session (or any CUDA-enabled machine)
+    before trusting the fix -- Section 8's root cause (a device-placement
+    bug reachable only when device_t is non-CPU) is structurally invisible
+    to this repo's CPU-only local test suite, so the fix is reasoned-through
+    and offline-verified (py_compile, code-path re-read) but NOT test-
+    verified. tests/test_efficiency.py has zero coverage of
+    _reference_backbones today (grep confirms) -- adding a CUDA-gated
+    regression test for it is cheap and should happen alongside the re-run.
+  - Energy score on evidential logits (Section 5 caveat 4) -- the cheapest
+    open follow-up anywhere in this thesis's backlog: no retraining, just a
+    re-run of the 120-cell eval with the energy score computed against
+    evidential pre-activation logits too, closing the asymmetry that
+    `near_tin_best_score` currently only documents rather than fixes.
+  - 10.9 (VAL-only KL-warmup/patience side-study, carried from Step 10) --
+    STILL deferred, now explicitly re-scoped as Step 12.G: it needs ~9 GPU
+    training runs and answers an RQ2 calibration question, which does not
+    belong in a step whose entire point is that it costs ~15 minutes and
+    trains nothing. Re-carried explicitly, not silently dropped a second
+    time.
+  - The from-scratch-backbone control (docs/RESULTS_MASTER.md Section 4.8
+    item 1) and a trained ViT-Tiny/DeiT-Small arm (item 2, step10.txt
+    Section 7's "new highest-priority experiment") remain Step 12 items.
+    This step's `--include-reference-backbones` opt-in gives the
+    ARCHITECTURE-ONLY half of the ViT question for free (params/MACs/
+    latency, never trained here, every row labelled as such) -- it answers
+    "how much would a ViT-Tiny cost to run" but not "how well would it
+    perform", which still needs the real Step-12 training run.
+  - docs/explainers/step11.md (would complete the step5-10 explainer
+    series) was scoped out of this step per an explicit user choice during
+    planning; still open for Step 12 or a documentation pass.
+================================================================================
+
+
+================================================================================
+8.  INCIDENT: FIRST CANONICAL KAGGLE RUN CRASHED BEFORE WRITING (2026-08-07)
+================================================================================
+8.1  WHAT HAPPENED, IN ORDER (reconstructed from the session log, every
+     line below independently confirmed against it, nothing inferred):
+       1. notebooks/step11_efficiency.ipynb ran on a Kaggle T4 session
+          (env_id kaggle_t4) -- its executed copy was committed separately
+          as notebooks/step11.ipynb in 87f2ca8, so the repo now carries TWO
+          notebooks with byte-identical sources, one with the crashed
+          session's outputs and one without. They are kept in sync by hand;
+          collapsing them to one file is worth doing but is a human call,
+          not something a fix session should decide. Invoking:
+            scripts/efficiency_table.py --device both --cpu-threads 1,0
+              --env-id kaggle_t4 --include-reference-backbones
+              --out results/efficiency_table.json
+       2. Reference gate passed for both real backbones (resnet18=pass,
+          mobilenetv3_small=pass).
+       3. ALL 12 measurement keys were correctly measured on cuda (12x
+          "[efficiency] measured [cuda]: <key>" + 12x train_step), THEN all
+          12 again on cpu (12x "[efficiency] measured [cpu]: <key>" + 12x
+          train_step) -- the actual thesis-relevant Step 11 measurement,
+          confirmed complete and correct in the session log.
+       4. The optional `--include-reference-backbones` step ran next (an
+          ADDITION beyond implementation.txt 11.1, Section 0.6c -- an
+          architecture-only ViT-B/16 / DeiT-Tiny comparison, never a thesis
+          result) and CRASHED:
+            RuntimeError: Input type (torch.FloatTensor) and weight type
+            (torch.cuda.FloatTensor) should be the same or input should be
+            a MKLDNN tensor and weight is a dense tensor
+          Traceback: scripts/efficiency_table.py:373 (_reference_backbones)
+          -> src/utils/efficiency.py:266 (count_flops) -> :292
+          (count_flops_detailed) -> fvcore's FlopCountAnalysis.total().
+       5. Because scripts/efficiency_table.py writes its output ONCE, at the
+          very end of main() (line 688, AFTER the reference-backbones call
+          at line 671), the crash meant NOTHING was written to
+          results/efficiency_table.json -- not the reference-backbone data
+          (expected, it crashed), but also NOT the fully-correct 12-key
+          GPU+CPU measurement from step 3, which existed only in memory and
+          was discarded when the process died.
+       6. The same command was retried twice more in the same session
+          (three total tracebacks in the log, identical error each time --
+          no fix was applied between retries), so the full ~45-50 minute
+          GPU+CPU measurement pass ran three times over, and three times
+          failed to save anything.
+     Net result: results/efficiency_table.json in this repo is STILL the
+     `local_cpu` development-machine artifact from Section 3 (generated_utc
+     2026-08-06T19:30:37, before this session existed) -- verified
+     byte-identical to the file the user downloaded from this Kaggle
+     session's results/ folder, confirming independently that the session
+     produced no new committed output.
+
+8.2  ROOT CAUSE. `_reference_backbones()` (scripts/efficiency_table.py) does:
+       vit = vit_b_16(weights=None)
+       vit.eval().to(device_t)              # weights moved to device_t
+       x = torch.zeros(..., device=device_t)  # trace input, matches vit
+       macs = count_flops(vit, forward="forward")
+     `count_flops` -> `count_flops_detailed` (src/utils/efficiency.py)
+     creates its OWN internal fvcore trace tensor with NO device argument:
+       x = torch.zeros(*input_shape)   # always CPU, unconditionally
+     When device_t is cuda, `vit`'s weights are on GPU but fvcore's trace
+     tensor is on CPU -> the exact crash above. This is invisible on CPU-only
+     runs (device_t == cpu, so both tensors happen to agree) -- which is
+     exactly the local_cpu development session (Section 3) that validated
+     everything else about this pipeline and never exercised this path.
+     The rest of this script's 12-key "static" FLOP-counting section never
+     hits this bug because (verified by reading scripts/efficiency_table.py)
+     it counts FLOPs on each model BEFORE any `.to(device)` call, in a
+     separate pass from the later per-device latency loop -- the same
+     pattern `_reference_backbones` should have followed and did not.
+
+8.3  FIX APPLIED (this session, offline, not yet re-verified on a GPU --
+     see 8.4):
+       - scripts/efficiency_table.py `_reference_backbones`: reordered both
+         the ViT-B/16 and DeiT-Tiny blocks so `count_flops(...)` runs on the
+         CPU-resident model immediately after construction, and `.to(device_t)`
+         happens AFTER, right before the latency-timing call -- matching the
+         working pattern used for the 12 real grid keys. Two-line reorder
+         per backbone, no change to src/utils/efficiency.py's tested
+         count_flops / count_flops_detailed (289 pre-existing tests depend
+         on those signatures; the fix is entirely call-order, not API).
+       - scripts/efficiency_table.py main(): the `--include-reference-
+         backbones` call is now wrapped in try/except. On any failure it
+         prints a warning, records `{"status": "failed", "error": ...}` in
+         the JSON, and CONTINUES -- the primary 12-key result now always
+         reaches the write step regardless of what happens in this opt-in
+         bonus feature, closing the actual failure mode from Section 8.1
+         step 5, not just the specific bug from 8.2. Future bugs in the
+         reference-backbone path can degrade that one JSON field; they can
+         no longer cost an entire Kaggle session's real measurement.
+
+8.4  VERIFICATION STATUS -- HONEST GAP (as written 2026-08-07; superseded in
+     part by 8.6). `python -m py_compile` passes and the change was re-read
+     against the crash trace line-by-line, but this fix is NOT
+     test-verified: the bug is a device-placement error only reachable when
+     device_t is a real CUDA device, and tests/test_efficiency.py is
+     explicitly CPU-only by convention (its own module docstring: "CPU-only,
+     offline, no CUDA assumed anywhere") with zero existing coverage of
+     `_reference_backbones` (confirmed by grep). This repo's implementing
+     session has no GPU and no torch installed at all, so the fix could not
+     be executed here. Do not treat this as closed until a GPU session
+     actually runs `--include-reference-backbones --device cuda` past the
+     point it previously crashed. Adding a CUDA-gated regression test for
+     `_reference_backbones` alongside the re-run (Section 7) would prevent
+     this exact class of bug -- device-only-reachable code path with
+     CPU-only test coverage -- from recurring silently.
+
+8.5  WHAT THIS DOES AND DOES NOT CHANGE ABOUT STEP 11'S STATUS. Does NOT
+     change: Section 4 is still placeholders, the exit criteria in Section 6
+     are still unmet, RQ4 is still unanswered. DOES change: the path to
+     closing it is now a straightforward re-run rather than "code complete,
+     never attempted" -- the expensive part (does the actual 12-key
+     GPU+CPU measurement work end-to-end on real Kaggle hardware) is now
+     CONFIRMED yes, from the crashed session's own log, even though nothing
+     from that confirmation is saved to disk.
+
+8.6  FOLLOW-UP FIX (2026-08-09, a later session WITH torch, still no GPU).
+     8.3 fixed the one caller that crashed; the helper that actually owns
+     the bad assumption was left as-is, so the next caller to hand
+     count_flops a non-CPU model would have hit the identical crash. Four
+     changes, all verified by execution this time:
+
+       (a) ROOT CAUSE, src/utils/efficiency.py `count_flops_detailed`: its
+           fvcore trace tensor was `torch.zeros(*input_shape)` --
+           unconditionally CPU. It now takes its device from the model
+           itself via a new `_module_device(model)` (first parameter, then
+           first buffer, else CPU). This makes the whole CLASS of bug
+           unreachable rather than fixing one call site, and it is the
+           right place for it: the function that creates the tensor is the
+           only one that can know what device it must be on. MACs are
+           device-independent, so no reported number changes -- VERIFIED by
+           recomputing the static block for all 12 keys against the
+           committed results/efficiency_table.json: 12/12 identical in both
+           trainable params and per-image MACs. (This matters beyond
+           tidiness: main() hard-exits on a static mismatch, so a fix that
+           perturbed MACs would have failed the re-run at the gate.) The
+           provenance dict gained a `trace_device` field recording where
+           each count was traced.
+       (b) scripts/efficiency_table.py `_reference_backbones`: the two
+           bonus rows are now isolated FROM EACH OTHER, not just from the
+           primary measurement. Previously a non-ImportError failure in the
+           DeiT block escaped to main()'s handler and discarded the
+           already-computed ViT row with it; each row now records its own
+           `{"status": "failed", "error": ...}`. A missing `timm` stays
+           `"unavailable"` -- a benign optional-dependency state must
+           remain distinguishable from a real failure in the merged JSON.
+           The shared measurement body was factored into one local helper,
+           so the two rows cannot drift apart again. 8.3's FLOP-before-
+           `.to()` ordering is kept (it mirrors the primary path) but is no
+           longer load-bearing after (a).
+       (c) tests/test_efficiency.py, +6 tests (289 -> 294 passing, 1
+           skipped), closing 8.4's gap in both directions:
+             - CPU-reachable: `_module_device` fallback chain; count_flops
+               records the model's own device; `_reference_backbones`
+               returns measured rows; a failing row degrades to data while
+               the OTHER row still survives; missing timm reports
+               "unavailable" not "failed". These use stub backbones (real
+               ViT-B/16 is far too heavy for the suite) because what is
+               under test is the isolation contract, not the models.
+             - CUDA-gated (skips on this host, RUNS on Kaggle since the
+               notebook's Section 3 invokes this file): count_flops on a
+               CUDA-resident ResNet-18 does not crash and returns MACs
+               equal to the CPU count. This is the direct regression for
+               8.1's traceback, and it now executes on the very session
+               that would otherwise reproduce the bug.
+       (d) notebooks/step11_efficiency.ipynb + notebooks/step11.ipynb
+           Sections 5/6: the measurement subprocess is TEED through a
+           `run_logged` helper into both the notebook and
+           results/step11_session.log (added to the artifact zip).
+           `subprocess.run(cmd, check=True)` without capture writes to the
+           kernel's real stdout, not IPython's, so NONE of the crashed
+           session's 3 tracebacks reached the saved .ipynb -- the committed
+           notebook shows an empty cell, and 8.1 was only reconstructable
+           because a side-channel step11.log happened to survive. Diagnosing
+           the next failure should not depend on that luck. Section 5 also
+           now prints the environments/measured-key counts and each
+           reference-backbone status after the run, because (b) means a
+           bonus-row failure is no longer loud on its own.
+
+     STILL NOT VERIFIED ON A GPU. Executed here: the full suite (294
+     passed, 1 skipped), the static-block equality check above, and a real
+     end-to-end `--include-reference-backbones` run on CPU (1 filtered key,
+     reduced warmup/measure) which wrote its JSON and measured ViT-B/16 at
+     86,567,656 params / 16.87 GMACs with DeiT correctly reported
+     "unavailable" (timm is not installed locally). What no CPU host can
+     execute is the CUDA branch itself -- that is precisely what the gated
+     test in (c) is for, and it will run automatically inside the re-run's
+     own Section 3. Step 11 stays open until that session writes
+     results/efficiency_table.json.
+================================================================================

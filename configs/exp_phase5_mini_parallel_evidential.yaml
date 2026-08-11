@@ -1,0 +1,22 @@
+# Step 9 — MiniImageNet + ResNet-18 + PARALLEL in-block Bottleneck (the Step-6
+# winner: Pareto-dominant on CIFAR-FS, +3.7pp over post_pool at 2.75x fewer
+# params on MobileNetV3 too per Step 8) + evidential head.
+#
+# This is the config implementation.txt §9.2 names directly: "best PEFT from
+# Step 6" run on MiniImageNet. Same 1x1 bottleneck form / rank / block_ids as
+# the post_pool sibling, so the head-to-head isolates placement, the same way
+# exp_phase3_placement_parallel_evidential.yaml isolates it on CIFAR-FS.
+extends: exp_phase5_mini_base_evidential.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+output:
+  run_tag: mini_parallel
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, bottleneck, parallel, evidential,
+         prototype, ravi_larochelle]

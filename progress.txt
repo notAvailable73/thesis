@@ -5,7 +5,8 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-05-19
+Updated:   2026-08-07 (Step 11 CODE COMPLETE, measurement pending — see
+           below; Step 10 CLOSED 2026-08-06 — all 120 grid cells ran)
 ================================================================================
 
 
@@ -16,16 +17,113 @@ CURRENT STATUS  (read this first)
 Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result);
              Step 4.5 "settle the science" (Phase 2.5, CLOSED FINAL — TIER 3,
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
-             config, no open caveats; see below)
-Just closed: Step 7 (Phase 4: far-OOD Gaussian + OOD consolidation, RQ3) — Kaggle
-             re-eval of the parallel winner (both heads, N=600, T4, 2026-07-22),
-             both OK; added gaussian_far pool; results/phase4_ood_table.json +
-             phase4_parallel_* JSONs + step7_ood_comparison.png; pytest 107 passed;
-             step7.txt §4 + RQ3 paragraph filled. Headline below.
-             (Step 6 closed just before — RQ1 placement; Step 5 — PEFT baselines.)
-Next up:     Step 8 (MobileNetV3-Small backbone, RQ4/efficiency).
+             config, no open caveats; see below); Step 9 (MiniImageNet 2nd
+             in-distribution dataset, CLOSED — see below); Step 10 (MVT grid,
+             CLOSED 2026-08-06 — all 120 cells ran; see below).
+In progress: Step 11 (RQ4, efficiency/Pareto) — CODE COMPLETE 2026-08-07, the
+             canonical Kaggle T4 GPU + Kaggle CPU measurement session has not
+             yet run. See below and step_writeups/step11.txt.
+
+Step 10 headline (CLOSED 2026-08-06). All 120 grid cells trained and
+             evaluated on real data: results/mvt_results.json reports
+             120/120 cells, 40/40 groups with all 3 seeds, missing_cells [];
+             results/grid/_run_log.jsonl has 123 "ok" + 1 "skipped_done",
+             zero errors; 36.3 h total wall time. Three of the four RQs are
+             now answered (full detail: step_writeups/step10.txt §4, full
+             tables incl. macro-F1: docs/RESULTS_MASTER.md):
+             RQ1 — parallel bottleneck beats LoRA 16/16 matched comparisons
+               (+2.13 to +8.26 pp), and on MobileNetV3-Small does so with
+               FEWER params (6,930 vs 10,754) = strict Pareto win. CIFAR-FS
+               5-shot: parallel@31,744 params beats full_ft@11,176,512 by
+               +0.98 pp; mbnet parallel@6,928 params MATCHES it (+0.27 pp,
+               inside seed noise). At 1-shot full_ft wins by 2.57 pp.
+             RQ2 — NEGATIVE, 0/20. Evidential pooled ECE worse than plain
+               softmax in 20/20 matched pairs (1.4x-9.1x) and worse than
+               TS-softmax by 5.3x-51.2x, with accuracy 0.61 pp worse on
+               average. Step 4.5's single-config finding is now a
+               well-powered negative result. Treat RQ2 as settled.
+             RQ3 — SPLIT. vs MSP: far 38/40 (+0.111), near 37/40 (+0.053).
+               vs TS-MSP: far 38/40 (+0.127), near 38/40 (+0.067). Near-OOD
+               advantage is LARGER at 1-shot (+0.064) than 5-shot (+0.043) —
+               the predicted low-data trend holds. BUT vs energy: only 10/40
+               far and 14/40 near. See the 2026-08-06 correction entry in
+               the decisions log — this supersedes the recorded Step 4.5
+               verdict that evidential beats energy on far-OOD.
+             RQ4 — not this step; Step 11's.
+             Also closed for free: the byte-identical-rerun spot-check that
+             had been open since Step 8 and was recorded as structurally
+             blocked on 2026-07-30. The grid's seed-42 cells reproduce Step
+             6's committed metrics EXACTLY (29/29 and 55/55 numeric keys) —
+             scripts/aggregate_grid.py prints the check on every run.
+             Carry-overs resolved by the run: (ii) the mbnet/parallel/
+             evidential KL-warm-up checkpoint pattern did NOT reproduce —
+             best_val_epoch is 3/5/12/6, all at or after full KL weight
+             (anneal completes end of epoch 2 at 200 steps / 100 eps per
+             epoch); (iii) the mbnet-vs-r18 gap DOES grow under 1-shot, but
+             only on MiniImageNet (+9.19/+10.12 pp at 1-shot vs +5.24/+5.46
+             at 5-shot); CIFAR-FS stays flat (<=1.34 pp). (iv) all three
+             pre-flight risks (1-shot, LoRA×mbnet, LoRA×mini) cleared — no
+             collapsed cells. Carry-over (i) — per-cell VAL tuning — is
+             STILL open by design: the recipe stayed FROZEN across all 120
+             cells (plan.md §3) so the grid is a controlled comparison, and
+             10.9 is deferred, not dropped.
+Step 11 headline (CODE COMPLETE 2026-08-07, measurement PENDING). Every
+             piece of infrastructure exists and was verified against real
+             (non-canonical) data this session: src/utils/efficiency.py +
+             src/utils/pareto.py (56 new tests, zero regressions to the
+             pre-existing 233-test suite — see the exact count in the
+             decisions log below); scripts/efficiency_table.py (12
+             (backbone, adapter, head) measurement keys derived from
+             configs/grid/_index.json, covering all 40 mvt_results.json
+             cells; `--check-params-only` reproduced 40/40 mvt cells'
+             n_params from a fresh build_model(cfg), independent of Step
+             10's training run); scripts/pareto_plots.py (strict + eps
+             Pareto frontiers, baseline-eligible, six PNGs +
+             results/pareto_frontier.json + the quality-axis audit family);
+             scripts/make_master_tables.py / make_results_master.py
+             extended additively (verified: the 3 pre-existing
+             mvt_table_*.tex files and docs/RESULTS_MASTER.md's pre-Step-11
+             content are BYTE-IDENTICAL before/after); notebooks/
+             step11_efficiency.ipynb (NOT YET RUN). A real local-CPU run
+             (env_id `local_cpu`, this repo's own dev machine) exercised
+             the full 12-key pipeline end-to-end as a development artifact
+             — explicitly NOT the reported edge-latency figure (Section 5
+             of step_writeups/step11.txt explains why). What remains: one
+             ~15-20 min Kaggle T4 session (notebooks/step11_efficiency.ipynb)
+             and transcribing its output into step_writeups/step11.txt §4
+             and docs/RESULTS_MASTER.md's Table 8 / RQ4 section. Reference
+             gate (measured MACs vs published Howard 2019 / ResNet-18
+             figures) PASSES for both backbones. Full reasoning, the
+             pre-registered axes/tolerances (fixed BEFORE any number
+             exists, per thesis_implementation_instructions.txt §5), and
+             every honest caveat: step_writeups/step11.txt.
+Next:        Finish Step 11: run notebooks/step11_efficiency.ipynb on
+             Kaggle (GPU T4, Internet ON, no dataset attach — build_model
+             needs no data), merge its artifact zip into results/, then
+             locally run scripts/pareto_plots.py → make_master_tables.py →
+             make_results_master.py in that order and transcribe
+             step_writeups/step11.txt §4's placeholders from the committed
+             JSON. This closes all four RQs.
+             Backlog re-carried (now explicitly Step 12 items, per
+             step_writeups/step11.txt §7): 10.9 (VAL-only KL-warmup/
+             patience side-study — motivating symptom still does not
+             reproduce); energy score on evidential logits (the cheapest
+             open follow-up — no retraining, just a re-run of the 120-cell
+             eval); the from-scratch-backbone control run that would make
+             any accuracy number here comparable to published few-shot SOTA
+             (docs/RESULTS_MASTER.md §4.8); and a trained ViT-Tiny/
+             DeiT-Small arm (Step 11's `--include-reference-backbones` only
+             gives the architecture-only params/MACs/latency for this, not
+             a trained accuracy number).
+             Also new: docs/DEFENCE_BRIEF.md answers the pre-defence
+             objection that CNN backbones are outdated -- see the
+             2026-08-06 entry in the decisions log.
+             ORDERING (2026-08-06, unchanged): Step 12 (incl. 12.F baseline
+             coverage for MobileNetV3-Small + MiniImageNet, ~19 GPU-h) stays
+             deferred until Step 11 fully closes (canonical measurement +
+             transcription), not just code-complete.
 Blocker:     none.
-Today:       2026-07-22
+Today:       2026-08-07
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -106,6 +204,103 @@ OOD EDGE IS LARGER ON NEAR-OOD THAN FAR-OOD (the RQ3 point):
   parallel numbers EXACTLY (determinism verified). TinyImageNet still uncurated —
   near-OOD claim rests on the clean, disjoint cifar100_near.
   Full numbers/story: step_writeups/step7.txt §4 ; table results/phase4_ood_table.json.
+
+Step 8 headline (Phase 5, RQ4 prep, MobileNetV3-Small vs ResNet-18, N=600,
+2026-07-26) — THE SMALL BACKBONE IS ALMOST FREE, AND PARALLEL BECOMES PARETO-
+DOMINANT:
+  Cost of the swap at matched placement (mbnet − r18 accuracy):
+    post_pool  evid −0.0163   softmax −0.0027      parallel evid −0.0098
+                                                   parallel softmax −0.0035
+  The two softmax gaps are INSIDE the 600-episode CI95 (±0.005); the two
+  evidential gaps exceed it. Either way 0.3-1.6 pp, NOT the ~7-8 pp that
+  MobileNetV3-Small's ImageNet top-1 deficit predicted — for a 12.1x smaller
+  frozen trunk (927,008 params vs 11,176,512). Few-shot 5-way transfer does not
+  need most of the capacity the ImageNet gap measures.
+  RQ1 STRENGTHENS: within MobileNetV3, in-block parallel beats post_pool by
+  +0.0376 (evid 0.9048 vs 0.8672) / +0.0370 (softmax 0.9090 vs 0.8720) while
+  using 2.75x FEWER params (6,930 vs 19,026). On ResNet-18 the same +3-4 pp win
+  cost 1.88x MORE params. So here parallel is strictly Pareto-dominant — better
+  accuracy AND cheaper, no trade-off to argue. Conv-Adapter's 1x1
+  "loss of locality" caveat did NOT bite in the narrow 24-96 ch stages.
+  RQ4 PREP: mbnet/parallel (6,928 params, 927K trunk) reaches 0.9090, ABOVE
+  Step-5 ResNet-18 Full-FT (0.9047, 11,176,512 params) — full-FT accuracy with
+  1,613x fewer trained params — and within 0.35 pp of the thesis best
+  (r18/parallel 0.9125 @ 31,744). Every mbnet/post_pool point is dominated.
+  LATENCY/FLOPs NOT MEASURED — parameters only; that is Step 11.
+  RQ2/RQ3 SURVIVE THE SWAP, WITH ONE REGRESSION:
+    vacuity beats msp on all 8 cells (parallel: svhn +0.108, gaussian +0.015,
+    cifar100 +0.041, tin +0.028) and ts_msp on all 8 (+0.033..+0.170).
+    mbnet/parallel evidential sets the best far-OOD SVHN AUROC in the thesis
+    (0.9522 vs r18/parallel 0.9328, FPR@95 0.226 vs 0.380) but its near-OOD is
+    BELOW r18/parallel (cifar100 0.875 vs 0.912; tin 0.913 vs 0.929).
+    REGRESSION vs ENERGY: energy now wins 3 of 4 pools on both mbnet placements
+    (parallel: svhn +0.004 to vacuity, gaussian −0.048, cifar100 −0.013, tin
+    −0.036). On ResNet-18 it was near-even (2-2). "Vacuity is on par with energy"
+    is a ResNet-18 statement only — do not generalise it.
+  CALIBRATION still the open problem, gap WIDER at the winning cell: evid ECE
+  0.3069 vs TS-softmax 0.0088 = 35x (r18/parallel 16.6x). Most of the widening is
+  the softmax side improving — 0.0088 is the best ECE_ts in the thesis. The
+  0.3069 is the worst evidential ECE; suspect is that its checkpoint was selected
+  at epoch 3, DURING the KL warm-up (kl_w=0.030 of 0.100), unlike the other three
+  evidential runs. Untested — Step 10.
+  No collapse anywhere (guard 0.25 never fired; mean_ev 1.69-2.56), so the Step-4
+  evidential collapse did not recur at 576-d. All 4 early-stopped normally
+  (best_val_epoch 14 / 1 / 3 / 10).
+  Full numbers/story: step_writeups/step8.txt §4 ; table
+  results/phase5_backbone_table.json ; plots results/step8_backbone_comparison.png
+  + results/step8_params_vs_accuracy.png.
+
+Step 9 headline (Phase 5, RQ2/RQ3 breadth, MiniImageNet vs CIFAR-FS, N=600,
+2026-07-30) — THE PRETRAINING-OVERLAP CONFOUND IS REAL AND MEASURED, THE
+EVIDENTIAL-VS-ENERGY EDGE ERODES FURTHER, AND THE BACKBONE-COST FINDING
+DOES NOT REPLICATE:
+  MiniImageNet accuracy is 4-9 pp higher than the matched CIFAR-FS cell for 9
+  of 10 (adapter, head) pairs — mini/r18/parallel evidential peaks at 0.9601,
+  the highest accuracy recorded anywhere in this thesis. The linear-probe
+  control MEASURES the ImageNet-pretraining-overlap confound directly: the
+  parallel-minus-linear-probe uplift shrinks from CIFAR-FS's +3.84 pp
+  (softmax) / +4.05 pp (evidential) to MiniImageNet's +1.39 pp / +1.90 pp —
+  a third to a half the CIFAR-FS value (corrects an earlier approximate
+  "+4.1 pp" CIFAR-FS figure carried in instructions.txt/step9.txt — the
+  real committed number is +3.84 pp). One cell (mbnet/parallel/softmax)
+  inverts the pattern (-1.10 pp on MiniImageNet vs CIFAR-FS), reported
+  as-is, not explained away.
+  RQ2/RQ3: evidential vacuity beats softmax MSP and TS-MSP on all 16 of 16
+  (pool, config) MiniImageNet comparisons — the probabilistic claim survives
+  both the Step 8 backbone swap and this dataset swap intact. Against
+  ENERGY specifically, the "near-even" CIFAR-FS story does NOT hold: vacuity
+  wins only 7 of 16, and even r18/post_pool (a CIFAR-FS win for evidential)
+  flips to a near-total loss (1/4) on MiniImageNet. CALIBRATION: evidential
+  ECE stays flat (0.267-0.318, same band as CIFAR-FS's 0.264-0.307) while
+  TS-softmax ECE drops to new thesis-wide lows (0.0047-0.0053 on ResNet-18)
+  — the evidential-vs-TS-softmax gap explodes to 55-57x on ResNet-18 (vs
+  Step 8's previous worst, 35x), the strongest evidence yet that the ECE
+  surface really is flat regardless of dataset/backbone (Step 4.5's VAL
+  sweep finding).
+  RQ1/RQ4: placement (parallel > post_pool) REPLICATES on both backbones but
+  the margin shrinks to +0.7-1.4 pp (vs CIFAR-FS's +3.1-3.8 pp) — a plausible
+  near-saturation ceiling effect. The backbone-cost finding does NOT
+  replicate: Step 8 found MobileNetV3 costs only 0.3-1.6 pp vs ResNet-18 on
+  CIFAR-FS; on MiniImageNet the same gap is 4.7-5.7 pp (2.9-19x larger,
+  outside CI95). Untested whether this is a MobileNetV3-capacity effect or
+  the untuned-recipe caveat hitting harder here — Step 10's job to isolate.
+  mbnet/parallel evidential's checkpoint-selected-during-KL-warm-up issue
+  (Step 8: epoch 3/30, kl_w=0.030, worst evidential ECE) REPRODUCED exactly
+  on MiniImageNet (epoch 6/30, kl_w=0.060, again the worst evidential ECE of
+  its dataset, 0.3176) — 2-for-2 across independent datasets, raising the
+  priority of testing a longer KL warm-up / patience>5 on this cell in
+  Step 10.
+  No collapse anywhere (guard 0.25 never fired). pytest: 208 passed / 6
+  failed (214 collected) — all 6 traced to one environment cause (a real
+  Kaggle dataset attached under /kaggle/input during the test run shadows
+  tests that assume nothing is staged); zero are logic bugs in Step 9 code.
+  1 of the 6 (test_exclude_wnids_drops_the_named_classes) is new to Step 9
+  and, while explained by code inspection, is NOT independently confirmed by
+  a logged count from the real run — see step9.txt §5 for the full trace.
+  Full numbers/story: step_writeups/step9.txt §4 ; table
+  results/step9_mini_artifacts/results/phase5_dataset_table.json ; plots
+  results/step9_mini_artifacts/results/step9_dataset_comparison.png +
+  step9_adapter_uplift.png.
 
 Phase 1 stand-in numbers (Step 3, kept for reference; easier setup):
   evidential softplus_kl0.5:  acc 0.849 ± 0.006   AUROC 0.951
@@ -499,95 +694,344 @@ Exit criteria:
 
 
 ================================================================================
-PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (NOT STARTED)
+PHASE 5 — FULL GRID + BACKBONES + EDGE EFFICIENCY  (IN PROGRESS — Steps 8-9 CLOSED)
 ================================================================================
 
 --------------------------------------------------------------------------------
-STEP 8 — MOBILENETV3-SMALL BACKBONE                             [ ] NOT STARTED
+STEP 8 — MOBILENETV3-SMALL BACKBONE                             [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 5     RQ: RQ4 (prep)                           Est: 0.5-1 week
+Phase: 5     RQ: RQ4 (prep)     Closed: 2026-07-26
+Writeup: step_writeups/step8.txt (COMPLETE — §4 filled from the run, §4.3 answered)
+Scope: second mandatory backbone (proposal §5A) + re-run the Step-6 WINNER
+  (parallel in-block 1x1 Bottleneck, both heads) on it, plus a post-pool
+  Bottleneck row per head so placement can also be read WITHIN this backbone.
+  4 configs / 4 result JSONs / 600 test episodes each. ResNet-18 comparison rows
+  are REUSED from Steps 4.5 + 7 — nothing earlier is re-run or changed.
 
 Actions:
-  [ ] 8.1  src/backbones/mobilenetv3.py (feature_dim 576, frozen)
-  [ ] 8.2  Verify adapters work at feature_dim=576
-  [ ] 8.3  4 configs: configs/exp_phase5_mbnet_<adapter>_<head>.yaml
-  [ ] 8.4  Run + evaluate; 4 result JSONs
-  [ ] 8.5  step_writeups/step8.txt
+  [x] 8.1  src/backbones/mobilenetv3.py — build_frozen_mobilenetv3_small
+           (torchvision IMAGENET1K_V1, classifier=Identity, frozen, eval) ->
+           (B, 576); MOBILENETV3_SMALL_FEATURE_DIM; mobilenetv3_stage_paths()
+           derives the in-block placement sites by traversal (features.3/6/8/11
+           = 24/40/48/96 ch — the stage-final RESIDUAL blocks, the only
+           shape-preserving sites, so parallel composition is valid).
+           backbones/__init__ gained build_backbone(name, pretrained=True) with
+           aliases + BACKBONE_FEATURE_DIMS + backbone_feature_dim().
+  [x] 8.2  Adapters verified at feature_dim=576 (tests/test_mobilenetv3.py):
+           post-pool Bottleneck 19,024; serial/parallel placement 6,928;
+           LoRA family default (features.11.block.3.0) 10,752; BitFit;
+           Linear-Probe 0. placement.py is now backbone-agnostic
+           (resolve_stage_paths + infer_block_channels + optional
+           adapter.stage_paths override); lora.py gained
+           default_lora_targets(backbone). BOTH refactors keep the ResNet-18
+           path identical — 3 regression tests assert the same module objects,
+           31,744 param count and unchanged LoRA target.
+           build_model now asserts backbone.feature_dim matches the backbone.
+  [x] 8.3  4 configs: configs/exp_phase5_mbnet_{bottleneck,parallel}_
+           {evidential,softmax}.yaml. Each overrides ONLY backbone (+placement,
+           +output.run_tag) on top of the Step-4.5 retuned / phase-2 softmax
+           recipe, so the comparison isolates the backbone.
+  [x] 8.3b scripts/train.py + evaluate.py: new optional cfg.output.run_tag in
+           the checkpoint tag (all 4 configs share adapter.type=bottleneck and
+           would otherwise overwrite each other's .pt). run_tag unset ->
+           byte-identical filenames to Steps 1-7. train.py also logs the
+           backbone + resolved placement sites. Metrics-JSON schema UNTOUCHED
+           (adding a key would break every earlier step's byte-identical rerun).
+  [x] 8.3c scripts/step8_backbone_compare.py -> results/phase5_backbone_table
+           .json + step8_backbone_comparison.png + step8_params_vs_accuracy.png
+           (RQ4-prep scatter incl. the Step-5 Full-FT point). Cells keyed by
+           result FILENAME, not by JSON fields.
+  [x] 8.4a Kaggle notebook notebooks/step8_mbnet.ipynb — dataset-protocol
+           guidelines in the intro, env/data/split staging, tests, a backbone
+           sanity cell, the 4 resumable runs (--use-tinyimagenet --use-gaussian),
+           consolidation + plots, and an artifact-packaging cell that zips the 4
+           CHECKPOINTS + all Step 8 results with a sha256 MANIFEST and prints a
+           download link.
+  [x] 8.4b RAN it: 4 train+eval pairs, Kaggle T4, 2026-07-26 11:45-12:29 UTC,
+           ~44 min total. All 4 trained end-to-end and early-stopped on the
+           val-acc plateau (best_val_epoch 14 / 1 / 3 / 10 of 30, patience 5);
+           the collapse guard (0.25) never fired and evidential mean_ev stayed
+           1.69-2.56, so the Step-4 evidential collapse did NOT recur at 576-d.
+           Split reported canonical_bertinetto_via_torchmeta 64/16/20. SVHN was
+           not in the attached dataset and downloaded at runtime (the fix in
+           801e21e); TinyImageNet likewise. -> 4 result JSONs +
+           phase5_backbone_table.json + the 2 plots. Artifacts landed in
+           results/ (checkpoints -> gitignored checkpoints/, sha256 provenance
+           in results/step8_mbnet_MANIFEST.txt).
+  [x] 8.5  step_writeups/step8.txt §4 filled by transcription from
+           results/phase5_backbone_table.json; §4.3's five questions answered;
+           §5 caveats extended (single seed; warm-up-truncated evidential
+           checkpoint; energy regression); §1 headline written.
 
 Exit criteria:
-  [ ] MobileNetV3-Small runs full episodic trainer end-to-end
-  [ ] Best (adapter, head) from Step 6 evaluated on MobileNetV3 ×
-      CIFAR-FS with 600-episode CI
+  [x] MobileNetV3-Small runs full episodic trainer end-to-end             4/4 runs
+  [x] Best (adapter, head) from Step 6 evaluated on MobileNetV3 ×
+      CIFAR-FS with 600-episode CI      parallel: 0.9048 ±0.0052 evidential,
+                                                  0.9090 ±0.0053 softmax
+  [x] 4 result JSONs results/phase5_mbnet*_metrics.json
+  [x] pytest tests/ passes with test_mobilenetv3.py added         135 passed on
+      Kaggle T4 (107 before + 28 new, incl. the 3 ResNet-18 guards)
+  [ ] byte-identical rerun spot-check for one config      NOT DONE (optional; no
+      new nondeterminism was introduced, but that is an argument not a
+      measurement — cheapest close is to re-run one evaluate.py cell against the
+      saved checkpoint and diff the JSON)
 
 --------------------------------------------------------------------------------
-STEP 9 — MINIIMAGENET DATASET                                   [ ] NOT STARTED
+STEP 9 — MINIIMAGENET DATASET                                          [x] CLOSED
 --------------------------------------------------------------------------------
-Phase: 5     RQ: RQ2, RQ3 breadth                     Est: 1 week
+Phase: 5     RQ: RQ2, RQ3 breadth     Est: 1 week     Closed: 2026-07-30
 
 Actions:
-  [ ] 9.1  data/mini_imagenet_split.json — Ravi & Larochelle 64/16/20
-  [ ] 9.2  src/datasets/mini_imagenet.py — auto-download / documented
-           manual path; resize 84→224
-  [ ] 9.3  Phase 2-style episodic train/val/test on MiniImageNet
-  [ ] 9.4  results/phase5_mini_<adapter>_<head>_metrics.json
-  [ ] 9.5  step_writeups/step9.txt
+  [x] 9.1  src/datasets/mini_imagenet.py:MINI_IMAGENET_SPLIT — frozen
+           Ravi & Larochelle 64/16/20 wnid split, cross-checked byte-for-byte
+           against a live fetch of the canonical CSVs during planning.
+           scripts/build_mini_imagenet_split.py materializes
+           data/mini_imagenet_split.json (gitignored, same convention as
+           cifar_fs_split.json) and cross-validates against the frozen
+           constant — RUN on Kaggle T4: disjoint asserted (test 20/train
+           64/val 16 classes, all "OK").
+  [x] 9.2  src/datasets/mini_imagenet.py — auto-discovers 3 staged source
+           layouts (Zenodo pkl caches / images+csv / wnid-imagefolder) or
+           downloads the Zenodo pkls (MD5-checked); resize 84→224 via the
+           same transform every other loader uses. get_id_split /
+           get_heldout_near_ood dispatch layer added to src/datasets/
+           __init__.py, replacing 6 hardcoded get_cifar_fs(...) sites in
+           scripts/train.py + evaluate.py + step45_val_sweep.py — verified
+           byte-identical for cifar_fs configs (regression tests). The
+           Zenodo pkl schema (_load_pkl_cache) decoded 3 real staged pkls
+           correctly on the real run (see 9.3b).
+  [x] 9.3  10 configs/exp_phase5_mini_*.yaml (2 backbones x 2 placements x
+           2 heads + ResNet-18 linear-probe reference x 2 heads) —
+           Phase-2-style episodic train/val/test, same recipe as the
+           CIFAR-FS siblings. All 10 RAN end-to-end with distinct run_tag/
+           result filenames (zero collisions).
+  [x] 9.3b RUN notebooks/step9-mini(1).ipynb on Kaggle T4 — DONE 2026-07-30,
+           log timestamps 00:54:55-03:17 UTC (~142 min), RUN STATUS 10/10 OK,
+           no evidential run's collapse guard (0.25) fired. Artifacts (10
+           result JSONs + phase5_dataset_table.json + 2 plots + a sha256
+           MANIFEST; checkpoints listed in the manifest but NOT committed —
+           checkpoints/ is gitignored) committed under
+           results/step9_mini_artifacts/ (commit 2dd71ab "step 9 complete").
+  [x] 9.4  results/step9_mini_artifacts/results/phase5_mini_<adapter>_
+           <head>_metrics.json (10) — DONE.
+  [x] 9.5  step_writeups/step9.txt — §4 transcribed VERBATIM from
+           phase5_dataset_table.json (honesty rule respected: spot-checked
+           field-for-field against the individual metrics JSONs and the
+           reused CIFAR-FS reference JSONs), §4.3's five questions answered
+           with numbers, §5/§6 updated post-run.
+  Extras beyond the original 9.1-9.5 spec: TinyImageNet exclude_wnids
+  (25 wnids shared with MiniImageNet, 5 of them MiniImageNet TEST classes —
+  filtered only for mini_imagenet runs, byte-identical default for cifar_fs;
+  the FILTERING LOGIC's real-run correctness rests on code inspection, not
+  an independently logged exclusion count — see step9.txt §5);
+  scripts/step9_dataset_compare.py (cross-dataset consolidation, mirrors
+  step8_backbone_compare.py); 35 new tests (tests/test_mini_imagenet.py,
+  test_dataset_dispatch.py, + test_tinyimagenet_ood.py extensions) — RUN:
+  208 passed / 6 failed (214 collected) full-suite; all 6 failures trace to
+  one environment cause (a real Kaggle dataset attached under /kaggle/input
+  during the test run), zero are logic bugs — see step9.txt §5 for the full
+  trace, including the one Step-9-authored failure
+  (test_exclude_wnids_drops_the_named_classes).
 
 Exit criteria:
-  [ ] MiniImageNet split JSON committed, disjoint asserted
-  [ ] Bottleneck × {evidential, softmax} runs on MiniImageNet
-      end-to-end
+  [x] MiniImageNet split JSON committed, disjoint asserted BY AN ACTUAL RUN
+  [x] Bottleneck × {evidential, softmax} runs on MiniImageNet end-to-end —
+      r18/post_pool 0.9459 evid / 0.9424 softmax, r18/parallel 0.9601 evid /
+      0.9550 softmax (600 episodes each)
+  [ ] (carried, optional) byte-identical rerun spot-check — STILL NOT DONE;
+      also the standing item carried over from Step 8 (never closed there
+      either). Requires a fresh Kaggle session or the pushed-checkpoint
+      artifact, since checkpoints/ is gitignored — see step9.txt §5.
 
 --------------------------------------------------------------------------------
-STEP 10 — MVT GRID EXECUTION                                    [ ] NOT STARTED
+STEP 10 — MVT GRID EXECUTION                          [x] CLOSED 2026-08-06
+                                                        (10.9 deferred, not dropped)
 --------------------------------------------------------------------------------
 Phase: 5     RQ: all four                             Est: 2-3 weeks
+Full plan: plan.md (detailed, read first) ; writeup: step_writeups/step10.txt
 
-Actions:
-  [ ] 10.1 scripts/run_mvt_grid.sh — loops 120 runs (96 PEFT + 24
-           baseline); skip on existing metrics JSON for resume
-  [ ] 10.2 scripts/build_grid_configs.py + configs/grid/*.yaml
-           (auto-generated, then committed)
-  [ ] 10.3 scripts/aggregate_grid.py → results/mvt_results.json
-           with schema
-           {dataset}.{kshot}.{backbone}.{adapter}.{head}.{metric}
-           = {mean, std, ci95}
-  [ ] 10.4 Three master tables (accuracy, calibration, OOD AUROC) in
-           LaTeX booktabs + 300 dpi PNG; baselines as separate
-           subsection of the accuracy table
-  [ ] 10.5 step_writeups/step10.txt
+Actions (plan.md's numbering, not implementation.txt's — plan.md supersedes
+it with a more detailed, three-notebook split):
+  [x] 10.0  Pre-flight smoke test (1-shot, LoRA×mbnet, LoRA×mini) — notebook
+            10a ran; all three risks cleared by the full run (no collapsed
+            cells). Whether the smoke-test CELL itself executed is not
+            recoverable from the committed artifacts — outcome confirmed,
+            gate not.
+  [x] 10.1  6 new parent configs (LoRA × {mbnet, mini, mini+mbnet}) — DONE,
+            load + build_model verified (2026-08-02); all trained
+            end-to-end in the grid.
+  [x] 10.2  scripts/build_grid_configs.py + configs/grid/*.yaml (120) +
+            _index.json — DONE, generated + verified (exactly 120, zero
+            collisions with Steps 1-9 results).
+  [x] 10.3  scripts/run_mvt_grid.py (+ .sh wrapper) — DONE; drove all 120
+            cells (123 "ok" + 1 "skipped_done", zero errors, 36.3 h).
+  [x] 10.4  scripts/aggregate_grid.py → results/mvt_results.json — DONE
+            against real results: 120/120 cells, 40/40 complete groups,
+            missing_cells []. Free Step 6 reproducibility check PASSES on
+            both heads (29/29 and 55/55 numeric keys byte-identical).
+  [x] 10.5  scripts/make_master_tables.py → 3 tables, LaTeX + 300 dpi PNG —
+            DONE; results/mvt_table_{accuracy,calibration,ood_auroc}.{tex,
+            png} all present.
+  [x] 10.6  scripts/grid_plots.py → 16 plots @ 300 dpi — DONE; manifest
+            reports 16 expected / 16 rendered, no fallbacks.
+  [x] 10.7  tests/test_grid_configs.py — DONE, 19/19 passing (233/233 full
+            suite, zero regressions vs the pre-Step-10 214).
+  [x] 10.8a notebooks/step10a_cifar_5shot.ipynb (36 runs) — RUN.
+  [x] 10.8b notebooks/step10b_cifar_1shot.ipynb (36 runs) — RUN.
+  [x] 10.8c notebooks/step10c_mini.ipynb (48 runs) — RUN.
+  [ ] 10.9  VAL-only side-study: KL warm-up / patience for mbnet-parallel-
+            evidential — NOT RUN. DEFERRED to Step 11's backlog, not
+            dropped: its motivating symptom (checkpoint selected mid-KL-
+            warm-up) did NOT reproduce in any of the grid's four
+            mbnet/parallel/evidential cells, so it is less urgent — but
+            "did not reproduce in 4 cells" is weaker than a VAL sweep, and
+            a longer warm-up may still be relevant to the RQ2 gap.
+            Rationale in step_writeups/step10.txt §6.
+  [x] 10.10 step_writeups/step10.txt — §4 filled from mvt_results.json;
+            §5 caveats updated; §6 exit criteria + 10.9 decision; §7 (new)
+            what Step 11 inherits.
+  [x] 10.11 progress.txt updated — this entry.
+  [x] extra docs/RESULTS_MASTER.md — all 40 configurations × every metric
+            (incl. macro-F1), RQ verdicts, and a cited state-of-the-art
+            positioning section. Generated from mvt_results.json, not
+            hand-transcribed.
+  [x] extra docs/explainers/step10.md — reader-facing explainer matching
+            the step{5..9}.md series.
 
 Exit criteria:
-  [ ] All 96 PEFT cells + 24 baseline cells have a metrics JSON
-  [ ] mvt_results.json complete; no missing cells
-  [ ] Three master tables saved
-  [ ] Wandb dashboard groups runs by (dataset, shots); baselines
-      tagged "baseline"
-  [ ] 16 plots (reliability + OOD histogram per dataset × head)
-      at 300 dpi
+  [x] All 96 PEFT cells + 24 baseline cells have a metrics JSON — 120/120.
+  [x] mvt_results.json complete; no missing cells — missing_cells [].
+  [x] Three master tables saved
+  [~] Wandb dashboard groups runs by (dataset, shots); baselines
+      tagged "baseline" — config side VERIFIED: exactly 4 groups
+      (cifar-1shot, cifar-5shot, mini-1shot, mini-5shot) and exactly 24 of
+      the 120 configs carry the "baseline" tag (= 2 baseline adapters × 2
+      heads × 2 shot regimes × 3 seeds), mode online. The dashboard itself
+      is external to the repo and was NOT verified from here.
+  [x] 16 plots (reliability + OOD histogram per dataset × head)
+      at 300 dpi — reading note: 16 = dataset(2) × shots(2) × head(2) ×
+      plot-type(2), collapsing backbone/adapter to one data-driven "best"
+      cell per (dataset, shot, head); see step_writeups/step10.txt §5.
 
 --------------------------------------------------------------------------------
-STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)                    [ ] NOT STARTED
+STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)          [~] CODE COMPLETE 2026-08-07
+                                                       (canonical measurement
+                                                       ATTEMPTED, CRASHED
+                                                       BEFORE WRITING, FIX
+                                                       APPLIED, RE-RUN NEEDED)
 --------------------------------------------------------------------------------
 Phase: 5     RQ: RQ4 (primary)                        Est: 1 week
+Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending a
+         successful Kaggle session; §0/§1/§2/§3/§5/§6/§7 complete; §8 is
+         the 2026-08-07 crash incident + root cause + fix, see below)
+
+2026-08-07 UPDATE: the first real canonical Kaggle T4 session ran and
+  actually completed the FULL 12-key GPU+CPU measurement correctly
+  (confirmed line-by-line from the session log) — then crashed in the
+  optional `--include-reference-backbones` bonus feature (a device-
+  placement bug: count_flops() traced a model already moved to CUDA against
+  a CPU-only trace tensor) BEFORE the script's one-shot write to
+  results/efficiency_table.json. Because nothing is written until the very
+  end, the entire correct 12-key measurement was computed and then
+  discarded — three times over (same crash, 3 retries, ~45-50 min of GPU
+  time each). results/efficiency_table.json in this repo is STILL the
+  local_cpu development artifact from Section 3, unchanged.
+  FIXED this session (offline, NOT yet GPU-verified — see caveat below):
+  (a) reordered _reference_backbones() to count FLOPs on the CPU-resident
+  model before .to(device_t), matching the pattern the 12 real grid keys
+  already use; (b) wrapped the --include-reference-backbones call in
+  main() in try/except so a future failure there can degrade one JSON
+  field instead of costing the whole session's primary measurement again.
+  Full incident, root cause, and fix: step_writeups/step11.txt §8.
+  HONEST GAP: this fix could not be executed or tested here — no GPU, no
+  torch installed in this environment, and the bug is a device-placement
+  error that is structurally invisible to this repo's CPU-only test suite
+  (tests/test_efficiency.py has zero coverage of _reference_backbones).
+  Do not treat this as closed until re-run on Kaggle confirms it actually
+  gets past the point it previously crashed.
+
+2026-08-09 FOLLOW-UP FIX (session WITH torch, still no GPU; full detail in
+  step_writeups/step11.txt §8.6). The 08-07 fix repaired the one caller
+  that crashed but left the helper that held the bad assumption unchanged,
+  so the next caller to hand count_flops a CUDA model would have hit the
+  identical crash. Four changes, all executed and verified here:
+  (a) ROOT CAUSE — src/utils/efficiency.py count_flops_detailed built its
+  fvcore trace tensor as torch.zeros(*input_shape), unconditionally CPU; it
+  now takes the device from the model itself (new _module_device helper),
+  making the whole class of bug unreachable instead of fixing one call
+  site. VERIFIED no reported number moves: the static block recomputes
+  12/12 keys byte-identical (params AND MACs) against the committed
+  results/efficiency_table.json — which matters because main() hard-exits
+  on a static mismatch, so a fix that perturbed MACs would have failed the
+  re-run at its own gate.
+  (b) _reference_backbones' two bonus rows are now isolated from EACH
+  OTHER, not just from the primary measurement (a non-ImportError failure
+  in the DeiT block used to discard the already-computed ViT row too);
+  missing timm stays "unavailable", distinct from a real "failed".
+  (c) +6 tests (289 → 294 passing, 1 skipped) closing §8.4's stated gap:
+  five CPU-reachable ones covering _reference_backbones, which had ZERO
+  coverage, plus a CUDA-gated regression that runs count_flops on a
+  CUDA-resident ResNet-18 — it skips locally but RUNS on Kaggle, since the
+  notebook's Section 3 invokes tests/test_efficiency.py.
+  (d) The notebook's measurement subprocess is now teed into both the
+  notebook and results/step11_session.log. subprocess.run without capture
+  writes to the kernel's real stdout, not IPython's, which is why all 3 of
+  the crashed session's tracebacks are absent from the committed notebook
+  and the incident was only reconstructable from a side-channel log that
+  happened to survive.
+  STILL NOT GPU-VERIFIED — no CPU host can execute the CUDA branch. A real
+  CPU end-to-end run with --include-reference-backbones did pass (wrote its
+  JSON; ViT-B/16 = 86,567,656 params / 16.87 GMACs). Step 11 stays open
+  until a Kaggle session writes results/efficiency_table.json.
 
 Actions:
-  [ ] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
-           (fvcore), latency (T4 + Colab CPU), peak memory
-  [ ] 11.2 scripts/efficiency_table.py → results/efficiency_table.json
-  [ ] 11.3 results/pareto_latency_vs_auroc.png (one per dataset)
-  [ ] 11.4 results/pareto_params_vs_accuracy.png
-  [ ] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted
+  [x] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
+           (fvcore), latency (T4 + Colab CPU), peak memory. DONE + 30 tests
+           (tests/test_efficiency.py); also src/utils/pareto.py (26 tests,
+           tests/test_pareto.py, incl. 2 scientific regressions against the
+           committed grid) and an ADDITION beyond spec:
+           measure_train_step_peak_memory (flagged in every record).
+  [x] 11.2 scripts/efficiency_table.py → results/efficiency_table.json —
+           DONE; 12 keys derived from configs/grid/_index.json (never
+           hardcoded), architecture-homogeneity asserted per key, reference
+           gate (measured MACs vs published Howard 2019/ResNet-18 figures)
+           runs first, `--check-params-only` reproduced 40/40 mvt cells'
+           n_params. Exercised against real (non-canonical) local-CPU data
+           this session; the canonical Kaggle GPU+CPU run has not happened.
+  [x] 11.3 results/pareto_latency_vs_auroc.png (one per dataset) —
+           scripts/pareto_plots.py DONE; renders correctly against real
+           mvt_results.json + local-CPU efficiency data (0 points until the
+           canonical session exists, by design — no efficiency_table.json
+           committed yet).
+  [x] 11.4 results/pareto_params_vs_accuracy.png — DONE, needs NO new
+           measurement; fully populated from the already-committed
+           results/mvt_results.json (see step_writeups/step11.txt §4.6).
+  [x] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted — TEMPLATE
+           written with the pre-registered axes/tolerances (§0) and every
+           §4 placeholder named; the RQ4 paragraph itself is NOT YET
+           FILLED (needs the canonical session).
 
 Exit criteria:
-  [ ] efficiency_table.json complete for all MVT cells + baselines
-  [ ] Two Pareto plots saved at 300 dpi
-  [ ] RQ4 paragraph: numerical Pareto-optimal point
-  [ ] Limitation noted: "no Jetson Nano access; CPU as edge proxy"
+  [~] efficiency_table.json complete for all MVT cells + baselines —
+      pipeline verified end-to-end against real local-CPU data; canonical
+      Kaggle GPU+CPU session not yet run.
+  [~] Two Pareto plots saved at 300 dpi — script verified, real (non-final)
+      PNGs rendered; committed canonical versions pending the session above.
+  [ ] RQ4 paragraph: numerical Pareto-optimal point — NOT FILLED (the
+      params-only half IS filled, §4.6, and needs no further measurement).
+  [x] Limitation noted: "no Jetson Nano access; CPU as edge proxy" —
+      present verbatim in step_writeups/step11.txt §5 and
+      docs/RESULTS_MASTER_template.md's RQ4 section; quantification (the
+      two-environment ratio) pending the canonical CPU session.
 
 --------------------------------------------------------------------------------
 STEP 12 — OPTIONAL EXTENSIONS                                   [ ] NOT STARTED
 --------------------------------------------------------------------------------
 Phase: 5     RQ: breadth only                         Est: variable
+DO NOT START BEFORE STEP 11 — explicit ordering decision, 2026-08-06 (see
+below). Step 11 (RQ4) is the last unanswered research question and the
+thesis's most exposed gap; everything in this step is coverage/polish on
+top of an already-complete RQ1-RQ3 story and should wait.
 
 Drop order (priority top → bottom):
   [ ] 12.A ConvNeXt-Nano backbone (proposal §5A line 3)
@@ -595,9 +1039,113 @@ Drop order (priority top → bottom):
   [ ] 12.C CUB-200-2011 dataset (fine-grained)
   [ ] 12.D ISIC medical dataset (drop earliest if time tight)
   [ ] 12.E CIFAR-10-C corruption robustness (drop second)
-  [ ] 12.F Baselines extended to MobileNetV3-Small and MiniImageNet
+  [ ] 12.F Baselines (full_ft, linear_probe) extended to every (backbone,
+           dataset) pair — currently ResNet-18 x CIFAR-FS only. Supervisor
+           instruction (2026-08-06): every combination should be tested;
+           this item makes that literal rather than "optional." Scoped
+           2026-08-06 — full detail below; write step_writeups/step12.txt
+           from this box when 12.F is picked up (this step's own exit
+           criteria already require "a result JSON + one paragraph in
+           step12.txt" per extension):
 
-Exit criteria: per extension, a result JSON + one paragraph in step12.txt
+           Current coverage (results/mvt_results.json + results/
+           step9_mini_artifacts/): full_ft and linear_probe both have
+           full 3-seed x 2-shot x 2-head coverage on ResNet-18 x CIFAR-FS
+           only (in the Step 10 grid). linear_probe ALSO has a real but
+           ORPHANED result on ResNet-18 x MiniImageNet x 5-shot (Step 9,
+           seed 42 only, both heads) that was never folded into the grid
+           and has no seeds 43/44 -- treat as needing a clean 3-seed redo,
+           not a reusable partial result. full_ft x MiniImageNet has NEVER
+           run (any backbone). Neither adapter has EVER run on
+           MobileNetV3-Small, on either dataset -- confirmed by direct
+           search: no config file for it exists anywhere in configs/,
+           not even unused.
+
+           Missing, to reach parity with the PEFT adapters' coverage:
+             full_ft      x resnet18          x mini_imagenet  (both shots, both heads) -- 4 configs
+             full_ft      x mobilenetv3_small x cifar_fs       (both shots, both heads) -- 4 configs
+             full_ft      x mobilenetv3_small x mini_imagenet  (both shots, both heads) -- 4 configs
+             linear_probe x resnet18          x mini_imagenet  (both shots, both heads) -- 4 configs
+             linear_probe x mobilenetv3_small x cifar_fs       (both shots, both heads) -- 4 configs
+             linear_probe x mobilenetv3_small x mini_imagenet  (both shots, both heads) -- 4 configs
+           = 24 configs x 3 seeds = 72 runs.
+
+           Plumbing needed first (no GPU, can be done in an offline session
+           like Step 10's 2026-08-02 one): 4 new parent configs
+           (exp_phase3_mbnet_full_ft_{evidential,softmax}.yaml,
+           exp_phase3_mbnet_linear_probe_{evidential,softmax}.yaml -- mbnet
+           has never had either adapter configured) + 1 new parent config
+           (full_ft x mini_imagenet x resnet18, mirroring the linear_probe
+           one Step 9 already built); extend build_grid_configs.py's
+           baseline scope past "ResNet-18 x CIFAR-FS only"; regenerate and
+           re-run tests/test_grid_configs.py to confirm zero collisions
+           with the existing 120 cells.
+
+           Compute estimate (12 of the 24 configs are directly measured
+           from the Step 10 run log; the 12 MobileNetV3-Small configs are
+           EXTRAPOLATED at ~84-89% of the matching ResNet-18 wall-clock,
+           the ratio bottleneck_parallel/lora showed between backbones on
+           the same recipe -- not measured, since mbnet has never run
+           these adapters):
+             full_ft      r18/mini      (measured)     4.6h
+             full_ft      mbnet/cifar   (extrapolated) ~3.9h
+             full_ft      mbnet/mini    (extrapolated) ~3.9h
+             linear_probe r18/mini      (measured)     2.3h
+             linear_probe mbnet/cifar   (extrapolated) ~1.9h
+             linear_probe mbnet/mini    (extrapolated) ~1.9h
+           = ~18-19 GPU-hours total, 72 runs. Against Kaggle's free-tier
+           30 GPU-h/week + 12h max session cap (plan.md Section 8): ~2
+           sessions, or 1-2 days across 2 accounts in parallel as Step 10's
+           10b/10c did. Early-stop epochs were very stable across seeds for
+           the existing full_ft/linear_probe cells (epoch 4 or 6 for
+           full_ft, 0 or 1 for linear_probe, identical across all 3 seeds)
+           -- low risk of the estimate blowing up from unstable
+           convergence, but MobileNetV3-Small's real number could still
+           differ from the extrapolation since neither baseline has ever
+           actually been measured on it.
+
+  [ ] 12.G VAL-only KL-warmup/patience side-study (mbnet-parallel-
+           evidential) — re-carried from Step 10 (deferred there, 2026-08-06)
+           and again from Step 11 (step_writeups/step11.txt §7, 2026-08-07):
+           needs ~9 GPU training runs on VAL seeds only (never the 600 test
+           seeds), answering an RQ2 calibration question. Scope: plan.md §3.
+           Motivating symptom (checkpoint selected mid-KL-warm-up) has now
+           failed to reproduce across both the Step 10 grid's four
+           mbnet/parallel/evidential cells AND is unrelated to Step 11
+           (a pure measurement step), so priority stays low but the item is
+           re-carried explicitly rather than silently dropped a second time.
+  [ ] 12.H Energy score computed on evidential logits — the cheapest open
+           follow-up in the whole backlog (step_writeups/step11.txt §5/§7):
+           no retraining, just a re-run of the 120-cell eval adding the
+           energy score to the evidential side, closing the asymmetry that
+           Step 10's RQ3 comparison (and Step 11's `near_tin_best_score`
+           frontier variant) currently only documents (3 softmax-side
+           scores vs 1 evidential-side score) rather than fixes.
+  [ ] 12.I Trained ViT-Tiny/DeiT-Small arm inside the existing grid, same
+           protocol — the "NEW HIGHEST-PRIORITY EXPERIMENT" from the
+           2026-08-06 decisions-log entry below, ranked above the
+           from-scratch control there. Step 11's
+           `--include-reference-backbones` opt-in (scripts/efficiency_table.py)
+           already gives the ARCHITECTURE-ONLY half for free (params/MACs/
+           latency for ViT-B/16 via torchvision + DeiT-Tiny via timm if
+           installed, never trained, every row labelled
+           "architecture-only, not a thesis result") — this item is the
+           remaining trained-accuracy half.
+  [ ] 12.J From-scratch-backbone control run — trains the SAME grid from a
+           randomly-initialised backbone on the 64 base classes, giving one
+           number in the "Regime A" from-scratch protocol table
+           (docs/RESULTS_MASTER.md §4.2/§4.8 item 1) and removing the
+           "your accuracy is contaminated by ImageNet pretraining overlap"
+           objection entirely. Now ranked BELOW 12.I (2026-08-06 decision).
+
+Exit criteria: per extension, a result JSON + one paragraph in step12.txt.
+  12.F specifically: 24/24 new configs present in configs/grid/_index.json
+  with zero collisions; results/mvt_results.json updated to 144/144 cells
+  (120 existing + 24 new); docs/RESULTS_MASTER.md and
+  docs/DEFENCE_BRIEF.md's cross-backbone comparisons (currently ResNet-18
+  full_ft standing in as the reference for MobileNetV3-Small adapter
+  claims -- see the 2026-08-06 decisions-log entry) regenerated so every
+  adapter/backbone comparison in those documents is same-backbone.
 
 
 ================================================================================
@@ -744,6 +1292,87 @@ NOTES / DECISIONS LOG
             threshold>0), so the EXPECTED overfit/collapse completes and writes
             honest metrics instead of aborting the Colab run. LR 1e-5, wd 1e-4.
 
+2026-07-26  Decision (Step 8, feature dim): MobileNetV3-Small's frozen feature is
+            the 576-d POOLED CONV feature (torchvision classifier -> Identity),
+            per implementation.txt 8.1. Flagged alternative NOT taken: the paper
+            moves the final feature expansion after pooling, which in torchvision
+            is classifier[0] (Linear 576->1024), so a 1024-d feature is available.
+            Rejected because the spec says 576, classifier[0] is a 1000-class-tuned
+            layer, and the smaller feature is the honest "small backbone" for RQ4.
+
+2026-07-26  Decision (Step 8, placement sites): in-block adapter stages are
+            DERIVED from the backbone, not hardcoded — the stage-final RESIDUAL
+            inverted-residual block of each channel-width group
+            (features.3/6/8/11 = 24/40/48/96 ch for V3-Small). Only residual
+            blocks (stride 1, in==out) qualify, because parallel composition adds
+            body(block_input) to the block output and needs matching shapes.
+            Consequence to remember: V3-Small's first downsampling group
+            (features.1) is stride-2, so it has NO eligible site — the 4 mbnet
+            sites are "analogous depth", not the same resolutions as ResNet-18's
+            layer1..layer4. Escape hatch: cfg.adapter.stage_paths.
+
+2026-07-26  Result (Step 8, run): the ~7-8 pp accuracy drop that §0 predicted from
+            MobileNetV3-Small's ImageNet top-1 deficit did NOT materialise — the
+            measured gap at matched placement is 0.3-1.6 pp (and the two softmax
+            gaps are inside the 600-episode CI95). NB the "~7-8 pp" expectation
+            itself is general knowledge, not summary-sourced: the summaries state
+            only V3-Small = ~67.4-67.5% top-1, never ResNet-18's — flagged in
+            step8.txt §4.3(b). Conclusion to carry into
+            Chapter 5: on 5-way 5-shot CIFAR-FS with a prototype head, ImageNet
+            top-1 is a poor predictor of few-shot transfer, so the RQ4 efficiency
+            axis costs far less accuracy than the backbone-size ratio suggests.
+            Confound that must be stated with it: the recipe was inherited from a
+            ResNet-18 VAL sweep and never re-tuned for this backbone, which if
+            anything biases AGAINST MobileNetV3 — so 0.3-1.6 pp is an upper bound
+            on the cost, not a tuned optimum.
+
+2026-07-26  Result (Step 8, RQ1): the Step-6 placement conclusion strengthens on
+            the second backbone. In-block parallel beats post_pool by +3.7 pp on
+            BOTH heads while costing 2.75x FEWER params, i.e. strictly
+            Pareto-dominant here (on ResNet-18 the same win cost 1.88x more).
+            Combined with the param-ordering flip logged below, the honest RQ1
+            statement is "in-block parallel wins on accuracy on both backbones;
+            whether it also wins on params depends on the backbone's channel
+            profile" — not "parallel costs ~2x params".
+
+2026-07-26  Finding to flag, NOT to bury (Step 8, RQ3): energy beats evidential
+            vacuity on 3 of 4 OOD pools on BOTH MobileNetV3 placements
+            (parallel: gaussian −0.048, cifar100 −0.013, tin −0.036; svhn +0.004
+            to vacuity). On ResNet-18/parallel the same comparison was near-even
+            (2-2). The claim that survives the backbone swap intact is the
+            PROBABILISTIC one — vacuity > MSP and > TS-MSP on all 8 cells, by
+            +0.015 to +0.170. Steps 4.5/7's "on par with energy" line must be
+            scoped to ResNet-18 wherever it appears in the thesis text.
+
+2026-07-26  Open question (Step 8 -> Step 10): mbnet/parallel evidential has the
+            worst evidential ECE in the thesis (0.3069) and is the only evidential
+            run whose checkpoint was selected DURING KL warm-up (epoch 3,
+            kl_w=0.030 of a 0.100 plateau; val-acc peaked there and patience 5
+            stopped it at epoch 8). Prime suspect, untested. Step 10's VAL tuning
+            should try a longer warm-up and/or patience > 5 before any claim is
+            made about the loss on this backbone. Do not cite 0.3069 as a
+            property of the evidential loss.
+
+2026-07-26  Observation (Step 8, RQ4 relevance): on MobileNetV3 the param
+            ordering FLIPS vs ResNet-18 — in-block parallel is ~2.7x CHEAPER than
+            the post-pool adapter (6,928 vs 19,024), because stage widths are
+            24-96 ch while the pooled feature is 576-d. On ResNet-18 parallel cost
+            ~1.9x MORE (31,744 vs 16,912). Same adapter form, opposite verdict:
+            the param cost of a placement is a property of the backbone's channel
+            profile, which is a point Chapter 5 should make explicitly.
+
+2026-07-26  Decision (Step 8, reproducibility): Steps 1-7 must reproduce
+            unchanged, so every Step 8 edit is additive with the old default
+            preserved: build_frozen_resnet18/build_backbone gained
+            pretrained=True (default = old behaviour); the placement/LoRA
+            refactors resolve to the SAME ResNet modules/targets (3 regression
+            tests assert it); cfg.output.run_tag defaults to null, reproducing
+            the old checkpoint filenames; and the metrics-JSON schema was left
+            UNTOUCHED on purpose — adding a field would make every re-run of a
+            Step 4.5/5/6/7 config differ from its committed result file. Anything
+            a new step needs about a run (backbone, placement) is derived from the
+            result FILENAME by the consolidation script instead.
+
 2026-07-08  Architecture (Step 5): LoRA/BitFit/Full-FT put trainable params
             INSIDE the frozen backbone. build_adapter now receives the backbone
             and mutates it in place; the model exposes backbone_trainable so
@@ -753,6 +1382,496 @@ NOTES / DECISIONS LOG
             trainable params -> train.py short-circuits to a train-free
             checkpoint (Adam rejects an empty parameter list).
 
+2026-07-27  Decision (Step 9, data source): MiniImageNet images come from the
+            learn2learn Zenodo record 7978538 (mini-imagenet-cache-{train,
+            validation,test}.pkl), verified live during planning to serve over
+            plain HTTPS with published MD5s — no auth, no gdown. Reason:
+            cheapest reliable no-auth source found; a Kaggle-attached dataset
+            (any of 3 layouts: the same pkls, images/+csv, or a wnid
+            imagefolder) is auto-discovered first and preferred when present.
+
+2026-07-27  Decision (Step 9, split materialization): mirror CIFAR-FS —
+            regenerate into gitignored data/ via scripts/build_mini_imagenet_
+            split.py, rather than committing the split JSON to git. Reason:
+            consistency with the existing CIFAR-FS convention; the 100-wnid
+            split is additionally frozen as a Python constant
+            (MINI_IMAGENET_SPLIT in src/datasets/mini_imagenet.py), so it is
+            in git as code even though the generated JSON is not, and offline
+            structural tests need no network access.
+
+2026-07-27  Decision (Step 9, OOD pools): TinyImageNet-200 shares 25 wnids
+            with MiniImageNet's 100 classes — 5 of them MiniImageNet TEST
+            classes (verified by diffing the two wnid lists during planning).
+            Unfiltered, ~2.5% of the "tin_near" OOD pool would be literal
+            in-distribution images, biasing RQ3's headline metric. Fix:
+            get_tinyimagenet_ood gained exclude_wnids (default None, byte-
+            identical to every earlier step); evaluate.py passes
+            MINI_IMAGENET_ALL_WNIDS (all 100, not just the 20 test wnids)
+            only when cfg.dataset.name == "mini_imagenet". Consequence: Step
+            9's tin_near numbers are NOT directly comparable to Steps 4.5/7/8's
+            tin_near (different 500-image sample) — flag this if the two are
+            ever put in the same table column.
+
+2026-07-27  Decision (Step 9, run scope): 10 runs, not the spec's 2-run
+            minimum — user asked for maximum research value. Beyond
+            {ResNet-18, parallel} x {evidential, softmax} (the literal spec),
+            added: the ResNet-18 post_pool sibling (RQ1 external validity on
+            a 2nd dataset), the MobileNetV3-Small post_pool/parallel pair
+            (tests whether Step 8's "energy beats vacuity on MobileNetV3"
+            finding is a backbone property or a CIFAR-FS artifact, and gives
+            a less ImageNet-saturated 2nd cell), and a ResNet-18 linear-probe
+            reference pair (Chen 2019 "A Closer Look" motivates this as the
+            way to MEASURE, not just caveat, the ImageNet-pretraining-overlap
+            confound: parallel_acc - linear_probe_acc is the adapter's uplift
+            over raw frozen features, vs the already-committed CIFAR-FS
+            uplift of +4.1pp).
+
+2026-07-27  Architecture (Step 9): get_id_split(dataset_cfg, split) and
+            get_heldout_near_ood(dataset_cfg, ...) added to
+            src/datasets/__init__.py, replacing 6 hardcoded get_cifar_fs(...)
+            call sites in scripts/train.py (2), scripts/evaluate.py (3), and
+            scripts/step45_val_sweep.py (1) (cfg.dataset.name was previously
+            dead on the episodic path — only the legacy build_dataset()
+            factory consulted it). Every pre-Step-9 config never sets
+            dataset.name, so both functions default to the cifar_fs branch
+            with the exact same positional/keyword arguments as the old
+            direct calls — proven byte-identical by monkeypatched regression
+            tests in tests/test_dataset_dispatch.py, plus 2 real
+            (non-mocked) tests comparing routed vs direct get_cifar_fs output.
+            get_heldout_near_ood also returns the pool NAME (cifar100_near /
+            mini_near) so evaluate.py's OOD-pool dict needs no dataset
+            conditional — the evaluator already generates summary keys
+            dynamically per pool name.
+
+2026-07-27  Status note (Step 9, historical — superseded by the 2026-07-30
+            entries below): this step was implemented in a session with no
+            GPU, no torch/numpy/PIL/torchvision, and no package manager
+            available (verified before starting) — every file was written,
+            syntax-checked (python -m py_compile across the whole repo) and,
+            for configs, validated through the real load_config deep-merge;
+            none of it had been executed against real data yet.
+            step_writeups/step9.txt §4 was, at this point, an explicit
+            template, not a result.
+
+2026-07-30  Result (Step 9, run): the 10-config Kaggle T4 run completed
+            (00:54:55-03:17 UTC, ~142 min, 10/10 OK, no collapse). The
+            Zenodo pkl schema assumption flagged 2026-07-27
+            (_load_pkl_cache) decoded 3 real staged pkls correctly (test
+            20/train 64/val 16 classes, all "OK") — CLOSED, no longer a
+            caveat. The Zenodo-403/user_agent download fix from the same
+            entry was NOT exercised end-to-end this run (pkls arrived
+            pre-staged via the attached Kaggle dataset, so
+            ensure_archive()'s download path was never called) — remains
+            code-review-verified only, not execution-verified.
+
+2026-07-30  Result (Step 9, RQ2/RQ3): the ImageNet-pretraining-overlap
+            confound flagged at design time is now MEASURED: the
+            parallel-minus-linear-probe accuracy uplift shrinks from
+            CIFAR-FS's +3.84 pp (softmax) / +4.05 pp (evidential) to
+            MiniImageNet's +1.39 pp / +1.90 pp. Evidential vacuity beats
+            softmax MSP/TS-MSP on all 16 of 16 MiniImageNet (pool, config)
+            comparisons (the probabilistic claim now survives both the
+            Step 8 backbone swap and this dataset swap), but against ENERGY
+            it wins only 7 of 16 — a further erosion of the "on par with
+            energy" line, which should now be scoped to CIFAR-FS/ResNet-18
+            specifically wherever it appears in the thesis text, not just
+            "ResNet-18" as Step 8 concluded. Evidential ECE is essentially
+            flat across BOTH datasets (0.267-0.318 here vs 0.264-0.307 on
+            CIFAR-FS) while TS-softmax ECE reaches new thesis-wide lows on
+            MiniImageNet (0.0047-0.0053, ResNet-18) — pushing the
+            evidential-vs-TS-softmax gap to 55-57x, the strongest evidence
+            yet for Step 4.5's "the ECE surface is flat" conclusion.
+
+2026-07-30  Finding to flag, NOT to bury (Step 9, RQ4-adjacent, unexpected):
+            Step 8's backbone-cost finding (MobileNetV3 costs only 0.3-1.6
+            pp vs ResNet-18 on CIFAR-FS) does NOT replicate on MiniImageNet
+            — the same gap there is 4.7-5.7 pp, 2.9-19x larger and outside
+            CI95. Nothing in Step 9's paper-grounded reasoning (step9.txt §0)
+            predicts this; it was written before any MiniImageNet number
+            existed. Two untested candidate explanations (backbone-capacity
+            interaction with the pretraining-overlap confound vs. the
+            untuned-recipe caveat hitting MobileNetV3 harder here) are named
+            in step9.txt §4.3e but NOT adjudicated — Step 10's per-cell VAL
+            tuning is what will distinguish them. Do not repeat "MobileNetV3
+            is almost free" as a dataset-independent claim.
+
+2026-07-30  Open question (Step 8 -> Step 9 -> Step 10, now 2-for-2):
+            mbnet/parallel evidential's checkpoint-selected-during-KL-
+            warm-up pattern (Step 8: epoch 3/30, kl_w=0.030, worst
+            evidential ECE 0.3069 on CIFAR-FS) REPRODUCED on MiniImageNet
+            (epoch 6/30, kl_w=0.060, again the worst evidential ECE of its
+            dataset, 0.3176). Two independent datasets now show the same
+            cell hitting the same failure mode — this raises the priority
+            of Step 10 testing a longer KL warm-up / patience>5 specifically
+            for mbnet/parallel, though it remains a plausible, UNTESTED
+            explanation, not a proven cause.
+
+2026-07-30  Caveat (Step 9, test suite, traced not just flagged): the full
+            pytest suite on the Step 9 Kaggle session returned 208 passed /
+            6 failed (214 collected, more than the ~170 pre-run estimate —
+            the estimate counted test FILES, not post-parametrization pytest
+            nodes). All 6 failures trace to ONE root cause: this session had
+            a real, persistent Kaggle dataset attached under /kaggle/input,
+            which shadows tests written assuming nothing is staged. 5 of 6
+            predate Step 9 (test_cifar_fs.py x4, test_svhn_ood.py x1). The
+            6th, new in Step 9
+            (test_tinyimagenet_ood.py::test_exclude_wnids_drops_the_named_
+            classes), fails via the identical mechanism:
+            _find_extracted_tin_root's deliberate /kaggle/input recursive
+            search finds a real, attached 200-class TinyImageNet before the
+            test's synthetic tmp_path fixture, so the test's fake wnids
+            match nothing real and exclude nothing. Traced by code
+            inspection to be a TEST-ISOLATION bug, not a defect in the
+            exclude_wnids filtering logic itself (the real evaluate.py path
+            filters real wnids against real wnids, which should collide
+            correctly) — but this conclusion is NOT independently confirmed
+            by a logged exclusion count from the real run; the notebook's
+            overlap-report cell ran too early (before TinyImageNet data was
+            touched) and was never re-run. Full trace: step_writeups/
+            step9.txt §5. Recommended fix for whoever revisits this: add a
+            one-line kept/excluded print inside get_tinyimagenet_ood, and
+            isolate the test from /kaggle/input (monkeypatch or use wnids
+            that collide with a real synset).
+
+2026-07-30  Reproducibility note (Step 9): byte-identical rerun spot-check
+            is STILL NOT DONE — carried over from Step 8 (never closed
+            there either) and now also blocked structurally: the 10
+            checkpoints from this run are listed (with sha256) in
+            results/step9_mini_artifacts/MANIFEST.txt but were NOT
+            committed (checkpoints/ is gitignored), so this git checkout
+            cannot do the spot-check without either a fresh Kaggle run or
+            recovering the pushed-checkpoint artifact.
+
+2026-08-02  Decision (Step 10 plumbing session, no GPU/Kaggle available):
+            build every Step 10 artifact that is testable WITHOUT real
+            data or a GPU (configs, generator, grid runner, aggregator,
+            tables, plots, tests, notebooks) and leave the 120 actual runs
+            for whoever next has Kaggle access — same division of labor
+            Step 9 used successfully (instructions.txt §1A). Verified
+            everything offline/smoke-tested against synthetic fixtures
+            (deleted after use; nothing under results/ or checkpoints/ was
+            left behind), never against real results. Full detail in
+            step_writeups/step10.txt's STATUS header and §0/§5. Zero
+            changes made to scripts/train.py, scripts/evaluate.py, or any
+            pre-Step-10 config/notebook — every new naming convention is
+            IMPORTED from scripts.train, never re-derived, so old
+            notebooks stay reproducible exactly as before.
+
+
+2026-08-06  CORRECTION to the recorded state of the science (Step 10 grid,
+            supersedes Step 4.5 on one specific point). CLAUDE.md's "Known
+            state of the science" paragraph and step_writeups/step4_5.txt
+            record that evidential vacuity beats the non-probabilistic
+            ENERGY score on far-OOD and CIFAR-100-near, losing only on
+            TinyImageNet-near (-0.013). That was measured on ONE
+            configuration. Across the 40-configuration grid, vacuity beats
+            energy in only 10/40 far-OOD and 14/40 near-OOD comparisons
+            (mean dAUROC -0.022 and -0.007) — energy is the better OOD
+            score in ~70% of cells, INCLUDING far-OOD where Step 4.5 had
+            evidential ahead. The Step 4.5 cell is not wrong about itself;
+            the result simply does not generalise, and 40 configurations
+            outrank 1. Everything Step 4.5 said about evidential beating
+            MSP and TS-MSP is CONFIRMED and strengthened by the grid
+            (93.8% and 95.0% win rates). ACTION OUTSTANDING: CLAUDE.md's
+            paragraph still states the old version — update it before any
+            later step relies on it. Narrowed claim to use from now on:
+            "among scores derived from the model's own predictive
+            distribution, Dirichlet vacuity is a substantially better OOD
+            ranker than MSP with or without temperature scaling, and its
+            margin grows as shots shrink — but it does not beat a
+            well-chosen logit-space score."
+
+2026-08-06  Decision (Step 10 close-out): mark Step 10 CLOSED with 10.9
+            DEFERRED rather than either (a) holding the step open until the
+            side-study runs or (b) dropping 10.9 from scope. Reason: 10.9's
+            motivating symptom — the mbnet/parallel/evidential checkpoint
+            being selected during KL warm-up, 2-for-2 across Steps 8 and 9 —
+            did not reproduce in any of the grid's four such cells
+            (best_val_epoch 3/5/12/6, all at or after full KL weight, which
+            is reached at the end of epoch 2 given kl_anneal_steps=200 and
+            100 episodes/epoch with one optimizer step per episode). The
+            side-study would now be answering a question the grid has made
+            less pressing, while everything the step actually promised —
+            120 cells, three master tables, 16 plots, RQ1-RQ3 — is
+            delivered. It stays on the books because 4 non-reproductions is
+            weaker evidence than a VAL sweep, and because a longer KL
+            warm-up may still bear on the RQ2 calibration gap.
+
+2026-08-06  Finding worth not re-discovering (Step 10): full_ft and
+            linear_probe cells return BIT-IDENTICAL metrics across seeds
+            42/43/44, including best_val_epoch. This is expected, not a
+            broken seed. The grid configs vary only `seed:`, and cfg.seed
+            reaches training solely through set_seed() i.e. through random
+            parameter INITIALISATION — the training episode stream comes
+            from cfg.trainer.train_seed_offset, a fixed config value,
+            independent of cfg.seed (scripts/train.py:270, :287). Full-FT
+            initialises from pretrained ImageNet weights and linear-probe
+            has no parameters, so neither has a randomly-initialised tensor
+            for the seed to perturb; Bottleneck and LoRA do, which is why
+            only those show spread. CONSEQUENCE TO CARRY: for the two
+            BASELINE rows, n=3 seeds is effectively n=1 with no variance
+            estimate — do not claim a sub-1 pp win over them without saying
+            so. (This is why the "6,928-param adapter beats full_ft"
+            framing was demoted to "matches" in docs/RESULTS_MASTER.md
+            §4.7: the +0.27 pp margin is inside the adapter's own seed
+            spread and the baseline has none.)
+
+2026-08-06  Pre-defence objection answered (Step 10 close-out): "CNN
+            backbones are backdated — nobody uses them in 2025-26." Full
+            rebuttal with fetched-and-verified sources in
+            docs/DEFENCE_BRIEF.md; condensed into step_writeups/step10.txt
+            §8; the parameter tables also live in docs/RESULTS_MASTER.md
+            §4.4-4.5. Position taken: CONCEDE that transformers are the
+            strongest backbones at scale (do not argue this), and rest the
+            defence on three things instead — (1) the deployment target
+            cannot run them (MCU: 32-512 kB SRAM, <~1 MB flash; a
+            memory-optimised transformer attention block still costs ~180 ms
+            on an STM32F746 vs ~8-12 ms for CNN inference, arXiv:2506.18927
+            2025); (2) an Oct-2025 comparative study finds CNNs MATCH ViTs
+            specifically in low-data regimes even against large-scale-
+            pretrained ViTs (arXiv:2510.04794) — few-shot is that regime;
+            (3) our adapter is 34.6x-86.6x smaller than standard ViT PEFT
+            (SSF 0.24M, VPT-Deep 0.60M vs our 6,928) and 12,390x smaller
+            than fine-tuning ViT-B/16, on a backbone 34.6x smaller at
+            inference than CLIP-ViT-B/16.
+            THE TRADE IS QUANTIFIED, NOT ASSERTED (added after review --
+            a parameter table without the accuracy cost only shows half of
+            it). On the SAME 5-way few-shot protocol as P>M>F
+            (arXiv:2204.07305 Table 4): our r18 31,744-param adapter is
+            -1.06 pp vs DINO>PN ViT-S on CIFAR-FS 5-shot at 662x fewer
+            trainable params, -0.76 pp vs ViT-B at 2,703x fewer, and
+            +3.56 pp AHEAD of the backbone-matched DINO>PN ResNet-50 on
+            mini 5-shot at 788x fewer -- so the residual gap is a ViT gap,
+            not a parameter-efficiency gap. It costs us at 1-shot and on
+            MiniImageNet with mbnet (-7.90 pp mini-5shot, -18.18 pp
+            mini-1shot vs ViT-S); reported, not hidden. Macro-F1 is
+            reported for every one of our cells and by NONE of the
+            comparison methods. Tables: docs/RESULTS_MASTER.md §4.4.1-4.4.4,
+            docs/DEFENCE_BRIEF.md §3.1-3.4, step10.txt §8.3/§8.3b.
+            Two NEW pieces of gap evidence found while checking, both
+            documented absences rather than inferences: arXiv:2402.02242
+            (survey of the entire ViT PEFT field) and arXiv:2506.18927
+            (TinyML->TinyDL survey) each contain ZERO discussion of
+            calibration, uncertainty, or OOD detection.
+            Two findings that change how results should be presented:
+            (a) arXiv:2606.10777 (2026) shows standard reverse-KL EDL
+            objectives retain non-vanishing epistemic uncertainty even with
+            infinite data — independent theoretical support for our RQ2
+            negative, so present it as convergent evidence, not a failure;
+            (b) arXiv:2207.13137 (Bayesian Evidential Learning for Few-Shot
+            Classification) reports evidential IMPROVING ECE — the opposite
+            of our RQ2 — but meta-trains its backbone and fuses two networks,
+            where we freeze and cap the budget at <=31,744 params. That is a
+            REGIME BOUNDARY, not a contradiction, and naming it is a
+            contribution. Do not concede a contradiction if a reviewer
+            raises BEL; see step10.txt §8.7.
+            NEW HIGHEST-PRIORITY EXPERIMENT arising from this: a
+            ViT-Tiny/DeiT-Small arm inside the existing grid under the
+            identical protocol. It converts §8's argument-from-literature
+            into a measurement and is the most direct answer to the
+            objection. Now ranked above the from-scratch control in
+            docs/RESULTS_MASTER.md §4.8.
+
+2026-08-06  Reproducibility note (Step 10) — the item open since Step 8 is
+            now CLOSED POSITIVELY. progress.txt's 2026-07-30 entry recorded
+            the byte-identical-rerun spot-check as NOT DONE and
+            structurally blocked (Step 9's checkpoints were never
+            committed). scripts/aggregate_grid.py's free Step 6 check ran
+            against the real grid and both seed-42 cells reproduce the
+            committed Step 6 metrics EXACTLY — 29/29 common numeric keys
+            (evidential) and 55/55 (softmax) — months later, on different
+            hardware. CLAUDE.md's reproducibility invariant is now
+            demonstrated rather than asserted, and the check re-runs for
+            free on every aggregate_grid.py invocation.
+
+2026-08-06  Baseline-coverage gap scoped and deferred to Step 12 (12.F).
+            Supervisor instruction: every combination should be tested.
+            Audit confirmed full_ft and linear_probe have real 3-seed
+            coverage on ResNet-18 x CIFAR-FS only (in the Step 10 grid);
+            linear_probe additionally has a real but ORPHANED single-seed
+            (42) result on ResNet-18 x MiniImageNet x 5-shot from Step 9
+            (results/step9_mini_artifacts/), never folded into
+            mvt_results.json and missing seeds 43/44; full_ft has NEVER run
+            on MiniImageNet on any backbone; NEITHER baseline has EVER run
+            on MobileNetV3-Small, on either dataset -- confirmed by direct
+            search, no config file for it exists anywhere in configs/, not
+            even unused. 24 configs / 72 runs needed to reach parity with
+            the PEFT adapters' coverage; ~18-19 GPU-h estimated (12
+            configs measured directly from the Step 10 run log, 12
+            MobileNetV3-Small configs extrapolated at ~84-89% of matching
+            ResNet-18 wall-clock since mbnet has never run these adapters
+            -- flagged as an estimate, not a measurement). Full scoping in
+            Step 12 section, item 12.F.
+            DECISION: do this AFTER Step 11, not before. Step 11 answers
+            RQ4, the one research question with no answer at all; 12.F
+            fills a coverage gap in an RQ1-RQ3 story that is already
+            complete. Do not start 12.F until Step 11 is closed unless
+            explicitly told otherwise.
+            Consequence for existing documents: until 12.F runs,
+            docs/RESULTS_MASTER.md and docs/DEFENCE_BRIEF.md's
+            MobileNetV3-Small "beats/matches full fine-tuning" claims are
+            necessarily CROSS-backbone comparisons (mbnet adapter vs
+            ResNet-18 full_ft, the only full_ft number that exists) --
+            already stated as such in those documents, not a new caveat,
+            but worth remembering this is WHY, and that 12.F would let
+            those comparisons become same-backbone.
+
+2026-08-07  Decision (Step 11, FLOPs backend): fvcore, exactly as
+            implementation.txt 11.1 specifies, chosen over a torch-native
+            zero-dependency alternative that was verified to also work
+            locally. Reason: the user directed this session to follow the
+            spec literally rather than deviate for convenience. Consequence
+            handled explicitly rather than absorbed silently: fvcore is not
+            preinstalled on Kaggle/Colab, so it is now a line in
+            requirements.txt AND pyproject.toml (every notebook installs
+            from requirements.txt, so no bespoke pip cell was needed
+            anywhere). Verified locally: fvcore's FlopCountAnalysis.total()
+            returns MACs directly (not 2x), matching the "FLOPs" figures
+            quoted in PAPER SUMMARIES/CNN_paper_summaries.txt and
+            src/backbones/mobilenetv3.py's docstring, which are themselves
+            MAC counts despite the naming.
+
+2026-08-07  Bug found + fixed (Step 11, fvcore tracing): wrapping a bound
+            method (e.g. `model.adapter_features`) as a plain python closure
+            and passing that closure to fvcore's FlopCountAnalysis crashes
+            on MobileNetV3-Small with "Cannot insert a Tensor that requires
+            grad as a constant" — reproduced deterministically. Root cause:
+            fvcore traces via torch.jit.trace, which requires the model
+            whose weights are being counted to be a REGISTERED SUBMODULE of
+            the traced wrapper; a bound method stored as a closure does not
+            register its owner. Fix: src/utils/efficiency.py's
+            `_TracedForward` holds the model as a genuine child module
+            (`self.inner = model`) rather than a closed-over bound method.
+            Verified against both backbones after the fix. Does not affect
+            LoRA (which replaces a submodule INSIDE the backbone directly,
+            so tracing the bare backbone already worked) — only affects
+            adapters like PlacementAdapter that wire trainable modules in
+            via a forward-hook closure instead of module insertion.
+
+2026-08-07  Decision (Step 11, extras beyond spec, user-selected): three
+            additions beyond implementation.txt 11.1, each flagged at every
+            point of use so they can never be mistaken for a spec'd number:
+            (1) measure_train_step_peak_memory — a forward+backward+Adam
+            step on a synthetic episode, because inference-only memory
+            barely separates the adapters (same frozen trunk +-1%) and
+            understates PEFT's real advantage, which is in gradient +
+            optimizer-state memory (full_ft's 11.18M trainable params vs
+            bottleneck_parallel's 31,744 is where the difference actually
+            shows up). (2) score_stage_{1,5}shot timing units, isolating
+            the head + uncertainty-scoring cost from cached features, so
+            "evidential uncertainty is free at inference" becomes a
+            measured millisecond figure rather than an assertion. (3) an
+            opt-in `--include-reference-backbones` flag (ViT-B/16 via
+            torchvision, DeiT-Tiny via timm if installed) giving an
+            architecture-only params/MACs/latency row for the transformer
+            question docs/DEFENCE_BRIEF.md argues from published figures —
+            gated so a missing `timm` can never break the run, and every
+            such row carries the disclaimer "architecture-only, never
+            trained here, not a thesis result" verbatim.
+
+2026-08-07  Decision (Step 11, pre-registration): the cost/quality axes and
+            the recommended-point tolerance were fixed BEFORE any Section-4
+            number exists (step_writeups/step11.txt §0.4), because they
+            change the answer — verified on the committed grid data that
+            "cheapest within 1.0 pp accuracy" and "cheapest within one
+            combined CI95" pick DIFFERENT CIFAR-FS-5-shot configurations
+            (mbnet/parallel/softmax @6,928 vs r18/parallel/softmax
+            @31,744). Primary quality axis is `ood_auroc__tin_near__
+            <native>` (the only near-OOD pool present on both datasets);
+            `ood_auroc_mean` in mvt_results.json is NEVER used as a quality
+            axis because it silently aliases the svhn_far value. All
+            secondary axis variants are computed and committed to
+            results/pareto_frontier.json regardless, so the primary choice
+            is auditable, not asserted.
+
+2026-08-07  Housekeeping (Step 11): docs/RESULTS_MASTER_template.md was
+            MISSING from disk and from git — scripts/make_results_master.py
+            had been silently broken (FileNotFoundError) since whenever it
+            went missing; nobody had re-run the script since. Reconstructed
+            mechanically: each of the 7 table chunks the script generates
+            occurs exactly once in the committed docs/RESULTS_MASTER.md;
+            replacing each with its {{TABLEn}} marker and re-running the
+            (at-that-point-unmodified) script reproduced the committed
+            document BYTE-IDENTICALLY — verified before any Step-11 content
+            was added, and before scripts/make_master_tables.py /
+            make_results_master.py were extended with the new efficiency
+            table (that extension was ALSO gated: the three pre-existing
+            mvt_table_*.tex files stayed byte-identical before/after).
+            CLAUDE.md's "Known state of the science" paragraph was also
+            corrected in this step for the energy-score finding (Step 10's
+            2026-08-06 correction) — Step 11's quality axis turns on
+            exactly this fact, so leaving CLAUDE.md's old text would have
+            made this step's own write-up contradict the repo's standing
+            brief.
+
+2026-08-07  Step 11 canonical Kaggle run crashed before writing; root cause
+            found and fixed offline; re-run required. User reported "Step
+            11 is done, results are here" and asked to copy them in. Audit
+            found: (1) the file the user had on Desktop
+            (configs_only/thesis/results/efficiency_table.json) is BYTE-
+            IDENTICAL to what was already committed in this repo — nothing
+            to copy; (2) that committed file is the `local_cpu` DEVELOPMENT
+            artifact from Step 11's implementation session (generated_utc
+            2026-08-06T19:30, environments block has only `local_cpu`, no
+            GPU key) — NOT the canonical Kaggle measurement; (3) a session
+            log at Desktop/configs_only/step11.log, dated LATER than the
+            committed file, showed the actual canonical Kaggle T4 attempt:
+            it completed the real 12-key GPU+CPU measurement correctly
+            (verified line-by-line: 12x "measured [cuda]", 12x "measured
+            [cpu]", train_step timings for both), then crashed in the
+            opt-in --include-reference-backbones bonus feature on a
+            device-placement bug (count_flops() traced a CUDA-resident
+            model against a CPU-only trace tensor,
+            src/utils/efficiency.py:266/292) — and because
+            scripts/efficiency_table.py writes its output only once, at the
+            very end of main(), the crash discarded the entire correct
+            measurement before it could be saved. Retried 3x in the same
+            session, same crash each time, ~45-50 GPU-minutes lost per
+            attempt, nothing ever written.
+            FIXED offline (scripts/efficiency_table.py): reordered
+            _reference_backbones() to count FLOPs before moving the model
+            to its target device (matching the pattern the 12 real keys
+            already use); wrapped the --include-reference-backbones call in
+            try/except so this class of failure can only degrade one JSON
+            field, never again cost the primary measurement its write.
+            NOT test-verified — no GPU/torch available in this session, and
+            tests/test_efficiency.py is explicitly CPU-only by convention
+            with zero prior coverage of _reference_backbones (exactly why
+            this bug reached Kaggle uncaught). Full incident:
+            step_writeups/step11.txt §8.
+            ANSWER TO "did we answer RQ4 perfectly / did we fail": neither
+            — RQ4 is NOT YET ANSWERED (no canonical measurement is saved to
+            disk, Section 4 of step11.txt is still placeholders), but this
+            is a software bug in an optional bonus feature, not a failure
+            of the underlying measurement or the science — the log
+            confirms the actual 12-key measurement pipeline works
+            correctly end-to-end on real Kaggle hardware. Re-run is the
+            next action, not a redesign.
+
+2026-08-09  Step 11 crash fixed at the root, not just at the call site;
+            §8.4's "not test-verified" gap closed as far as a GPU-less host
+            can. PRINCIPLE WORTH KEEPING: the 08-07 fix corrected the
+            caller that happened to crash, which leaves the next caller to
+            hit the same landmine. The bad assumption lived in
+            count_flops_detailed — it builds its own fvcore trace tensor
+            and hardcoded it to CPU — so that is where it was fixed (the
+            tensor now follows the model's device). Prefer fixing the
+            function that OWNS an assumption over fixing each caller that
+            trips on it, especially when the trip is only reachable on
+            hardware the test suite never sees.
+            Also: a bonus feature that can crash the run is a bonus
+            feature that can cost the run. Fault isolation now runs
+            per-reference-row, not just around the whole block, and the
+            notebook tees subprocess output to disk so the NEXT failure is
+            diagnosable from the committed .ipynb rather than from a log
+            that survived by luck.
+            Verified here: 294 passed / 1 skipped (the CUDA-gated
+            regression, which will run on Kaggle); static block recomputes
+            12/12 keys byte-identical, so main()'s static gate will not
+            trip on the re-run; a real CPU end-to-end run with
+            --include-reference-backbones wrote its JSON. NOT verified:
+            the CUDA branch itself — unreachable without a GPU. Full
+            detail: step_writeups/step11.txt §8.6.
 
 ================================================================================
 END OF PROGRESS.TXT

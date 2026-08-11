@@ -1,0 +1,25 @@
+{
+  "n_rendered": 2,
+  "plots": [
+    {
+      "dataset": "cifar_fs",
+      "dest": "results/pareto_audit/quality_axis_variants__cifar_fs.png",
+      "status": "rendered",
+      "variants": [
+        "far_svhn_native",
+        "near_dataset_native",
+        "near_tin_best_score"
+      ]
+    },
+    {
+      "dataset": "mini_imagenet",
+      "dest": "results/pareto_audit/quality_axis_variants__mini_imagenet.png",
+      "status": "rendered",
+      "variants": [
+        "far_svhn_native",
+        "near_dataset_native",
+        "near_tin_best_score"
+      ]
+    }
+  ]
+}

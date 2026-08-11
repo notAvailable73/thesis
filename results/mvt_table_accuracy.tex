@@ -1,0 +1,33 @@
+\begin{table}[t]
+\centering
+\caption{MVT Grid — Accuracy (mean ± 95% CI, N=600)}
+\begin{tabular}{lllllll}
+\toprule
+Dataset & Shots & Backbone & Adapter & Acc (evidential) & Acc (softmax) & Params (evid/softmax) \\
+\midrule
+CIFAR-FS & 5-shot & ResNet-18 & Bottleneck (parallel) & 0.916$\pm$0.002 & 0.914$\pm$0.002 & 31,746/31,744 \\
+CIFAR-FS & 5-shot & ResNet-18 & LoRA & 0.833$\pm$0.012 & 0.863$\pm$0.002 & 12,290/12,288 \\
+CIFAR-FS & 5-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.902$\pm$0.002 & 0.907$\pm$0.002 & 6,930/6,928 \\
+CIFAR-FS & 5-shot & MobileNetV3-Small & LoRA & 0.870$\pm$0.008 & 0.880$\pm$0.004 & 10,754/10,752 \\
+CIFAR-FS & 1-shot & ResNet-18 & Bottleneck (parallel) & 0.792$\pm$0.005 & 0.786$\pm$0.005 & 31,746/31,744 \\
+CIFAR-FS & 1-shot & ResNet-18 & LoRA & 0.738$\pm$0.012 & 0.754$\pm$0.004 & 12,290/12,288 \\
+CIFAR-FS & 1-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.789$\pm$0.001 & 0.788$\pm$0.004 & 6,930/6,928 \\
+CIFAR-FS & 1-shot & MobileNetV3-Small & LoRA & 0.740$\pm$0.006 & 0.754$\pm$0.003 & 10,754/10,752 \\
+MiniImageNet & 5-shot & ResNet-18 & Bottleneck (parallel) & 0.959$\pm$0.001 & 0.956$\pm$0.001 & 31,746/31,744 \\
+MiniImageNet & 5-shot & ResNet-18 & LoRA & 0.883$\pm$0.004 & 0.916$\pm$0.006 & 12,290/12,288 \\
+MiniImageNet & 5-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.906$\pm$0.002 & 0.901$\pm$0.004 & 6,930/6,928 \\
+MiniImageNet & 5-shot & MobileNetV3-Small & LoRA & 0.880$\pm$0.003 & 0.880$\pm$0.002 & 10,754/10,752 \\
+MiniImageNet & 1-shot & ResNet-18 & Bottleneck (parallel) & 0.848$\pm$0.001 & 0.850$\pm$0.006 & 31,746/31,744 \\
+MiniImageNet & 1-shot & ResNet-18 & LoRA & 0.792$\pm$0.004 & 0.803$\pm$0.004 & 12,290/12,288 \\
+MiniImageNet & 1-shot & MobileNetV3-Small & Bottleneck (parallel) & 0.756$\pm$0.004 & 0.749$\pm$0.001 & 6,930/6,928 \\
+MiniImageNet & 1-shot & MobileNetV3-Small & LoRA & 0.725$\pm$0.002 & 0.725$\pm$0.005 & 10,754/10,752 \\
+\midrule
+\multicolumn{7}{l}{\textit{Baselines}} \\
+\midrule
+CIFAR-FS & 5-shot & ResNet-18 & Full-FT & 0.888$\pm$0.000 & 0.905$\pm$0.000 & 11,176,514/11,176,512 \\
+CIFAR-FS & 5-shot & ResNet-18 & Linear-Probe & 0.874$\pm$0.000 & 0.874$\pm$0.000 & 2/0 \\
+CIFAR-FS & 1-shot & ResNet-18 & Full-FT & 0.804$\pm$0.000 & 0.811$\pm$0.000 & 11,176,514/11,176,512 \\
+CIFAR-FS & 1-shot & ResNet-18 & Linear-Probe & 0.703$\pm$0.000 & 0.703$\pm$0.000 & 2/0 \\
+\bottomrule
+\end{tabular}
+\end{table}

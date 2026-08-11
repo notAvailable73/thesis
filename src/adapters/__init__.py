@@ -1,11 +1,12 @@
 from .bottleneck import BottleneckAdapter
-from .lora import LoRAAdapter, LoRALayer, LoRAConv2d
+from .lora import LoRAAdapter, LoRALayer, LoRAConv2d, default_lora_targets
 from .bitfit import BitFitAdapter
 from .full_ft import FullFTAdapter
 from .linear_probe import LinearProbeAdapter
 from .placement import (
     PlacementAdapter, Conv1x1Bottleneck,
     register_serial_adapter, register_parallel_adapter,
+    resolve_stage_paths, infer_block_channels,
 )
 
 
@@ -38,9 +39,12 @@ def build_adapter(spec: dict, dim: int, backbone=None):
             if backbone is None:
                 raise ValueError(
                     "serial/parallel bottleneck placement requires a backbone")
+            # Step 8: stage sites are derived from the backbone family
+            # (ResNet / MobileNetV3); adapter.stage_paths overrides explicitly.
             return PlacementAdapter(
                 backbone=backbone, rank=int(spec["rank"]),
-                placement=placement, block_ids=spec.get("block_ids"))
+                placement=placement, block_ids=spec.get("block_ids"),
+                stage_paths=spec.get("stage_paths"))
         raise ValueError(f"Unknown bottleneck placement: {placement!r}")
     if atype == "lora":
         if backbone is None:
@@ -71,6 +75,7 @@ __all__ = [
     "LoRAAdapter",
     "LoRALayer",
     "LoRAConv2d",
+    "default_lora_targets",
     "BitFitAdapter",
     "FullFTAdapter",
     "LinearProbeAdapter",
@@ -78,4 +83,6 @@ __all__ = [
     "Conv1x1Bottleneck",
     "register_serial_adapter",
     "register_parallel_adapter",
+    "resolve_stage_paths",
+    "infer_block_channels",
 ]

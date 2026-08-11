@@ -1,0 +1,16 @@
+# Step 9 — MiniImageNet + ResNet-18 + PARALLEL in-block Bottleneck (Step-6
+# winner) + softmax head. Softmax sibling of exp_phase5_mini_parallel_evidential.
+extends: exp_phase5_mini_base_softmax.yaml
+
+adapter:
+  type: bottleneck
+  rank: 16
+  placement: parallel
+  block_ids: [0, 1, 2, 3]
+
+output:
+  run_tag: mini_parallel
+
+wandb:
+  tags: [phase5, step9, mini_imagenet, bottleneck, parallel, softmax,
+         prototype, ravi_larochelle]

@@ -1,0 +1,3113 @@
+{
+  "collapse_check": {
+    "mobilenetv3_small|bottleneck_parallel@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 6.729951001034351,
+      "rel_diff_pct": 13.15733950565019,
+      "softmax_median_ms": 7.749590999083011,
+      "status": "warn"
+    },
+    "mobilenetv3_small|lora@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 8.276381999166915,
+      "rel_diff_pct": 16.870599457908273,
+      "softmax_median_ms": 7.081662999553373,
+      "status": "warn"
+    },
+    "resnet18|bottleneck_parallel@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 80.43494199955603,
+      "rel_diff_pct": 47.22564974021615,
+      "softmax_median_ms": 54.633783000099356,
+      "status": "warn"
+    },
+    "resnet18|full_ft@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 53.62852600046608,
+      "rel_diff_pct": 7.877644957114985,
+      "softmax_median_ms": 58.214454000335536,
+      "status": "warn"
+    },
+    "resnet18|linear_probe@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 49.866651999764144,
+      "rel_diff_pct": 11.686351911154103,
+      "softmax_median_ms": 56.465397001375095,
+      "status": "warn"
+    },
+    "resnet18|lora@cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+      "evidential_median_ms": 56.75985599918931,
+      "rel_diff_pct": 18.81601674168969,
+      "softmax_median_ms": 47.77121599909151,
+      "status": "warn"
+    }
+  },
+  "environments": {
+    "local_cpu": {
+      "cpu_threads_measured": [
+        1
+      ],
+      "drift_check": {
+        "drift_pct": 0.0020335539193224415,
+        "key": "resnet18|linear_probe|softmax",
+        "median_ms_first": 47.97022399998241,
+        "median_ms_last": 47.97119950035267,
+        "purpose": "Kaggle/Colab give no clock locking or persistence mode on a shared host; this measures session drift instead of assuming it away.",
+        "status": "pass",
+        "threshold_pct": 5.0,
+        "unit": "per_image"
+      },
+      "flags": {
+        "cublas_workspace_config": ":4096:8",
+        "cudnn_benchmark": false,
+        "cudnn_deterministic": true,
+        "deterministic_algorithms": true,
+        "mkl_num_threads": null,
+        "omp_num_threads": null,
+        "torch_num_threads": 6
+      },
+      "gpu_clocks": {
+        "reason": "cpu session",
+        "status": "n/a"
+      },
+      "host": {
+        "cpu_count": 12,
+        "cpu_model": "AMD Ryzen 5 PRO 5650U with Radeon Graphics",
+        "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+        "python": "3.12.3"
+      },
+      "parallel_info": "ATen/Parallel:\n\tat::get_num_threads() : 6\n\tat::get_num_interop_threads() : 12\nOpenMP 201511 (a.k.a. OpenMP 4.5)\n\tomp_get_max_threads() : 6\nIntel(R) oneAPI Math Kernel Library Version 2024.2-Product Build 20240605 for Intel(R) 64 architecture applications\n\tmkl_get_max_threads() : 6\nIntel(R) MKL-DNN v3.12.0 (Git Hash 80afa71049cd69a3df32adcccb623b12cd7baa22)\nstd::thread::hardware_concurrency() : 12\nEnvironment variables:\n\tOMP_NUM_THREADS : [not set]\n\tMKL_NUM_THREADS : [not set]\nATen parallel backend: OpenMP\n",
+      "repo": {
+        "argv": [
+          "scripts/efficiency_table.py",
+          "--device",
+          "cpu",
+          "--cpu-threads",
+          "1",
+          "--units",
+          "per_image",
+          "--warmup",
+          "1",
+          "--measure",
+          "2",
+          "--no-train-step",
+          "--env-id",
+          "local_cpu",
+          "--out",
+          "results/efficiency_table.json",
+          "--only",
+          "backbone=resnet18,adapter=linear_probe,head=softmax"
+        ],
+        "git_sha": "c97befb"
+      },
+      "torch": {
+        "cuda": "13.0",
+        "cudnn": 92000,
+        "device_kind": "cpu",
+        "version": "2.13.0+cu130"
+      }
+    }
+  },
+  "flop_convention": "macs",
+  "generated_utc": "2026-08-06T19:30:37.836551+00:00",
+  "key_arithmetic": {
+    "note": "implementation.txt 11.2 estimates '8 of the 12 combos collapse' for the efficiency loop. Measured against the closed grid: 12 keys derived; both heads of every (backbone, adapter) pair ARE measured (not collapsed) so the assumption is checked (see collapse_check), not assumed.",
+    "report_rows": 12
+  },
+  "limitations": [
+    "No Jetson Nano or any ARM edge device was available; CPU latency is used as the edge proxy (implementation.txt Step 11 exit criterion).",
+    "The CPU proxy is a server/laptop core, not an edge SoC. Absolute milliseconds are not transferable to edge hardware; ratios between backbones/adapters are the portable signal.",
+    "PyTorch eager, fp32, no quantization, no TFLite/TensorRT.",
+    "MAC counts exclude BatchNorm, activations, pooling and residual adds (no MAC counter includes them) -- see uncounted_ops per key."
+  ],
+  "measured": {
+    "mobilenetv3_small|bottleneck_parallel|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.608516998909181,
+            "max": 6.821865999881993,
+            "mean": 6.588388667296385,
+            "median": 6.729951001034351,
+            "min": 6.213349000972812,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 6.821865999881993,
+            "std": 0.2678347192335395,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 151.78218081817576
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 7.426009999107919,
+            "max": 964.7295499999018,
+            "mean": 960.2352580004663,
+            "median": 958.6726840007032,
+            "min": 957.3035400007939,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 964.7295499999018,
+            "std": 3.2267253013196395,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 78.10585934552674
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              5,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.07100699986040127,
+            "max": 0.399373999243835,
+            "mean": 0.35644033293162164,
+            "median": 0.34158000016759615,
+            "min": 0.3283669993834337,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.399373999243835,
+            "std": 0.03083418692173708,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 210413.8984024228
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              25,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.020085997675778344,
+            "max": 0.34345399944868404,
+            "mean": 0.3309083337323197,
+            "median": 0.3259029999753693,
+            "min": 0.3233680017729057,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.34345399944868404,
+            "std": 0.00893128770751801,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 226648.87025985098
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 1.4833770001132507,
+            "max": 25.408157000128995,
+            "mean": 24.612748666792566,
+            "median": 24.505309000232955,
+            "min": 23.924780000015744,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 25.408157000128995,
+            "std": 0.6103328559505197,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 203.1467540537633
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 7.778006000080495,
+            "max": 223.82637900045665,
+            "mean": 219.67301433384515,
+            "median": 219.14429100070265,
+            "min": 216.04837300037616,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 223.82637900045665,
+            "std": 3.1972911041045395,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 113.80551259703927
+        }
+      }
+    },
+    "mobilenetv3_small|bottleneck_parallel|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.8815769997454481,
+            "max": 7.942176000142354,
+            "mean": 7.58412199987409,
+            "median": 7.749590999083011,
+            "min": 7.0605990003969055,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 7.942176000142354,
+            "std": 0.3784437376893673,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 131.854419010744
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 30.191198000466102,
+            "max": 957.982546000494,
+            "mean": 938.8707933333839,
+            "median": 930.8384859996295,
+            "min": 927.7913480000279,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 957.982546000494,
+            "std": 13.571184669579631,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 79.88319642335304
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              5,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.06688099892926402,
+            "max": 0.3408109987503849,
+            "mean": 0.3045156663574744,
+            "median": 0.29880600050091743,
+            "min": 0.2739299998211209,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3408109987503849,
+            "std": 0.027600932563824763,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 246292.74709287583
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              25,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.2845999988494441,
+            "max": 0.5781359996035462,
+            "mean": 0.39546533359195263,
+            "median": 0.31472400041820947,
+            "min": 0.29353600075410213,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.5781359996035462,
+            "std": 0.12945697354277197,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 189649.99869593166
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.7003420014370931,
+            "max": 21.123152000654954,
+            "mean": 20.66596799947244,
+            "median": 20.4519419985445,
+            "min": 20.42280999921786,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 21.123152000654954,
+            "std": 0.32349660126924895,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 241.94366313388466
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 6.19407200065325,
+            "max": 234.68427800071368,
+            "mean": 231.2308696667363,
+            "median": 230.5181249994348,
+            "min": 228.49020600006043,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 234.68427800071368,
+            "std": 2.5784537624830093,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 108.11705217400898
+        }
+      }
+    },
+    "mobilenetv3_small|lora|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 1.3209260014264146,
+            "max": 8.513696000591153,
+            "mean": 7.994282666307602,
+            "median": 8.276381999166915,
+            "min": 7.192769999164739,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 8.513696000591153,
+            "std": 0.5749761737155411,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 125.08939722816679
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 67.38719499844592,
+            "max": 1060.0174949995562,
+            "mean": 1019.5763370005201,
+            "median": 1006.0812160008936,
+            "min": 992.6303000011103,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1060.0174949995562,
+            "std": 29.1186907962974,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 73.55996532897345
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              5,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.0903330001165159,
+            "max": 0.40999600059876684,
+            "mean": 0.37972133395669516,
+            "median": 0.4095050007890677,
+            "min": 0.31966300048225094,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.40999600059876684,
+            "std": 0.042468127931418104,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 197513.26378873744
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              25,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.0755260007281322,
+            "max": 0.3944180007238174,
+            "mean": 0.34582733375524793,
+            "median": 0.3241720005462412,
+            "min": 0.3188919999956852,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3944180007238174,
+            "std": 0.03442633961364746,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 216871.23220016982
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 9.700062000774778,
+            "max": 32.9306120002002,
+            "mean": 28.44371833331631,
+            "median": 29.169993000323302,
+            "min": 23.23054999942542,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 32.9306120002002,
+            "std": 3.9931947839351882,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 175.7857373430487
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 14.808653999352828,
+            "max": 236.34598399985407,
+            "mean": 229.2935626671048,
+            "median": 229.9973740009591,
+            "min": 221.53733000050124,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 236.34598399985407,
+            "std": 6.066056990246819,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 109.03053583015648
+        }
+      }
+    },
+    "mobilenetv3_small|lora|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.5017010007577483,
+            "max": 7.5732559998868965,
+            "mean": 7.2421579995231395,
+            "median": 7.081662999553373,
+            "min": 7.071554999129148,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 7.5732559998868965,
+            "std": 0.23415800548889057,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 138.08038985974142
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 143.07268499942438,
+            "max": 1568.245909000325,
+            "mean": 1480.87302666742,
+            "median": 1449.1999470010342,
+            "min": 1425.1732240009005,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1568.245909000325,
+            "std": 62.55576861170114,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 50.645800584795026
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              5,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.07700800051679835,
+            "max": 0.35626099997898564,
+            "mean": 0.3245710001162176,
+            "median": 0.3381990009074798,
+            "min": 0.2792529994621873,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.35626099997898564,
+            "std": 0.032882111044089876,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 231074.24869487758
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              576
+            ],
+            "support_shape": [
+              25,
+              576
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.032578000173089094,
+            "max": 0.3175309993821429,
+            "mean": 0.2992583328402058,
+            "median": 0.29529099992942065,
+            "min": 0.2849529992090538,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3175309993821429,
+            "std": 0.013592554865028071,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 250619.58772605858
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 16.398019000916975,
+            "max": 39.62651000074402,
+            "mean": 30.518535666487878,
+            "median": 28.70060599889257,
+            "min": 23.228490999827045,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 39.62651000074402,
+            "std": 6.816764041481409,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 163.83485939957643
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 7.0734100008849055,
+            "max": 306.0163959999045,
+            "mean": 302.6391996663733,
+            "median": 302.9582170001959,
+            "min": 298.9429859990196,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 306.0163959999045,
+            "std": 2.8965049403967407,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 82.60661549316735
+        }
+      }
+    },
+    "resnet18|bottleneck_parallel|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 16.393228001106763,
+            "max": 85.21634900171193,
+            "mean": 78.15813733395771,
+            "median": 80.43494199955603,
+            "min": 68.82312100060517,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 85.21634900171193,
+            "std": 6.88342747416021,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 12.794573081074766
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 560.8050060018286,
+            "max": 5777.415080001447,
+            "mean": 5412.56516566682,
+            "median": 5243.670342999394,
+            "min": 5216.610073999618,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5777.415080001447,
+            "std": 258.22426884664117,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 13.856646101139388
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.03982299858762417,
+            "max": 0.32213499980571214,
+            "mean": 0.2962943338692033,
+            "median": 0.2844360005838098,
+            "min": 0.28231200121808797,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.32213499980571214,
+            "std": 0.01829267349438171,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 253126.6765064368
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.05793599848402664,
+            "max": 0.4371939994598506,
+            "mean": 0.4070123335016736,
+            "median": 0.4045850000693463,
+            "min": 0.37925800097582396,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.4371939994598506,
+            "std": 0.023714467325229336,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 184269.60027168712
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 34.929529998407816,
+            "max": 354.0815319993271,
+            "mean": 339.13020466692006,
+            "median": 344.1570800005138,
+            "min": 319.1520020009193,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 354.0815319993271,
+            "std": 14.696260821311833,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 14.74359974780423
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 291.0538739997719,
+            "max": 2007.1865200006869,
+            "mean": 1899.7926470007467,
+            "median": 1976.058775000638,
+            "min": 1716.132646000915,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 2007.1865200006869,
+            "std": 130.48749902485073,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 13.15933085616905
+        }
+      }
+    },
+    "resnet18|bottleneck_parallel|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 7.114848998753587,
+            "max": 60.90985999981058,
+            "mean": 56.44621800032231,
+            "median": 54.633783000099356,
+            "min": 53.79501100105699,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 60.90985999981058,
+            "std": 3.174792333501632,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 17.71597877459726
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 208.0014269995445,
+            "max": 5547.707662999528,
+            "mean": 5470.066357333053,
+            "median": 5522.785172999647,
+            "min": 5339.706235999984,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5547.707662999528,
+            "std": 92.73835435398513,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 13.710985406869263
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.052364999646670185,
+            "max": 0.3464230012468761,
+            "mean": 0.3192636674308839,
+            "median": 0.3173099994455697,
+            "min": 0.2940580016002059,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3464230012468761,
+            "std": 0.021422510138427966,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 234915.54990746462
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.06377599856932648,
+            "max": 0.36859399915556423,
+            "mean": 0.3371766664107175,
+            "median": 0.3381179994903505,
+            "min": 0.30481800058623776,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.36859399915556423,
+            "std": 0.026044949342163465,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 222435.3209205821
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 10.25686799948744,
+            "max": 247.92682500083174,
+            "mean": 242.66027333396778,
+            "median": 242.3840379997273,
+            "min": 237.6699570013443,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 247.92682500083174,
+            "std": 4.191902094884022,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 20.604938465220528
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 27.323242000420578,
+            "max": 1487.0986660007475,
+            "mean": 1471.1696403331491,
+            "median": 1466.6348309983732,
+            "min": 1459.775424000327,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1487.0986660007475,
+            "std": 11.606413747879955,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 16.9932816138992
+        }
+      }
+    },
+    "resnet18|full_ft|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 2.9370190004556207,
+            "max": 53.70260100062296,
+            "mean": 52.698903000418795,
+            "median": 53.62852600046608,
+            "min": 50.76558200016734,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 53.70260100062296,
+            "std": 1.3673988308517309,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 18.975727065742774
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 455.82104100139986,
+            "max": 5408.765804000723,
+            "mean": 5126.475305999823,
+            "median": 5017.715350999424,
+            "min": 4952.944762999323,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5408.765804000723,
+            "std": 201.35333986745223,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 14.629934901319622
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.08173100104613695,
+            "max": 0.3876430000673281,
+            "mean": 0.3402786666507988,
+            "median": 0.3272810008638771,
+            "min": 0.30591199902119115,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3876430000673281,
+            "std": 0.0346091858705392,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 220407.58751698822
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.01707099909253884,
+            "max": 0.30972899912740104,
+            "mean": 0.29968066640625085,
+            "median": 0.29665500005648937,
+            "min": 0.2926580000348622,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.30972899912740104,
+            "std": 0.007290210108971473,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 250266.3948909172
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 9.96783699883963,
+            "max": 240.76164699908986,
+            "mean": 234.91034266650482,
+            "median": 233.1755710001744,
+            "min": 230.79381000025023,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 240.76164699908986,
+            "std": 4.250217105010537,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 21.284716301735383
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 71.84314700134564,
+            "max": 1468.6607270014065,
+            "mean": 1443.062015333756,
+            "median": 1463.7077389998012,
+            "min": 1396.8175800000608,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1468.6607270014065,
+            "std": 32.762212705445265,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 17.324272785475486
+        }
+      }
+    },
+    "resnet18|full_ft|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 4.674903000704944,
+            "max": 61.740745999486535,
+            "mean": 59.00701433286789,
+            "median": 58.214454000335536,
+            "min": 57.06584299878159,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 61.740745999486535,
+            "std": 1.9891025492296548,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 16.947137748045378
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 466.297155000575,
+            "max": 5295.849091000491,
+            "mean": 5022.592773999956,
+            "median": 4942.37729499946,
+            "min": 4829.551935999916,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5295.849091000491,
+            "std": 198.63559851122153,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 14.932526560434352
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.08631899800093379,
+            "max": 0.33726199944794644,
+            "mean": 0.2976026674635553,
+            "median": 0.30460300149570685,
+            "min": 0.25094300144701265,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.33726199944794644,
+            "std": 0.035585538836186224,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 252013.87016863542
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.05339900053513702,
+            "max": 0.34475700158509426,
+            "mean": 0.3113083342517105,
+            "median": 0.2978100001200801,
+            "min": 0.29135800104995724,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.34475700158509426,
+            "std": 0.023797998274151064,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 240918.70261127743
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 31.056281999553903,
+            "max": 271.2184009997145,
+            "mean": 260.3442873332824,
+            "median": 269.6523419999721,
+            "min": 240.1621190001606,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 271.2184009997145,
+            "std": 14.285262199612509,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 19.205337867080598
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 159.03946100115718,
+            "max": 1530.4790139998659,
+            "mean": 1446.6239789993172,
+            "median": 1437.9533699993772,
+            "min": 1371.4395529987087,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1530.4790139998659,
+            "std": 65.21641988644184,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 17.28161592986549
+        }
+      }
+    },
+    "resnet18|linear_probe|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.512235001224326,
+            "max": 49.977366001257906,
+            "mean": 49.76971633368521,
+            "median": 49.866651999764144,
+            "min": 49.46513100003358,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 49.977366001257906,
+            "std": 0.22006600015820452,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 20.09253967403424
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 538.7154189993453,
+            "max": 5319.277706999856,
+            "mean": 4960.478430667233,
+            "median": 4781.595297001331,
+            "min": 4780.56228800051,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5319.277706999856,
+            "std": 253.70975188130433,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 15.11950934739006
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.15286300003936049,
+            "max": 0.5696150001313072,
+            "mean": 0.4678366670608132,
+            "median": 0.4171430009591859,
+            "min": 0.4167520000919467,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.5696150001313072,
+            "std": 0.07196832651648846,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 160312.3595916241
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.07422800081258174,
+            "max": 0.39030399966577534,
+            "mean": 0.3631636664067628,
+            "median": 0.3831110007013194,
+            "min": 0.3160759988531936,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.39030399966577534,
+            "std": 0.03342525128554015,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 206518.45693174595
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 15.07896799921582,
+            "max": 245.28262999956496,
+            "mean": 236.1318736669394,
+            "median": 232.9093290009041,
+            "min": 230.20366200034914,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 245.28262999956496,
+            "std": 6.564166084319118,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 21.17460858779458
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 60.62784000096144,
+            "max": 1413.595031001023,
+            "mean": 1378.0534849999337,
+            "median": 1367.5982329987164,
+            "min": 1352.9671910000616,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1413.595031001023,
+            "std": 25.831737154158038,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 18.141530987094598
+        }
+      }
+    },
+    "resnet18|linear_probe|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 1.0187099996983306,
+            "max": 48.479578999831574,
+            "mean": 47.97022399998241,
+            "median": 47.97022399998241,
+            "min": 47.46086900013324,
+            "n_measure": 2,
+            "n_warmup": 1,
+            "p90": 48.479578999831574,
+            "std": 0.5093549998491653,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 3,
+          "session": "local_cpu",
+          "throughput_img_per_s": 20.846264966375113
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 218.70789699823945,
+            "max": 5179.294448998917,
+            "mean": 5053.631457666294,
+            "median": 5021.013371999288,
+            "min": 4960.586552000677,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 5179.294448998917,
+            "std": 92.2180050633036,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 14.840813111970395
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.03829100023722276,
+            "max": 0.28878699959022924,
+            "mean": 0.26658233340034104,
+            "median": 0.26046400125778746,
+            "min": 0.2504959993530065,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.28878699959022924,
+            "std": 0.01621985749930625,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 281338.97337963677
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.043591000576270744,
+            "max": 0.32074699993245304,
+            "mean": 0.29386033323438215,
+            "median": 0.2836780004145112,
+            "min": 0.2771559993561823,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.32074699993245304,
+            "std": 0.01919728729189058,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 255223.28643172202
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.48606100062897895,
+            "max": 243.01465999997163,
+            "mean": 242.69243933304097,
+            "median": 242.53405899980862,
+            "min": 242.52859899934265,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 243.01465999997163,
+            "std": 0.22785532185899943,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 20.602207525462386
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 10.098650998770609,
+            "max": 1453.2351889993151,
+            "mean": 1449.127557666846,
+            "median": 1451.0109460006788,
+            "min": 1443.1365380005445,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1453.2351889993151,
+            "std": 4.332516721318403,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 17.25175942430562
+        }
+      }
+    },
+    "resnet18|lora|evidential": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 9.415184000317822,
+            "max": 65.07615600094141,
+            "mean": 59.16566133358477,
+            "median": 56.75985599918931,
+            "min": 55.66097200062359,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 65.07615600094141,
+            "std": 4.203359523065203,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 16.90169563662699
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 78.67614200222306,
+            "max": 4766.046754000854,
+            "mean": 4719.381853333592,
+            "median": 4704.728194001291,
+            "min": 4687.370611998631,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 4766.046754000854,
+            "std": 33.74938151491414,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 15.891911765313683
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.07203300265246071,
+            "max": 0.3494910015433561,
+            "mean": 0.30327533325665473,
+            "median": 0.28287699933571275,
+            "min": 0.2774579988908954,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3494910015433561,
+            "std": 0.03275420978383331,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 247300.0332556861
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.01010899904940743,
+            "max": 0.3244359995733248,
+            "mean": 0.3201006669163083,
+            "median": 0.3215390006516827,
+            "min": 0.3143270005239174,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3244359995733248,
+            "std": 0.004250456320284305,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 234301.29253560436
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 33.30250500039256,
+            "max": 278.4920370013424,
+            "mean": 263.6111863345529,
+            "median": 267.15199000136636,
+            "min": 245.18953200094984,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 278.4920370013424,
+            "std": 13.824306559594776,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 18.967328623355254
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 423.559994000243,
+            "max": 2252.598068000225,
+            "mean": 2047.8010546667065,
+            "median": 2061.7670219999127,
+            "min": 1829.0380739999819,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 2252.598068000225,
+            "std": 173.1994097604177,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 12.208217171794024
+        }
+      }
+    },
+    "resnet18|lora|softmax": {
+      "per_image": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              1,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 6.755613001587335,
+            "max": 54.40962000102445,
+            "mean": 49.94494766651769,
+            "median": 47.77121599909151,
+            "min": 47.654006999437115,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 54.40962000102445,
+            "std": 3.1573626946427424,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 20.022045206193784
+        }
+      },
+      "query_batch": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              75,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 266.05456300057995,
+            "max": 4945.279749001202,
+            "mean": 4804.803667667026,
+            "median": 4789.906067999254,
+            "min": 4679.225186000622,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 4945.279749001202,
+            "std": 109.12595621651549,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 15.609378694221707
+        }
+      },
+      "score_stage_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              5,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.014707000445923768,
+            "max": 0.32985700090648606,
+            "mean": 0.3219590004543231,
+            "median": 0.3208699999959208,
+            "min": 0.3151500004605623,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.32985700090648606,
+            "std": 0.006053285996211794,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 232948.91552702652
+        }
+      },
+      "score_stage_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "query_shape": [
+              75,
+              512
+            ],
+            "support_shape": [
+              25,
+              512
+            ]
+          },
+          "latency_ms": {
+            "iqr": 0.024185999791370705,
+            "max": 0.3101399997831322,
+            "mean": 0.29804066677267355,
+            "median": 0.29802800054312684,
+            "min": 0.2859539999917615,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 0.3101399997831322,
+            "std": 0.009873897130045262,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 251643.5116460306
+        }
+      },
+      "support_1shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              5,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 40.18675599945709,
+            "max": 251.16689799870073,
+            "mean": 226.1858696656418,
+            "median": 216.41056899898103,
+            "min": 210.98014199924364,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 251.16689799870073,
+            "std": 17.802831549741164,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 22.10571335597235
+        }
+      },
+      "support_5shot": {
+        "cpu_1thread_amd-ryzen-5-pro-5650u-with-radeon-graphics": {
+          "device": "cpu",
+          "grad_mode": "inference",
+          "input": {
+            "shape": [
+              25,
+              3,
+              224,
+              224
+            ]
+          },
+          "latency_ms": {
+            "iqr": 7.28865500059328,
+            "max": 1302.0313380002335,
+            "mean": 1298.7213446667738,
+            "median": 1299.3900130004477,
+            "min": 1294.7426829996402,
+            "n_measure": 3,
+            "n_warmup": 2,
+            "p90": 1302.0313380002335,
+            "std": 3.012912315878883,
+            "sync": "n/a (CPU is synchronous)",
+            "timer": "time.perf_counter"
+          },
+          "model_mode": "eval",
+          "n_calls": 5,
+          "session": "local_cpu",
+          "throughput_img_per_s": 19.249702873263015
+        }
+      }
+    }
+  },
+  "protocol": "Per-(backbone, adapter, head) efficiency for the CLOSED Step-10 MVT grid. 12 keys derived from configs/grid/_index.json cover all 40 mvt_results.json leaf cells. 5-way {1,5}-shot, 15 query, 224x224.",
+  "reference_gate": {
+    "mobilenetv3_small": {
+      "classifier_delta_analytical": 1613824,
+      "classifier_delta_measured": 1613824,
+      "convention_note": null,
+      "delta_explains_gap": true,
+      "measured_macs": 59649536,
+      "published_macs": [
+        56000000.0,
+        57000000.0
+      ],
+      "ratio_to_midpoint": 1.055277063246351,
+      "source": "PAPER SUMMARIES/CNN_paper_summaries.txt Section 6 (Howard 2019): 'V3-Small 1.0 = ~67.4-67.5% top-1, ~56-57 MAdds, 2.5M params'",
+      "status": "pass",
+      "tolerance_frac": 0.05,
+      "variant": "torchvision mobilenet_v3_small, 224x224 input, WITH the classifier"
+    },
+    "resnet18": {
+      "convention_note": "published as 'GFLOPs' but is a MAC count",
+      "measured_macs": 1819065856,
+      "published_macs": 1800000000.0,
+      "ratio_to_midpoint": 1.0105921422222222,
+      "source": "src/backbones/mobilenetv3.py docstring, citing PAPER SUMMARIES/CNN_paper_summaries.txt Section 8: 'ResNet-18 is 11.7M params / 1.8 GFLOPs'",
+      "status": "pass",
+      "tolerance_frac": 0.05,
+      "variant": "torchvision resnet18, 224x224 input, WITH the fc layer"
+    }
+  },
+  "reproducibility": {
+    "cross_session_static_check": {
+      "keys_compared": 1,
+      "mismatches": [],
+      "status": "pass"
+    },
+    "measured_exemption_reason": "Wall-clock latency and CUDA peak memory depend on host load, GPU clocks/thermals, driver version, cuDNN kernel selection and allocator history. The repo's byte-identical-rerun invariant is asserted on the `static` block only.",
+    "measured_is_byte_identical": false,
+    "static_is_byte_identical": true
+  },
+  "schema_version": "step11-efficiency-v1",
+  "static": {
+    "mobilenetv3_small|bottleneck_parallel|evidential": {
+      "axes": {
+        "adapter": "bottleneck_parallel",
+        "backbone": "mobilenetv3_small",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 118680576,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 59340288,
+          "uncalled_modules": [
+            "inner.backbone.classifier",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 4,
+            "aten::add_": 6,
+            "aten::hardsigmoid": 9,
+            "aten::hardswish_": 18,
+            "aten::mul": 9
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 12146,
+        "bytes_fp32": {
+          "buffers": 48584,
+          "total": 3735752,
+          "trainable": 27720
+        },
+        "frozen": 927008,
+        "n_buffers": 102,
+        "total": 933938,
+        "trainable": 6930,
+        "trainable_fraction": 0.007420192775109268
+      },
+      "reference_config": "configs/grid/cifar_1shot_mbnet_parallel_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "mobilenetv3_small|bottleneck_parallel|softmax": {
+      "axes": {
+        "adapter": "bottleneck_parallel",
+        "backbone": "mobilenetv3_small",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 118680576,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 59340288,
+          "uncalled_modules": [
+            "inner.backbone.classifier",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 4,
+            "aten::add_": 6,
+            "aten::hardsigmoid": 9,
+            "aten::hardswish_": 18,
+            "aten::mul": 9
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 12148,
+        "bytes_fp32": {
+          "buffers": 48592,
+          "total": 3735744,
+          "trainable": 27712
+        },
+        "frozen": 927008,
+        "n_buffers": 104,
+        "total": 933936,
+        "trainable": 6928,
+        "trainable_fraction": 0.007418067190899591
+      },
+      "reference_config": "configs/grid/cifar_1shot_mbnet_parallel_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "mobilenetv3_small|lora|evidential": {
+      "axes": {
+        "adapter": "lora",
+        "backbone": "mobilenetv3_small",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 117125120,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 58562560,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.classifier",
+            "inner.backbone.features.11.block.3.0.dropout",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 1,
+            "aten::add_": 6,
+            "aten::hardsigmoid": 9,
+            "aten::hardswish_": 18,
+            "aten::mul": 10
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 12146,
+        "bytes_fp32": {
+          "buffers": 48584,
+          "total": 3751048,
+          "trainable": 43016
+        },
+        "frozen": 927008,
+        "n_buffers": 102,
+        "total": 937762,
+        "trainable": 10754,
+        "trainable_fraction": 0.011467728485479257
+      },
+      "reference_config": "configs/grid/cifar_1shot_mbnet_lora_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "mobilenetv3_small|lora|softmax": {
+      "axes": {
+        "adapter": "lora",
+        "backbone": "mobilenetv3_small",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 117125120,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 58562560,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.classifier",
+            "inner.backbone.features.11.block.3.0.dropout",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 1,
+            "aten::add_": 6,
+            "aten::hardsigmoid": 9,
+            "aten::hardswish_": 18,
+            "aten::mul": 10
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 12148,
+        "bytes_fp32": {
+          "buffers": 48592,
+          "total": 3751040,
+          "trainable": 43008
+        },
+        "frozen": 927008,
+        "n_buffers": 104,
+        "total": 937760,
+        "trainable": 10752,
+        "trainable_fraction": 0.011465620201330831
+      },
+      "reference_config": "configs/grid/cifar_1shot_mbnet_lora_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|bottleneck_parallel|evidential": {
+      "axes": {
+        "adapter": "bottleneck_parallel",
+        "backbone": "resnet18",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3661192192,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1830596096,
+          "uncalled_modules": [
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 4,
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 9620,
+        "bytes_fp32": {
+          "buffers": 38480,
+          "total": 44833032,
+          "trainable": 126984
+        },
+        "frozen": 11176512,
+        "n_buffers": 60,
+        "total": 11208258,
+        "trainable": 31746,
+        "trainable_fraction": 0.002832375914258933
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_parallel_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|bottleneck_parallel|softmax": {
+      "axes": {
+        "adapter": "bottleneck_parallel",
+        "backbone": "resnet18",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3661192192,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1830596096,
+          "uncalled_modules": [
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 4,
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 9622,
+        "bytes_fp32": {
+          "buffers": 38488,
+          "total": 44833024,
+          "trainable": 126976
+        },
+        "frozen": 11176512,
+        "n_buffers": 62,
+        "total": 11208256,
+        "trainable": 31744,
+        "trainable_fraction": 0.0028321979797749086
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_parallel_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|full_ft|evidential": {
+      "axes": {
+        "adapter": "full_ft",
+        "backbone": "resnet18",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3637107712,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1818553856,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot"
+      ],
+      "n_cells": 6,
+      "params": {
+        "buffer_numel": 9620,
+        "bytes_fp32": {
+          "buffers": 38480,
+          "total": 44706056,
+          "trainable": 44706056
+        },
+        "frozen": 0,
+        "n_buffers": 60,
+        "total": 11176514,
+        "trainable": 11176514,
+        "trainable_fraction": 1.0
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_full_ft_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|full_ft|softmax": {
+      "axes": {
+        "adapter": "full_ft",
+        "backbone": "resnet18",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3637107712,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1818553856,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot"
+      ],
+      "n_cells": 6,
+      "params": {
+        "buffer_numel": 9622,
+        "bytes_fp32": {
+          "buffers": 38488,
+          "total": 44706048,
+          "trainable": 44706048
+        },
+        "frozen": 0,
+        "n_buffers": 62,
+        "total": 11176512,
+        "trainable": 11176512,
+        "trainable_fraction": 1.0
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_full_ft_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|linear_probe|evidential": {
+      "axes": {
+        "adapter": "linear_probe",
+        "backbone": "resnet18",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3637107712,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1818553856,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot"
+      ],
+      "n_cells": 6,
+      "params": {
+        "buffer_numel": 9620,
+        "bytes_fp32": {
+          "buffers": 38480,
+          "total": 44706056,
+          "trainable": 8
+        },
+        "frozen": 11176512,
+        "n_buffers": 60,
+        "total": 11176514,
+        "trainable": 2,
+        "trainable_fraction": 1.7894667335450033e-07
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_linear_probe_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|linear_probe|softmax": {
+      "axes": {
+        "adapter": "linear_probe",
+        "backbone": "resnet18",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3637107712,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1818553856,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add_": 8,
+            "aten::max_pool2d": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot"
+      ],
+      "n_cells": 6,
+      "params": {
+        "buffer_numel": 9622,
+        "bytes_fp32": {
+          "buffers": 38488,
+          "total": 44706048,
+          "trainable": 0
+        },
+        "frozen": 11176512,
+        "n_buffers": 62,
+        "total": 11176512,
+        "trainable": 0,
+        "trainable_fraction": 0.0
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_linear_probe_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|lora|evidential": {
+      "axes": {
+        "adapter": "lora",
+        "backbone": "resnet18",
+        "head": "evidential"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3638311936,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1819155968,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.backbone.layer4.0.downsample.0.dropout",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 1,
+            "aten::add_": 8,
+            "aten::max_pool2d": 1,
+            "aten::mul": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 9620,
+        "bytes_fp32": {
+          "buffers": 38480,
+          "total": 44755208,
+          "trainable": 49160
+        },
+        "frozen": 11176512,
+        "n_buffers": 60,
+        "total": 11188802,
+        "trainable": 12290,
+        "trainable_fraction": 0.0010984196520771392
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_lora_evidential_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    },
+    "resnet18|lora|softmax": {
+      "axes": {
+        "adapter": "lora",
+        "backbone": "resnet18",
+        "head": "softmax"
+      },
+      "flops": {
+        "per_image": {
+          "backend": "fvcore.nn.FlopCountAnalysis",
+          "backend_version": "0.1.5.post20221221",
+          "flops_2x_macs": 3638311936,
+          "input_shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "macs": 1819155968,
+          "uncalled_modules": [
+            "inner.adapter",
+            "inner.backbone.fc",
+            "inner.backbone.layer4.0.downsample.0.dropout",
+            "inner.head"
+          ],
+          "uncounted_note": "BatchNorm / ReLU / h-swish / pooling / residual-add are not multiply-accumulate ops and are counted by NO MAC counter (fvcore included). Their omission understates depthwise + h-swish backbones.",
+          "uncounted_ops": {
+            "aten::add": 1,
+            "aten::add_": 8,
+            "aten::max_pool2d": 1,
+            "aten::mul": 1
+          }
+        }
+      },
+      "mvt_cells": [
+        "cifar_fs/1shot",
+        "cifar_fs/5shot",
+        "mini_imagenet/1shot",
+        "mini_imagenet/5shot"
+      ],
+      "n_cells": 12,
+      "params": {
+        "buffer_numel": 9622,
+        "bytes_fp32": {
+          "buffers": 38488,
+          "total": 44755200,
+          "trainable": 49152
+        },
+        "frozen": 11176512,
+        "n_buffers": 62,
+        "total": 11188800,
+        "trainable": 12288,
+        "trainable_fraction": 0.0010982410982410982
+      },
+      "reference_config": "configs/grid/cifar_1shot_r18_lora_softmax_seed42.yaml",
+      "weights": "IMAGENET1K_V1"
+    }
+  },
+  "training_step": {}
+}

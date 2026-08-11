@@ -1,0 +1,24 @@
+# Step 10 (MVT grid) — MiniImageNet + ResNet-18 + LoRA + evidential prototype
+# head. Dataset-axis complement to exp_phase3_lora_evidential.yaml (CIFAR-FS):
+# same LoRA target (layer4.0.downsample.0, the ResNet default — see
+# src/adapters/lora.py:_DEFAULT_LORA_TARGETS) and rank, only the dataset
+# switches, exactly as exp_phase5_mini_parallel_evidential.yaml isolates the
+# dataset axis for the Bottleneck-parallel adapter. This config has never been
+# run before (plan.md Step 10 risk #3: "LoRA on MiniImageNet has never run") —
+# the Step 10 pre-flight smoke test covers it first.
+extends: exp_phase5_mini_base_evidential.yaml
+
+adapter:
+  type: lora
+  rank: 16
+  alpha: null
+  dropout: 0.0
+  lora_targets:
+    - layer4.0.downsample.0
+
+output:
+  run_tag: mini_lora
+
+wandb:
+  tags: [phase5, step10, mini_imagenet, lora, evidential, prototype,
+         ravi_larochelle]

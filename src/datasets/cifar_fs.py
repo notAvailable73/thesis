@@ -26,10 +26,12 @@ This re-indexing is what lets the episode sampler treat the in-split
 class IDs as a simple 0..N range without surprises.
 """
 from __future__ import annotations
+import glob
 import json
+import os
 import warnings
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import torch
 from torch.utils.data import Dataset
@@ -41,6 +43,33 @@ _IMAGENET_STD = [0.229, 0.224, 0.225]
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SPLIT_PATH = _REPO_ROOT / "data" / "cifar_fs_split.json"
+
+_CIFAR100_DIRNAME = "cifar-100-python"
+
+
+def _find_staged_cifar100_root(data_root: str) -> Optional[str]:
+    """A directory that already contains a FULL cifar-100-python/ folder
+    (train + test + meta) -- searched under data_root and anywhere in
+    /kaggle/input at ANY depth (same convention as tinyimagenet_ood.py's
+    `_find_extracted_tin_root` / svhn_ood.py's staged-mat finder).
+
+    Requires all three files, not just the partition this call happens to
+    want: torchvision's CIFAR100._check_integrity() verifies train_list +
+    test_list TOGETHER regardless of the `train=` constructor flag, so a
+    directory missing either partition fails integrity no matter which
+    split we asked for -- there's no such thing as "just enough" staged
+    data here.
+    """
+    search_roots = [data_root]
+    if os.path.isdir("/kaggle/input"):
+        search_roots.append("/kaggle/input")
+    for root in search_roots:
+        for hit in glob.glob(os.path.join(root, "**", _CIFAR100_DIRNAME),
+                             recursive=True):
+            if all(os.path.isfile(os.path.join(hit, f))
+                   for f in ("train", "test", "meta")):
+                return os.path.dirname(hit)
+    return None
 
 
 def _build_transform(image_size: int):
@@ -186,18 +215,28 @@ def get_cifar_fs(data_root: str = "data", image_size: int = 224,
 
     transform = _build_transform(image_size)
     use_train_partition = split in ("train", "val")
-    # Pre-fetch with a browser User-Agent: the Toronto host 403s torchvision's
-    # default downloader, which breaks fresh (gitignored) clones on Colab.
-    from ._robust_download import ensure_archive
-    ensure_archive(
-        data_root, "cifar-100-python.tar.gz",
-        ["https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
-         "http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"],
-        extracted_dirname="cifar-100-python",
-    )
+    staged_root = _find_staged_cifar100_root(data_root)
+    # download=False on the staged path: we've already confirmed every file
+    # CIFAR100._check_integrity() looks at is present, so no download should
+    # ever be needed; False just avoids torchvision attempting a write into
+    # what may be a read-only /kaggle/input mount if an md5 ever disagreed.
+    download = staged_root is None
+    if staged_root is None:
+        # Pre-fetch with a browser User-Agent: the Toronto host 403s
+        # torchvision's default downloader, which breaks fresh (gitignored)
+        # clones on Colab.
+        from ._robust_download import ensure_archive
+        ensure_archive(
+            data_root, "cifar-100-python.tar.gz",
+            ["https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
+             "http://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"],
+            extracted_dirname="cifar-100-python",
+        )
+        staged_root = data_root
+        download = True
     base = datasets.CIFAR100(
-        root=data_root, train=use_train_partition,
-        download=True, transform=transform,
+        root=staged_root, train=use_train_partition,
+        download=download, transform=transform,
     )
 
     if class_ids is not None:
