@@ -32,7 +32,10 @@ class ModelService:
         self._preprocess = ImagePreprocessor(settings.image_size)
         self._backbone = FrozenResNet18(settings.allow_random_weights).to(self._device)
         self._adapter_bundle = load_trained_adapter(
-            settings.checkpoint_path, dim=self._backbone.output_dim,
+            settings.checkpoint_path,
+            backbone=self._backbone.net,
+            dim=self._backbone.output_dim,
+            placement_hint=settings.adapter_placement_hint,
         )
         log.info(
             "ModelService ready in %.2fs  (weights=%s, dim=%d, device=%s, adapter=%s)",
@@ -61,6 +64,17 @@ class ModelService:
         """``"trained"`` if the Phase-2 B-PEFT checkpoint loaded, else
         ``"baseline"`` (untrained backbone-only, fixed evidence constants)."""
         return "trained" if self._adapter_bundle is not None else "baseline"
+
+    @property
+    def adapter_type(self) -> str | None:
+        """``"bottleneck"`` / ``"lora"`` / etc, or None if no checkpoint loaded."""
+        return self._adapter_bundle.adapter_type if self._adapter_bundle else None
+
+    @property
+    def adapter_placement(self) -> str | None:
+        """``"post_pool"`` / ``"serial"`` / ``"parallel"`` for bottleneck
+        checkpoints, None for lora / no checkpoint."""
+        return self._adapter_bundle.placement if self._adapter_bundle else None
 
     @property
     def evidence_scale(self) -> float:
@@ -101,7 +115,7 @@ class ModelService:
 
         with self._lock, torch.no_grad():
             feats = self._backbone(batch)                       # (N, D)
-            if self._adapter_bundle is not None:
+            if self._adapter_bundle is not None and self._adapter_bundle.adapter is not None:
                 feats = self._adapter_bundle.adapter(feats)
         feats = torch.nn.functional.normalize(feats, dim=1)     # unit vectors
         return feats.cpu().numpy().astype(np.float32)

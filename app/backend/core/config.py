@@ -88,6 +88,13 @@ class Settings:
                 / "model_phase2_bottleneck_prototype-evidential_seed42.pt"),
         ))
     )
+    # Step-6 placement checkpoints don't record serial-vs-parallel in their
+    # own metadata (both produce identical weight shapes); this is the
+    # fallback used when the training config's filename can't be recovered
+    # from the checkpoint either. See app/backend/ml/adapter.py:load_trained_adapter.
+    adapter_placement_hint: str = field(
+        default_factory=lambda: _env("ADAPTER_PLACEMENT", "parallel")
+    )
 
     # --- Storage ------------------------------------------------------------
     data_dir: Path = field(

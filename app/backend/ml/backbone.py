@@ -7,8 +7,16 @@ never train it at runtime; we only read features out of it.
 
 The app deliberately does NOT bolt on a trainable adapter at runtime: enrollment
 uses the parameter-free prototype head (mean of embeddings), which needs no
-gradient step. The adapter lives in the research code (`src/adapters/`); swapping
-it in here would mean loading a trained checkpoint into this module.
+gradient step. The adapter lives in the research code (`src/adapters/`);
+``app/backend/ml/adapter.py`` loads a trained checkpoint into this module.
+
+The backbone is kept as an unmodified ``torchvision`` ResNet18 (``fc`` replaced
+by ``Identity``) rather than sliced into an anonymous ``nn.Sequential`` — this
+mirrors ``src/backbones/resnet18.py`` exactly, so submodule paths like
+``layer4.0.downsample.0`` still resolve. In-backbone adapters (LoRA / BitFit /
+Full-FT) need that: they inject into or overwrite named submodules, and a
+checkpoint's ``backbone.*`` state-dict keys only line up if the module tree
+matches the research code's.
 """
 from __future__ import annotations
 
@@ -57,12 +65,13 @@ class FrozenResNet18(nn.Module):
             net = resnet18(weights=None)
             status = "random"
 
-        # Drop the 1000-way classifier; keep everything up to and including avgpool.
-        self.features = nn.Sequential(*list(net.children())[:-1])
+        # Drop the 1000-way classifier; keep the named module tree intact so
+        # `net.get_submodule("layer4.0.downsample.0")` etc. still resolves.
+        net.fc = nn.Identity()
+        self.net = net
         return status
 
     @torch.no_grad()
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """``(B, 3, H, W) -> (B, 512)`` embeddings."""
-        feats = self.features(x)          # (B, 512, 1, 1)
-        return torch.flatten(feats, 1)    # (B, 512)
+        return self.net(x)                # avgpool + flatten + Identity fc

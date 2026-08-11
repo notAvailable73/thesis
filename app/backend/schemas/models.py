@@ -92,6 +92,8 @@ class HealthOut(BaseModel):
     adapter_status: str = Field(
         description='"trained" if the B-PEFT checkpoint is loaded, else "baseline"'
     )
+    adapter_type: str | None = None
+    adapter_placement: str | None = None
     checkpoint_val_accuracy: float | None = None
 
 

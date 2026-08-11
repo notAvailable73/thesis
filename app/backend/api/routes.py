@@ -40,6 +40,8 @@ def health(request: Request) -> HealthOut:
         embedding_dim=c.model.embedding_dim,
         product_count=c.store.count(),
         adapter_status=c.model.adapter_status,
+        adapter_type=c.model.adapter_type,
+        adapter_placement=c.model.adapter_placement,
         checkpoint_val_accuracy=c.model.checkpoint_val_accuracy,
     )
 
