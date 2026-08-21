@@ -1,0 +1,108 @@
+>>> /usr/bin/python3 scripts/efficiency_table.py --device both --cpu-threads 1,0 --env-id kaggle_t4 --include-reference-backbones --out results/efficiency_table.json
+[efficiency] 12 keys derived from configs/grid/_index.json
+[efficiency] 12 keys selected
+[efficiency] reference gate: resnet18=pass mobilenetv3_small=pass
+[efficiency] static: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] static: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] static: mobilenetv3_small|lora|evidential
+[efficiency] static: mobilenetv3_small|lora|softmax
+[efficiency] static: resnet18|bottleneck_parallel|evidential
+[efficiency] static: resnet18|bottleneck_parallel|softmax
+[efficiency] static: resnet18|full_ft|evidential
+[efficiency] static: resnet18|full_ft|softmax
+[efficiency] static: resnet18|linear_probe|evidential
+[efficiency] static: resnet18|linear_probe|softmax
+[efficiency] static: resnet18|lora|evidential
+[efficiency] static: resnet18|lora|softmax
+[efficiency] measured [cuda]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] train_step [cuda]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] measured [cuda]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] train_step [cuda]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] measured [cuda]: mobilenetv3_small|lora|evidential
+[efficiency] train_step [cuda]: mobilenetv3_small|lora|evidential
+[efficiency] measured [cuda]: mobilenetv3_small|lora|softmax
+[efficiency] train_step [cuda]: mobilenetv3_small|lora|softmax
+[efficiency] measured [cuda]: resnet18|bottleneck_parallel|evidential
+[efficiency] train_step [cuda]: resnet18|bottleneck_parallel|evidential
+[efficiency] measured [cuda]: resnet18|bottleneck_parallel|softmax
+[efficiency] train_step [cuda]: resnet18|bottleneck_parallel|softmax
+[efficiency] measured [cuda]: resnet18|full_ft|evidential
+[efficiency] train_step [cuda]: resnet18|full_ft|evidential
+[efficiency] measured [cuda]: resnet18|full_ft|softmax
+[efficiency] train_step [cuda]: resnet18|full_ft|softmax
+[efficiency] measured [cuda]: resnet18|linear_probe|evidential
+[efficiency] train_step [cuda]: resnet18|linear_probe|evidential
+[efficiency] measured [cuda]: resnet18|linear_probe|softmax
+[efficiency] train_step [cuda]: resnet18|linear_probe|softmax
+[efficiency] measured [cuda]: resnet18|lora|evidential
+[efficiency] train_step [cuda]: resnet18|lora|evidential
+[efficiency] measured [cuda]: resnet18|lora|softmax
+[efficiency] train_step [cuda]: resnet18|lora|softmax
+[efficiency] measured [cpu]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] train_step [cpu]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] measured [cpu]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] train_step [cpu]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] measured [cpu]: mobilenetv3_small|lora|evidential
+[efficiency] train_step [cpu]: mobilenetv3_small|lora|evidential
+[efficiency] measured [cpu]: mobilenetv3_small|lora|softmax
+[efficiency] train_step [cpu]: mobilenetv3_small|lora|softmax
+[efficiency] measured [cpu]: resnet18|bottleneck_parallel|evidential
+[efficiency] train_step [cpu]: resnet18|bottleneck_parallel|evidential
+[efficiency] measured [cpu]: resnet18|bottleneck_parallel|softmax
+[efficiency] train_step [cpu]: resnet18|bottleneck_parallel|softmax
+[efficiency] measured [cpu]: resnet18|full_ft|evidential
+[efficiency] train_step [cpu]: resnet18|full_ft|evidential
+[efficiency] measured [cpu]: resnet18|full_ft|softmax
+[efficiency] train_step [cpu]: resnet18|full_ft|softmax
+[efficiency] measured [cpu]: resnet18|linear_probe|evidential
+[efficiency] train_step [cpu]: resnet18|linear_probe|evidential
+[efficiency] measured [cpu]: resnet18|linear_probe|softmax
+[efficiency] train_step [cpu]: resnet18|linear_probe|softmax
+[efficiency] measured [cpu]: resnet18|lora|evidential
+[efficiency] train_step [cpu]: resnet18|lora|evidential
+[efficiency] measured [cpu]: resnet18|lora|softmax
+[efficiency] train_step [cpu]: resnet18|lora|softmax
+[efficiency] wrote results/efficiency_table.json
+<<< exit 0
+>>> /usr/bin/python3 scripts/efficiency_table.py --device both --cpu-threads 1 --warmup 5 --measure 20 --no-train-step --env-id kaggle_t4_rerun --out results/efficiency_table_rerun.json
+[efficiency] 12 keys derived from configs/grid/_index.json
+[efficiency] 12 keys selected
+[efficiency] reference gate: resnet18=pass mobilenetv3_small=pass
+[efficiency] static: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] static: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] static: mobilenetv3_small|lora|evidential
+[efficiency] static: mobilenetv3_small|lora|softmax
+[efficiency] static: resnet18|bottleneck_parallel|evidential
+[efficiency] static: resnet18|bottleneck_parallel|softmax
+[efficiency] static: resnet18|full_ft|evidential
+[efficiency] static: resnet18|full_ft|softmax
+[efficiency] static: resnet18|linear_probe|evidential
+[efficiency] static: resnet18|linear_probe|softmax
+[efficiency] static: resnet18|lora|evidential
+[efficiency] static: resnet18|lora|softmax
+[efficiency] measured [cuda]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] measured [cuda]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] measured [cuda]: mobilenetv3_small|lora|evidential
+[efficiency] measured [cuda]: mobilenetv3_small|lora|softmax
+[efficiency] measured [cuda]: resnet18|bottleneck_parallel|evidential
+[efficiency] measured [cuda]: resnet18|bottleneck_parallel|softmax
+[efficiency] measured [cuda]: resnet18|full_ft|evidential
+[efficiency] measured [cuda]: resnet18|full_ft|softmax
+[efficiency] measured [cuda]: resnet18|linear_probe|evidential
+[efficiency] measured [cuda]: resnet18|linear_probe|softmax
+[efficiency] measured [cuda]: resnet18|lora|evidential
+[efficiency] measured [cuda]: resnet18|lora|softmax
+[efficiency] measured [cpu]: mobilenetv3_small|bottleneck_parallel|evidential
+[efficiency] measured [cpu]: mobilenetv3_small|bottleneck_parallel|softmax
+[efficiency] measured [cpu]: mobilenetv3_small|lora|evidential
+[efficiency] measured [cpu]: mobilenetv3_small|lora|softmax
+[efficiency] measured [cpu]: resnet18|bottleneck_parallel|evidential
+[efficiency] measured [cpu]: resnet18|bottleneck_parallel|softmax
+[efficiency] measured [cpu]: resnet18|full_ft|evidential
+[efficiency] measured [cpu]: resnet18|full_ft|softmax
+[efficiency] measured [cpu]: resnet18|linear_probe|evidential
+[efficiency] measured [cpu]: resnet18|linear_probe|softmax
+[efficiency] measured [cpu]: resnet18|lora|evidential
+[efficiency] measured [cpu]: resnet18|lora|softmax
+[efficiency] wrote results/efficiency_table_rerun.json
+<<< exit 0

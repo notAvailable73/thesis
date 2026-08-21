@@ -312,8 +312,26 @@ else:
         ("mobilenetv3_small", "bottleneck_parallel"), ("mobilenetv3_small", "lora"),
     ]
 
+    def _eff_excluded_fragments():
+        # Same exclusion as scripts/pareto_plots.py / scripts/make_master_tables.py
+        # -- see either's _non_canonical_profile_fragments docstring for the
+        # 2026-08-09 incident (local_cpu dev-laptop profile silently winning
+        # over the canonical Kaggle CPU profile on dict-insertion order).
+        env = EFF.get("environments", {}).get("local_cpu")
+        if not env:
+            return []
+        cpu_model = env.get("host", {}).get("cpu_model")
+        if not cpu_model:
+            return []
+        return [re.sub(r"[^a-z0-9]+", "-", cpu_model.lower()).strip("-")]
+
+    _eff_excluded = _eff_excluded_fragments()
+
     def _eff_lat(key, prefix):
         per_image = EFF.get("measured", {}).get(key, {}).get("per_image", {})
+        for profile, timing in per_image.items():
+            if profile.startswith(prefix) and not any(f in profile for f in _eff_excluded):
+                return f"{timing['latency_ms']['median']:.2f}"
         for profile, timing in per_image.items():
             if profile.startswith(prefix):
                 return f"{timing['latency_ms']['median']:.2f}"

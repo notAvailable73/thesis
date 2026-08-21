@@ -5,21 +5,21 @@
 \toprule
 Backbone & Adapter & Head & Trainable params & Total params & GMACs & CPU ms/img (1 thr) & CPU ms/img (all thr) & GPU ms/img & Peak GPU MB & On frontier? \\
 \midrule
-ResNet-18 & Bottleneck (parallel) & Evid. & 31,746 & 11,208,258 & 1.8306 & 80.43 & - & - & - & yes \\
-ResNet-18 & Bottleneck (parallel) & Softmax & 31,744 & 11,208,256 & 1.8306 & 54.63 & - & - & - & yes \\
-ResNet-18 & LoRA & Evid. & 12,290 & 11,188,802 & 1.8192 & 56.76 & - & - & - & no \\
-ResNet-18 & LoRA & Softmax & 12,288 & 11,188,800 & 1.8192 & 47.77 & - & - & - & yes \\
-ResNet-18 & Full-FT & Evid. & 11,176,514 & 11,176,514 & 1.8186 & 53.63 & - & - & - & no \\
-ResNet-18 & Full-FT & Softmax & 11,176,512 & 11,176,512 & 1.8186 & 58.21 & - & - & - & yes \\
-ResNet-18 & Linear-Probe & Evid. & 2 & 11,176,514 & 1.8186 & 49.87 & - & - & - & no \\
-ResNet-18 & Linear-Probe & Softmax & 0 & 11,176,512 & 1.8186 & 47.97 & - & - & - & yes \\
+ResNet-18 & Bottleneck (parallel) & Evid. & 31,746 & 11,208,258 & 1.8306 & 62.38 & 37.72 & 3.36 & 134.4 & yes \\
+ResNet-18 & Bottleneck (parallel) & Softmax & 31,744 & 11,208,256 & 1.8306 & 62.18 & 38.54 & 3.35 & 134.4 & yes \\
+ResNet-18 & LoRA & Evid. & 12,290 & 11,188,802 & 1.8192 & 60.04 & 35.48 & 2.90 & 134.4 & no \\
+ResNet-18 & LoRA & Softmax & 12,288 & 11,188,800 & 1.8192 & 59.76 & 36.82 & 2.87 & 134.4 & yes \\
+ResNet-18 & Full-FT & Evid. & 11,176,514 & 11,176,514 & 1.8186 & 59.76 & 34.53 & 3.02 & 134.3 & no \\
+ResNet-18 & Full-FT & Softmax & 11,176,512 & 11,176,512 & 1.8186 & 61.52 & 36.67 & 2.82 & 134.3 & yes \\
+ResNet-18 & Linear-Probe & Evid. & 2 & 11,176,514 & 1.8186 & 61.10 & 36.08 & 3.04 & 134.3 & no \\
+ResNet-18 & Linear-Probe & Softmax & 0 & 11,176,512 & 1.8186 & 60.63 & 35.48 & 2.81 & 134.3 & yes \\
 \midrule
 \multicolumn{11}{l}{\textit{Baselines}} \\
 \midrule
-MobileNetV3-Small & Bottleneck (parallel) & Evid. & 6,930 & 933,938 & 0.0593 & 6.73 & - & - & - & yes \\
-MobileNetV3-Small & Bottleneck (parallel) & Softmax & 6,928 & 933,936 & 0.0593 & 7.75 & - & - & - & yes \\
-MobileNetV3-Small & LoRA & Evid. & 10,754 & 937,762 & 0.0586 & 8.28 & - & - & - & no \\
-MobileNetV3-Small & LoRA & Softmax & 10,752 & 937,760 & 0.0586 & 7.08 & - & - & - & no \\
+MobileNetV3-Small & Bottleneck (parallel) & Evid. & 6,930 & 933,938 & 0.0593 & 11.86 & 13.35 & 6.53 & 38.7 & yes \\
+MobileNetV3-Small & Bottleneck (parallel) & Softmax & 6,928 & 933,936 & 0.0593 & 12.14 & 14.52 & 6.58 & 70.7 & yes \\
+MobileNetV3-Small & LoRA & Evid. & 10,754 & 937,762 & 0.0586 & 11.55 & 13.62 & 6.01 & 70.7 & yes \\
+MobileNetV3-Small & LoRA & Softmax & 10,752 & 937,760 & 0.0586 & 11.44 & 13.76 & 5.88 & 70.7 & yes \\
 \bottomrule
 \end{tabular}
 \end{table}

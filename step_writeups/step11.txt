@@ -15,25 +15,19 @@ Scope:     measure trainable/total params, FLOPs (MACs), latency (GPU + CPU)
 Spec:      implementation.txt Section 11 ; progress.txt "STEP 11"
 Previous:  step_writeups/step10.txt (MVT grid execution, CLOSED 2026-08-06)
 
-STATUS OF THIS WRITEUP: TEMPLATE -- CODE COMPLETE, CANONICAL MEASUREMENT
-  ATTEMPTED ONCE (2026-08-07), CRASHED BEFORE WRITING, ROOT CAUSE FIXED,
-  RE-RUN NOT YET DONE. The first real Kaggle T4 attempt at the canonical
-  session actually completed the entire 12-key GPU + CPU measurement
-  correctly (confirmed line-by-line from the session log: all 12 keys
-  measured on cuda, all 12 on cpu, train_step timings for both) -- then
-  crashed in an unrelated opt-in bonus feature (--include-reference-
-  backbones) BEFORE the script reached its json write, so none of that
-  correctly-measured data was ever persisted. Full incident writeup,
-  root cause, and the fix: Section 8. Every piece of Step 11's
-  infrastructure exists, is tested offline, and was exercised against real
-  data during implementation (Section 3), but the CANONICAL session output
-  -- both the GPU numbers and the Kaggle-CPU edge-proxy numbers this
-  document is supposed to report -- still does not exist on disk. Section 4
-  below contains NAMED PLACEHOLDERS ONLY. Every number that eventually fills
-  them MUST be transcribed from the committed results/efficiency_table.json
-  + results/pareto_frontier.json after a successful session, never typed
-  from memory or estimated (thesis_implementation_instructions.txt Section
-  6's honesty rule).
+STATUS OF THIS WRITEUP: CLOSED 2026-08-09 -- CANONICAL MEASUREMENT COMPLETE.
+  The first Kaggle T4 attempt (2026-08-07) crashed before writing, root
+  cause fixed; the re-run (2026-08-09) succeeded end-to-end. A SECOND,
+  more serious bug was then found during this session's own verification
+  pass (not by any automated check) -- a silent, no-error data-selection
+  bug that made every downstream artifact (Pareto plots, pareto_frontier.json,
+  Table 8 in docs/RESULTS_MASTER.md) read latency numbers from this repo's
+  own noisy dev laptop instead of the canonical Kaggle CPU edge proxy, off
+  by up to 47% with zero warning. Also fixed, verified against the real
+  data, and all downstream artifacts regenerated. Full account of both
+  incidents: Section 8. Section 4 below is filled with real, transcribed
+  numbers from the corrected data -- never estimated
+  (thesis_implementation_instructions.txt Section 6's honesty rule).
 
   One sub-section, 4.6 (the params-vs-accuracy frontier), needs NO new
   measurement and is filled below from the already-committed
@@ -362,49 +356,124 @@ Canonical reproduction path (NOT YET RUN):
 
 
 ================================================================================
-4.  RESULTS -- PLACEHOLDERS ONLY (except 4.6)
+4.  RESULTS
 ================================================================================
-Every <PLACEHOLDER> below must be transcribed verbatim from the committed
-results/efficiency_table.json / results/pareto_frontier.json after the
-Kaggle session -- never estimated, never carried over from the local_cpu
-development run described in Section 3.
+Every number below is transcribed from the canonical Kaggle session's
+committed results/efficiency_table.json / results/pareto_frontier.json
+(session run 2026-08-09, after the Section 8.1-8.6 crash fix; the
+Section 8.7 selection-bug fix was applied AFTER this raw data was already
+on disk, so the raw measurements below were unaffected by that bug -- only
+the downstream Pareto-frontier/table SELECTION LOGIC needed re-running
+against the same raw data, not a new Kaggle session. See Section 8 for
+the full incident.)
 
 --------------------------------------------------------------------------------
 4.1  Hardware provenance
 --------------------------------------------------------------------------------
-  GPU session : <GPU_NAME>, driver <DRIVER>, CUDA <CUDA_VERSION>,
-                torch <TORCH_VERSION>, session id <KAGGLE_T4_SESSION_ID>
-  CPU session : <CPU_MODEL>, <N_VCPU> vCPUs, session id <KAGGLE_CPU_SESSION_ID>
-  Local dev   : AMD Ryzen 5 PRO 5650U (verified, env_id `local_cpu`) --
-                development artifact, not reported as an edge number.
+  Three environments recorded in results/efficiency_table.json:
+    kaggle_t4_cuda : Tesla T4, torch 2.10.0+cu128, CUDA 12.8, 4 vCPU host
+                     (Intel(R) Xeon(R) CPU @ 2.00GHz) -- the canonical GPU
+                     number.
+    kaggle_t4_cpu  : Intel(R) Xeon(R) CPU @ 2.00GHz, 4 vCPU, same session's
+                     CPU pass -- the canonical CPU edge-proxy number
+                     (pre-registered primary axis, Section 0.4).
+    local_cpu      : AMD Ryzen 5 PRO 5650U with Radeon Graphics, 12 vCPU,
+                     torch 2.13.0+cu130 -- this repo's own dev machine
+                     (Section 3's offline verification run). NOT a reported
+                     edge number; see Section 8 for why this distinction
+                     turned out to matter more than expected.
+  device_profile_slug / session_id fields are present in the schema but
+  recorded as null in this session's environment blocks -- a real, minor
+  gap (Section 8.7's fix relies on host.cpu_model instead, which IS
+  populated).
 
 --------------------------------------------------------------------------------
-4.2  Efficiency table (12 rows -- also results/mvt_table_efficiency.tex/.png)
+4.2  Efficiency table (12 rows -- results/mvt_table_efficiency.tex/.png,
+     docs/RESULTS_MASTER.md Table 8; both regenerated after the Section 8
+     fix, both now agree with each other and with the numbers below)
 --------------------------------------------------------------------------------
-  <EFF_TABLE_12_ROWS: backbone | adapter | head | trainable params |
-   total params | GMACs | CPU ms/img (1 thr) | CPU ms/img (all thr) |
-   GPU ms/img | peak GPU MB>
+  backbone | adapter | head | train.params | total params | GMACs |
+  CPU ms/img (1 thr, Kaggle) | CPU ms/img (all thr) | GPU ms/img | peak GPU MB
+    resnet18 | bottleneck_parallel | evid.    | 31,746     | 11,208,258 | 1.8306 | 62.38 | 37.72 | 3.36 | 134.4
+    resnet18 | bottleneck_parallel | softmax  | 31,744     | 11,208,256 | 1.8306 | 62.18 | 38.54 | 3.35 | 134.4
+    resnet18 | lora                | evid.    | 12,290     | 11,188,802 | 1.8192 | 60.04 | 35.48 | 2.90 | 134.4
+    resnet18 | lora                | softmax  | 12,288     | 11,188,800 | 1.8192 | 59.76 | 36.82 | 2.87 | 134.4
+    resnet18 | full_ft             | evid.    | 11,176,514 | 11,176,514 | 1.8186 | 59.76 | 34.53 | 3.02 | 134.3
+    resnet18 | full_ft             | softmax  | 11,176,512 | 11,176,512 | 1.8186 | 61.52 | 36.67 | 2.82 | 134.3
+    resnet18 | linear_probe        | evid.    | 2          | 11,176,514 | 1.8186 | 61.10 | 36.08 | 3.04 | 134.3
+    resnet18 | linear_probe        | softmax  | 0          | 11,176,512 | 1.8186 | 60.63 | 35.48 | 2.81 | 134.3
+    mbnet    | bottleneck_parallel | evid.    | 6,930      | 933,938    | 0.0593 | 11.86 | 13.35 | 6.53 | 38.7
+    mbnet    | bottleneck_parallel | softmax  | 6,928      | 933,936    | 0.0593 | 12.14 | 14.52 | 6.58 | 70.7
+    mbnet    | lora                | evid.    | 10,754     | 937,762    | 0.0586 | 11.55 | 13.62 | 6.01 | 70.7
+    mbnet    | lora                | softmax  | 10,752     | 937,760    | 0.0586 | 11.44 | 13.76 | 5.88 | 70.7
+  Reference gate: PASS for both real backbones (resnet18 1.011x published,
+  mbnet 1.055x the published-range midpoint -- both inside 5% tolerance).
+  Bonus (architecture-only, --include-reference-backbones, never trained
+  here): vit_b_16 86.6M params / 16.87 GMACs / ~21.0ms GPU per-image;
+  deit_tiny_patch16_224 5.7M params / 1.08 GMACs / ~11.0ms GPU per-image --
+  both measured for real on this session (not from literature) after the
+  Section 8.1/8.2 fix; feeds docs/DEFENCE_BRIEF.md's ViT comparison with an
+  actual measurement instead of only published figures.
 
 --------------------------------------------------------------------------------
-4.3  Measurement stability (the stability re-run, notebook Section 6)
+4.3  Measurement stability (results/efficiency_table_rerun.json, an
+     independent second pass in the same Kaggle session: --cpu-threads 1
+     --warmup 5 --measure 20 --no-train-step)
 --------------------------------------------------------------------------------
-  Max relative per-key per_image median difference across two back-to-back
-  measurements on the same Kaggle session: <MAX_REL_DIFF_PCT>%
-  (key: <MAX_REL_DIFF_KEY>). <N_KEYS_OVER_10PCT> of 12 keys exceeded the 10%
-  drift-warning threshold.
+  Max relative per-key per_image median difference between the two passes,
+  Kaggle CPU 1-thread (the primary axis): 5.91% (key:
+  mobilenetv3_small|bottleneck_parallel|softmax, main=12.137ms vs
+  rerun=11.419ms). All other 11 of 12 keys under 4%; 8 of 12 under 2%. 0 of
+  12 keys exceeded the 10% drift-warning threshold. This is tighter than
+  the session's own internal drift_check for kaggle_t4_cuda (11.21%, GPU
+  clock/thermal variability on a shared T4 -- see 4.1) -- the CPU edge-proxy
+  number this thesis actually reports is the more stable of the two.
 
 --------------------------------------------------------------------------------
 4.4  Param cross-check vs the grid
 --------------------------------------------------------------------------------
-  `--check-params-only` on the Kaggle session: <N_MATCH>/40 mvt cells
-  matched (must be 40/40 -- Section 3 item 2 already reproduced this
-  offline; this re-confirms it on the canonical hardware/torch build).
+  results/efficiency_table.json's own `reproducibility.cross_session_static_check`
+  reports 12/12 static (params/MACs) keys matching across every session that
+  has contributed to the merged file, status "pass", zero mismatches --
+  the deterministic half of the reproducibility invariant, confirmed on the
+  canonical hardware.
+  HONEST GAP: `--check-params-only` (the harsher check against all 40
+  mvt_results.json leaf cells, not just the 12 measurement keys) was run
+  and passed 40/40 during OFFLINE implementation (Section 3, item 2) but
+  was NOT re-invoked as a separate step in this canonical Kaggle session's
+  log -- the session ran the main measurement + reference backbones, then
+  the stability re-run, never `--check-params-only` on its own. Given the
+  static block's cross-session check above already confirms the 12
+  measurement keys are internally consistent, this is a low-risk gap, but
+  it is a gap, not a re-confirmation -- do not claim "40/40 reconfirmed on
+  Kaggle" without actually running that flag there.
 
 --------------------------------------------------------------------------------
-4.5  Latency-vs-AUROC frontier (primary axis: CPU 1-thread, tin_near native)
+4.5  Latency-vs-AUROC frontier (primary axis: Kaggle CPU 1-thread,
+     tin_near native -- results/pareto_frontier.json, post-fix)
 --------------------------------------------------------------------------------
-  <FRONT_TIN_NATIVE: per (dataset, shot) panel -- n_points, n_baseline_points,
-   strict_front members, eps_front members, recommended_point>
+  cifar_fs 1-shot  (12 points, 4 baseline): strict_front = eps_front =
+    {mbnet/parallel/evid, mbnet/lora/evid, mbnet/lora/softmax}.
+    recommended_point = mbnet/parallel/evid (11.86ms, AUROC 0.8698).
+  cifar_fs 5-shot  (12 points, 4 baseline): strict_front = eps_front =
+    {mbnet/parallel/evid, mbnet/lora/evid, mbnet/lora/softmax,
+     r18/parallel/evid}. recommended_point = mbnet/parallel/evid
+    (11.86ms, AUROC 0.9186).
+  mini_imagenet 1-shot (8 points, 0 baseline -- Step 12.F's gap, Section
+    4.6's note applies here too): strict_front = eps_front =
+    {mbnet/parallel/evid, mbnet/lora/evid, mbnet/lora/softmax,
+     r18/parallel/evid}. recommended_point = r18/parallel/evid
+    (62.38ms, AUROC 0.8704) -- mbnet/parallel/evid IS on the strict
+    frontier here (11.86ms) but its quality falls outside the pre-
+    registered 0.010 AUROC tolerance of the panel's best, so the rule
+    (Section 0.4) picks the cheapest config that clears the bar, not the
+    cheapest point on the frontier -- consistent with the known
+    MobileNetV3-vs-ResNet-18 accuracy gap widening on MiniImageNet
+    (step_writeups/step10.txt Section 5(ii)).
+  mini_imagenet 5-shot (8 points, 0 baseline): strict_front = eps_front =
+    {mbnet/parallel/evid, mbnet/lora/evid, mbnet/lora/softmax,
+     r18/parallel/evid, r18/parallel/softmax}. recommended_point =
+     r18/parallel/evid (62.38ms, AUROC 0.9582) -- same reasoning as above.
 
 --------------------------------------------------------------------------------
 4.6  Params-vs-accuracy frontier -- PRE-FILLED, no Step-11 measurement
@@ -445,44 +514,106 @@ development run described in Section 3.
 --------------------------------------------------------------------------------
 4.7  Axis-choice sensitivity (results/pareto_audit/quality_axis_variants__*.png)
 --------------------------------------------------------------------------------
-  <STABILITY_TABLE: recommended point under each of far_svhn_native,
-   near_dataset_native, near_tin_best_score, vs the primary near_tin_native>
-  Mode-B counterpoint (0.5): under `near_tin_best_score` (softmax gets
-  max(msp, ts_msp, energy)), <N_FRONT_B> points are on the frontier and the
-  recommended point is <REC_B> -- consistent with Step 10's finding that
-  energy beats vacuity in ~70% of comparisons.
+  These three secondary quality-axis variants are PNG-only in this codebase
+  -- scripts/pareto_plots.py's _render_quality_audit renders them without
+  writing frontier membership to any JSON (a real gap; promoting this to a
+  JSON-backed output alongside the plots is a cheap Step 12 follow-up).
+  Read directly off results/pareto_audit/quality_axis_variants__cifar_fs.png:
+    cifar_fs 5-shot / near_tin_best_score (Mode B -- softmax gets
+    max(msp, ts_msp, energy) instead of only msp): the frontier COLLAPSES
+    to 2 points -- resnet18/linear_probe/softmax* (baseline, ~0.927 AUROC)
+    and mbnet/parallel/SOFTMAX (~0.951 AUROC, the new top-quality point).
+    mbnet/parallel/EVIDENTIAL, which anchors the frontier under the
+    primary (Mode A, native-score) reading in 4.5, drops OFF the frontier
+    entirely under Mode B, replaced by its softmax sibling -- direct visual
+    confirmation of Section 0.5's pre-registered counterpoint and step10.txt
+    Section 4.6's grid-wide finding (energy beats vacuity in ~70% of
+    comparisons). The cifar_fs 1-shot panel shows the same qualitative
+    pattern (evidential's frontier presence shrinks under Mode B) but with
+    denser overlapping labels at this resolution -- reported qualitatively
+    here rather than with a precise point count that would overclaim
+    legibility. The mini_imagenet audit panel was not separately
+    transcribed in this pass; visually consistent with cifar_fs on a spot
+    check, not exhaustively verified.
 
 --------------------------------------------------------------------------------
 4.8  Head cost delta -- "evidential uncertainty is free at inference"
 --------------------------------------------------------------------------------
-  Measured: <HEAD_DELTA_MS> ms difference between evidential and softmax
-  per_image latency at matched (backbone, adapter) -- <HEAD_DELTA_PCT>% of
-  the total, <inside/outside> the measurement's own CI. score_stage latency
-  (head + uncertainty computation from cached features) measured at
-  <SCORE_STAGE_MS> ms for a full <N_QUERY>-query episode, against
-  <PER_IMAGE_MS> ms for ONE image through the backbone -- <RATIO>% of a
-  single forward pass.
-  Analytical (NOT measured -- MC-dropout / a k-member deep ensemble would
-  cost k times the forward pass; at the measured per-image latency, k=10
-  means roughly 10x <PER_IMAGE_MS> ms/image, plus k times the weights for an
-  ensemble). Recommendation followed: measure the head delta, state the k-x
-  counterfactual analytically -- implementing MC-dropout/an ensemble is new
-  method surface this step deliberately does not add.
+  Measured, Kaggle CPU 1-thread, per_image, evidential minus softmax, all
+  6 (backbone, adapter) pairs:
+    resnet18/bottleneck_parallel  +0.204ms (+0.3%)
+    resnet18/lora                 +0.278ms (+0.5%)
+    resnet18/full_ft              -1.765ms (-2.9%)
+    resnet18/linear_probe         +0.465ms (+0.8%)
+    mbnet/bottleneck_parallel     -0.280ms (-2.3%)
+    mbnet/lora                    +0.115ms (+1.0%)
+  Mean |delta| = 1.29% -- SMALLER than this session's own measurement noise
+  floor (4.3's 5.91% max stability-rerun difference, and 4.1's kaggle_t4_cuda
+  11.21% drift_check): the evidential/softmax cost difference is not
+  distinguishable from zero at this measurement's precision. "Evidential
+  uncertainty is free at inference" is supported, not merely asserted.
+  score_stage_5shot (resnet18/bottleneck_parallel/evidential, the head +
+  uncertainty-score computation from CACHED features for a full 75-query
+  episode) = 0.678ms, against per_image (one image through the full
+  backbone+adapter) = 62.381ms -- the entire uncertainty-scoring stage for
+  an entire episode costs 1.09% of ONE image's backbone forward pass.
+  Analytical (NOT measured -- new method surface this step deliberately
+  does not add): a k-member MC-dropout/deep ensemble would cost
+  approximately k x the 62.38ms per-image figure plus k x the weights; at
+  k=10 that is ~624ms/image, roughly 10x the single evidential forward pass
+  measured above.
 
 --------------------------------------------------------------------------------
-4.9  ANSWERS TO SECTION 0'S QUESTIONS -- the RQ4 paragraph, filled
+4.9  ANSWERS TO SECTION 0'S QUESTIONS -- the RQ4 paragraph
 --------------------------------------------------------------------------------
-  <RQ4_PARAGRAPH: numerical Pareto-optimal point + frontier shape + the
-   Step 8/10 consistency check (mbnet/parallel/softmax at 6,928 params
-   matching r18/full_ft/softmax's 90.47% at 11,176,512, +0.27 pp, inside
-   seed noise) + the parameter-vs-latency ordering comparison (does the
-   backbone that is cheaper in PARAMS also win in LATENCY? Step 8 found the
-   param ordering flips between backbones -- parallel is 2.75x cheaper than
-   post_pool on MobileNetV3-Small but 1.88x more expensive on ResNet-18;
-   latency is dominated by the 0.93M-vs-11.18M-param frozen trunk, not the
-   adapter delta, so this need not track the param ordering, and whether it
-   does is this step's most novel measurement) + the Mode-A/Mode-B
-   counterpoint from 4.7>
+  RQ4: What is the Pareto frontier between inference latency and
+  uncertainty quality on edge hardware?
+
+  On the pre-registered primary axis (Kaggle CPU, 1 thread, per-image
+  latency vs. native-score near-OOD AUROC), the recommended Pareto point is
+  MobileNetV3-Small + parallel bottleneck + evidential head on CIFAR-FS
+  (both shot regimes): 11.86ms/image, 6,930 trainable params, AUROC 0.870
+  (1-shot) / 0.919 (5-shot). On MiniImageNet the same MobileNetV3-Small
+  point sits on the strict cost-quality frontier but falls outside the
+  1.0pp/0.010-AUROC tolerance of the panel's best, so the recommended point
+  moves to ResNet-18 + parallel bottleneck + evidential (62.38ms, AUROC
+  0.870 / 0.958) -- consistent with the MobileNetV3-vs-ResNet-18 accuracy
+  gap that step_writeups/step10.txt already found widens specifically on
+  MiniImageNet.
+
+  BACKBONE CHOICE, NOT ADAPTER CHOICE, DRIVES LATENCY -- this step's most
+  novel measurement, and a clean, quantified finding: ResNet-18 vs
+  MobileNetV3-Small at matched adapter (parallel, softmax) is 62.18ms vs
+  12.14ms, a 5.12x difference. Meanwhile LoRA vs the parallel bottleneck on
+  ResNet-18 -- a 2.58x difference in trainable parameters (12,288 vs
+  31,744) -- produces only a 3.9% latency difference (59.76ms vs 62.18ms);
+  on MobileNetV3-Small the adapter choice with MORE parameters (LoRA,
+  10,752 vs parallel's 6,928) is actually 5.8% FASTER, reversing the naive
+  param-implies-latency intuition entirely. Both adapters' parameter deltas
+  (tens of thousands) are swamped by the frozen trunk's forward-pass cost
+  (2.5M or 11.7M parameters) -- exactly the mechanism Section 0.4's
+  pre-registration anticipated, now measured rather than assumed. Practical
+  reading: choosing the adapter is an accuracy decision (RQ1, up to +8.3pp);
+  choosing the backbone is the latency decision (RQ4, 5.1x).
+
+  Cross-check against Step 8/10: mbnet/parallel/softmax's accuracy
+  (90.74%, CIFAR-FS 5-shot, 6,928 params) essentially matches
+  r18/full_ft/softmax (90.47%, 11,176,512 params) as already established in
+  docs/RESULTS_MASTER.md Section 4.7 claim 2 -- Step 11 adds the missing
+  latency side of that comparison: mbnet/parallel/softmax is 12.14ms vs
+  full_ft's 61.52ms on the same hardware, a 5.1x latency advantage riding
+  alongside the 1,613x parameter advantage already reported, for
+  essentially the same accuracy.
+
+  Mode-A/Mode-B counterpoint (4.7): under the primary native-score reading,
+  evidential heads anchor every strict frontier in 4.5. Under Mode B
+  (softmax gets its best of 3 scores), evidential's frontier presence
+  collapses on CIFAR-FS 5-shot to nothing -- the softmax sibling of the
+  SAME (backbone, adapter) pair takes its place. This is Step 10's grid-
+  wide "energy beats vacuity ~70% of the time" finding, now visible in the
+  efficiency-aware view too, not just the accuracy-only OOD tables: the
+  claim "put an evidential head on the Pareto-optimal edge configuration
+  for better uncertainty" is native-score-conditional, not universal.
 
 
 ================================================================================
@@ -490,15 +621,21 @@ development run described in Section 3.
 ================================================================================
   1. "No Jetson Nano access; CPU latency is used as the edge proxy"
      (verbatim, per the exit criterion) -- quantified, not just asserted:
-     <CPU_ENV_RATIO> is the ratio between the Kaggle-CPU and local-dev-CPU
-     per_image medians once both exist in results/efficiency_table.json.
-     The Kaggle CPU itself is a hosted-notebook server core, not an edge
-     SoC -- absolute milliseconds do not transfer to real edge hardware;
-     ONLY the ratios between backbones/adapters are portable, and even
-     those shift with kernel quality (Howard 2019: h-swish's latency win
-     depends on an optimised fused kernel and "largely disappears" without
-     one, so MobileNetV3-Small's real edge advantage is plausibly LARGER
-     than what PyTorch eager on a CPU measures here).
+     local-dev-CPU / Kaggle-CPU per_image median ratio, all 12 keys:
+     mean 0.825x, range 0.568x-1.289x -- NOT a constant offset, varies by
+     up to 2.3x across the 12 architectures. This is direct, measured
+     evidence for why Section 8's bug (treating the two machines'
+     "cpu_1thread_*" profiles as interchangeable) produced errors as large
+     as 47% on some keys and under 1% on others -- a fixed correction
+     factor could not have papered over this, only excluding local_cpu
+     from the canonical selection (the actual fix) could. The Kaggle CPU
+     itself is a hosted-notebook server core, not an edge SoC -- absolute
+     milliseconds do not transfer to real edge hardware; ONLY the ratios
+     between backbones/adapters are portable, and even those shift with
+     kernel quality (Howard 2019: h-swish's latency win depends on an
+     optimised fused kernel and "largely disappears" without one, so
+     MobileNetV3-Small's real edge advantage is plausibly LARGER than what
+     PyTorch eager on a CPU measures here).
   2. Latency and peak-memory are the ONLY numbers in this entire thesis that
      are not byte-reproducible by design -- see
      results/efficiency_table.json's `reproducibility` block, which asserts
@@ -545,30 +682,35 @@ development run described in Section 3.
       implementation.
   11. The `local_cpu` development measurement (Section 3) is a REAL but
       NON-CANONICAL data point. It must never be read as this step's
-      reported edge-latency figure -- results/efficiency_table.json's
-      `environments` block keeps it structurally separate from `kaggle_t4`,
-      and scripts/pareto_plots.py's `--env` flag defaults to the Kaggle
+      reported edge-latency figure. CORRECTION TO THIS CAVEAT'S ORIGINAL
+      TEXT (2026-08-09): this sentence used to assert that
+      scripts/pareto_plots.py's `--env` flag "defaults to the Kaggle
       session id so a local-CPU number cannot become the headline by
-      accident.
+      accident." That was aspirational, not true -- the flag was a
+      documented no-op, and the local-CPU number DID become the headline,
+      silently, with no error, until this session's manual cross-check
+      caught it (full incident: Section 8.7). The structural
+      separation in `environments` existed; nothing in the SELECTION code
+      actually used it. Fixed now (three independent call sites, Section
+      8.7), and results/efficiency_table.json's `environments` block
+      remains the record of which profile belongs to which session.
 
 
 ================================================================================
 6.  EXIT CRITERIA (implementation.txt Section 11 / progress.txt "STEP 11")
 ================================================================================
-  [~] efficiency_table.json complete for all MVT cells + baselines --
-      SCHEMA + PIPELINE COMPLETE, exercised against real data (local_cpu);
-      the CANONICAL Kaggle GPU+CPU session has not run (Section 3/4).
-  [~] Two Pareto plots saved at 300 dpi -- SCRIPT COMPLETE, all six PNGs
-      (2 exit-criteria stems x {combined, cifar_fs, mini_imagenet}) render
-      correctly against real mvt_results.json + local_cpu efficiency data;
-      awaiting the canonical run for the committed versions.
-  [ ] RQ4 paragraph: numerical Pareto-optimal point -- NOT YET FILLED
-      (Section 4.9 placeholder); the params-only half (4.6) IS filled and
-      does not need the canonical session.
+  [x] efficiency_table.json complete for all MVT cells + baselines -- DONE.
+      12/12 measurement keys, 3 real environments (kaggle_t4_cuda,
+      kaggle_t4_cpu, local_cpu), committed at results/efficiency_table.json.
+  [x] Two Pareto plots saved at 300 dpi -- DONE, all six PNGs regenerated
+      AFTER the Section 8.7 selection-bug fix (params_vs_accuracy and
+      latency_vs_auroc, each x {combined, cifar_fs, mini_imagenet}),
+      correctly reading the Kaggle CPU profile (verified, Section 8.7).
+  [x] RQ4 paragraph: numerical Pareto-optimal point -- FILLED, Section 4.9.
   [x] Limitation noted: "No Jetson Nano access; CPU as edge proxy" --
-      present verbatim in Section 5 caveat 1 and in
-      docs/RESULTS_MASTER_template.md's RQ4 section; quantification pending
-      the canonical CPU session (same placeholder).
+      present verbatim in Section 5 caveat 1, now quantified with the
+      measured local/Kaggle ratio (mean 0.825x, range 0.568x-1.289x) and
+      docs/RESULTS_MASTER.md's RQ4 section (regenerated).
 
   Additional infra this write-up commits to, beyond the four boxes above:
   [x] src/utils/pareto.py + src/utils/efficiency.py, both fully tested
@@ -583,38 +725,51 @@ development run described in Section 3.
       verified (Section 1, 11.4/11.5; Section 3 items 6-7).
   [x] docs/RESULTS_MASTER_template.md reconstructed and round-trip-verified
       BEFORE any Step-11 content landed (Section 1, 11.5; Section 3 item 7).
-  [x] notebooks/step11_efficiency.ipynb (Section 1, 11.6) -- NOT YET RUN.
+  [x] notebooks/step11_efficiency.ipynb (Section 1, 11.6) -- RUN 2026-08-09,
+      succeeded after the Section 8.1-8.2 fix (crashed once on 2026-08-07
+      before that fix existed).
   [x] tests/test_pareto.py + tests/test_efficiency.py, 56 new tests, zero
       regressions to the pre-existing suite (Section 1, 11.7; Section 3
-      item 8).
+      item 8) -- offline/CPU-only, per Section 7's open item, NOT yet
+      re-run on the Kaggle session or extended to cover either bug fixed
+      in Section 8.
 
-Overall STEP 11 status: CODE COMPLETE, MEASUREMENT PENDING. Every script,
-test, table, plot and document edit exists and is verified against real
-(if non-canonical) data; what remains is a single ~15-20 minute Kaggle T4
-session (Section 3's canonical reproduction path) and the mechanical
-transcription of Section 4's placeholders from its output.
+Overall STEP 11 status: CLOSED 2026-08-09. All four exit-criteria boxes
+above are met with real, transcribed data; RQ4 is answered (Section 4.9);
+all four of the thesis's research questions now have numerical answers.
+Two real bugs were found and fixed during this step's own closing
+verification pass (Section 8) -- neither is test-covered yet (Section 7).
 
 
 ================================================================================
 7.  WHAT THE NEXT STEP INHERITS
 ================================================================================
-  - RE-RUN notebooks/step11_efficiency.ipynb on Kaggle (GPU T4, Internet ON,
-    no dataset attach). Section 8's fix is in place; the previous crash point
-    (--include-reference-backbones' ViT/DeiT FLOP count) is now fault-
-    isolated even if a different bug surfaces there later -- the 12-key
-    primary measurement's write to disk can no longer be blocked by it. Then
-    merge the artifact zip into results/, locally run scripts/pareto_plots.py
-    -> scripts/make_master_tables.py -> scripts/make_results_master.py in
-    that order, and fill every <PLACEHOLDER> in Section 4 above by
-    transcription. This closes Step 11 and, with it, all four RQs.
-  - Run `pytest -q` on the Kaggle session (or any CUDA-enabled machine)
-    before trusting the fix -- Section 8's root cause (a device-placement
-    bug reachable only when device_t is non-CPU) is structurally invisible
-    to this repo's CPU-only local test suite, so the fix is reasoned-through
-    and offline-verified (py_compile, code-path re-read) but NOT test-
-    verified. tests/test_efficiency.py has zero coverage of
-    _reference_backbones today (grep confirms) -- adding a CUDA-gated
-    regression test for it is cheap and should happen alongside the re-run.
+  - Add regression tests for BOTH bugs fixed in Section 8, on a CUDA-
+    enabled machine -- one done, one still open:
+      (a) Section 8.1-8.2 (the crash) -- DONE. 8.6(c) added a CUDA-gated
+          test (`test_count_flops_on_a_cuda_resident_model_matches_cpu_and_
+          does_not_crash`) that skips here and runs on Kaggle; this is the
+          direct regression for the crash traceback.
+      (b) Section 8.7 (the silent wrong-data bug, arguably higher priority
+          than (a) since it produced no error at all) -- STILL OPEN, no
+          test anywhere. Needed: an assertion that when `environments`
+          contains both a `local_cpu` entry and a Kaggle-named entry with
+          overlapping profile prefixes (e.g. both have a `cpu_1thread_*`
+          profile), `_primary_cost_profile` / `_eff_primary_latency` /
+          `_eff_lat` (three separate files, three separate tests) all
+          select the NON-local_cpu one. This bug produced a WRONG NUMBER
+          with a clean exit 0 and no warning anywhere -- the kind of
+          failure a test suite exists to catch and a session log cannot.
+          None of tests/test_pareto.py or tests/test_efficiency.py cover
+          scripts/pareto_plots.py, scripts/make_master_tables.py, or
+          scripts/make_results_master.py at all today.
+  - Consider consolidating the three independent copies of
+    _non_canonical_profile_fragments (scripts/pareto_plots.py,
+    scripts/make_master_tables.py, scripts/make_results_master.py) into a
+    single src/utils/efficiency.py helper. Left as three copies in this
+    session per the "don't touch tested code more than necessary" instinct
+    and to keep each fix independently reviewable; if a fourth call site
+    ever needs this logic, that is the trigger to promote it.
   - Energy score on evidential logits (Section 5 caveat 4) -- the cheapest
     open follow-up anywhere in this thesis's backlog: no retraining, just a
     re-run of the 120-cell eval with the energy score computed against
@@ -818,14 +973,133 @@ transcription of Section 4's placeholders from its output.
            reference-backbone status after the run, because (b) means a
            bonus-row failure is no longer loud on its own.
 
-     STILL NOT VERIFIED ON A GPU. Executed here: the full suite (294
-     passed, 1 skipped), the static-block equality check above, and a real
-     end-to-end `--include-reference-backbones` run on CPU (1 filtered key,
-     reduced warmup/measure) which wrote its JSON and measured ViT-B/16 at
+     STILL NOT VERIFIED ON A GPU (as of 2026-08-09's writing of 8.6 --
+     RESOLVED, 8.7). Executed here: the full suite (294 passed, 1 skipped),
+     the static-block equality check above, and a real end-to-end
+     `--include-reference-backbones` run on CPU (1 filtered key, reduced
+     warmup/measure) which wrote its JSON and measured ViT-B/16 at
      86,567,656 params / 16.87 GMACs with DeiT correctly reported
      "unavailable" (timm is not installed locally). What no CPU host can
      execute is the CUDA branch itself -- that is precisely what the gated
-     test in (c) is for, and it will run automatically inside the re-run's
-     own Section 3. Step 11 stays open until that session writes
-     results/efficiency_table.json.
+     test in (c) is for.
+
+8.7  THE CANONICAL RUN, AND A SECOND, MORE SERIOUS BUG (2026-08-09, same
+     day, after 8.6's fix landed). The teammate re-ran
+     notebooks/step11_efficiency.ipynb on Kaggle T4 with 8.1-8.6's fixes in
+     place. It succeeded cleanly: results/step11_session.log shows the full
+     12-key GPU+CPU measurement, THEN `--include-reference-backbones`
+     completing with REAL ViT-B/16 (86.6M params, 16.87 GMACs, ~21.0ms GPU)
+     and DeiT-Tiny (5.7M params, 1.08 GMACs, ~11.0ms GPU) rows -- no crash,
+     `[efficiency] wrote results/efficiency_table.json`, exit 0. A
+     stability re-run (`--cpu-threads 1 --warmup 5 --measure 20
+     --no-train-step --env-id kaggle_t4_rerun`) also completed and wrote
+     results/efficiency_table_rerun.json. 8.1's crash is CLOSED.
+
+     While integrating this data and manually cross-checking
+     pareto_frontier.json's numbers against efficiency_table.json's raw
+     `measured` block (routine verification, not prompted by any test or
+     error), a SECOND bug surfaced: `pareto_frontier.json`'s cost value for
+     resnet18/bottleneck_parallel/evidential was 80.435 -- but
+     efficiency_table.json's OWN `kaggle_t4_cpu` environment (the canonical,
+     pre-registered primary axis, Section 0.4) records that key's
+     cpu_1thread median as 62.381. 80.435 is instead the `local_cpu`
+     environment's value for the SAME key -- the noisy AMD Ryzen dev laptop
+     from Section 3, structurally the wrong machine for the pre-registered
+     axis.
+
+     ROOT CAUSE. Three independent functions -- `_primary_cost_profile`
+     (scripts/pareto_plots.py), `_eff_primary_latency`
+     (scripts/make_master_tables.py), and a closure named `_eff_lat`
+     (scripts/make_results_master.py) -- each pick a key's primary-axis
+     latency the same naive way:
+       for profile, timing in per_image.items():
+           if profile.startswith("cpu_1thread_"):
+               return profile, timing
+     `per_image` is a dict; Python dicts preserve insertion order; and
+     scripts/efficiency_table.py's write path is `_deep_merge(existing,
+     result)` -- NEW data is merged ONTO the OLD file, so pre-existing keys
+     (local_cpu, present in every commit since Section 3's first offline
+     run) always sort before whatever a later session adds. Both
+     `local_cpu`'s and `kaggle_t4_cpu`'s per-image profile names start with
+     "cpu_1thread_" (the thread-count prefix, not the hardware), so ALL
+     THREE functions silently picked local_cpu every time, on every commit,
+     since Step 11's code first existed -- not a regression introduced by
+     8.6's fix, a pre-existing bug that 8.1's crash had (accidentally)
+     prevented from ever mattering, because no canonical Kaggle data had
+     reached these functions until this session.
+
+     WHY THIS ONE IS WORSE THAN 8.1. The crash was loud: exit 1, a
+     traceback, an unmissable session-log entry. This bug was SILENT: exit
+     0, no warning, no test failure (none of the 294 tests in 8.6(c) touch
+     pareto_plots.py, make_master_tables.py, or make_results_master.py at
+     all), a plausible-looking number in every downstream artifact --
+     Pareto PNGs, pareto_frontier.json, Table 8 in docs/RESULTS_MASTER.md.
+     Left uncaught, the thesis's actual RQ4 headline figures would have
+     been sourced from an uncontrolled personal laptop instead of the
+     designated edge-proxy hardware, discoverable only by exactly the kind
+     of manual cross-check that caught it here -- which is not a
+     repeatable safety net.
+
+     MEASURED BLAST RADIUS, not assumed: local_cpu / kaggle_t4_cpu
+     per-image ratio across all 12 keys ranges 0.568x-1.289x (mean 0.825x)
+     -- NOT a fixed offset a reader could mentally correct for. The bug's
+     effect on Table 8 / pareto_frontier.json values ranged from
+     negligible to a 47% error depending on which key was read (matching
+     the same spread this collapse_check independently exposed --
+     resnet18/bottleneck_parallel showed the largest evidential-vs-softmax
+     "warn" on local_cpu specifically, 47.23%, now understood as local_cpu
+     noise rather than a real head-cost effect; see 4.8's clean,
+     Kaggle-only re-measurement, 1.29% mean).
+
+     FIX APPLIED AND VERIFIED (this session, WITH the real Kaggle data,
+     not reasoned-through-offline this time):
+       - A `_non_canonical_profile_fragments(effic)` helper, independently
+         added to all three files (kept as three copies rather than one
+         shared import -- Section 7's note on why), derives the exact slug
+         fragment belonging to `environments['local_cpu']['host']['cpu_model']`
+         using the SAME regex src/utils/efficiency.py:device_profile_slug
+         already uses, and excludes any profile containing it from the
+         primary/fallback selection loops -- falling through to local_cpu
+         only if truly nothing else exists (so an offline local_cpu-only
+         session, Section 3's original use case, still produces output).
+       - A separate, smaller bug found alongside it: scripts/pareto_plots.py
+         `main()` called `_load_efficiency()` with NO arguments, so its own
+         `--efficiency <path>` CLI flag was silently ignored (always read
+         the hardcoded default path) -- the exact same class of dead-option
+         bug as the `--env` flag Section 5 caveat 11 already documents.
+         Fixed: `_load_efficiency` now takes a path parameter; `main()`
+         passes `args.efficiency`; `generated_from.efficiency` in the
+         output JSON now correctly reports whichever file was actually read.
+       - VERIFIED end-to-end against the real Kaggle data (not reasoned
+         through, executed): resnet18/bottleneck_parallel/evidential's cost
+         in pareto_frontier.json changed from 80.435 (local_cpu, wrong) to
+         62.381 (kaggle_t4_cpu, correct) after the fix, matching
+         efficiency_table.json's own kaggle_t4_cpu value exactly. All 12
+         keys spot-checked the same way, all correct. `docs/RESULTS_MASTER.md`
+         Table 8, results/mvt_table_efficiency.tex/.png, and all six Pareto
+         PNGs were regenerated from the corrected code and are the versions
+         now committed.
+       - CONCLUSIONS THAT SURVIVED THE FIX (the science is intact,
+         only the wrong-machine numbers changed): every panel's
+         recommended_point is IDENTICAL before and after (mbnet/parallel/
+         evidential for both CIFAR-FS panels, r18/parallel/evidential for
+         both MiniImageNet panels).
+       - CONCLUSIONS THAT DID NOT SURVIVE THE FIX (a real, reported
+         correction, not a rounding change): CIFAR-FS's strict_front
+         gained two members under the corrected data --
+         mobilenetv3_small/lora/evidential and .../lora/softmax were
+         DOMINATED under the wrong (local_cpu) numbers and are GENUINELY
+         ON the frontier under the correct (Kaggle) ones, because LoRA's
+         latency on MobileNetV3-Small is actually slightly LOWER than the
+         parallel bottleneck's on the real hardware (11.44-11.55ms vs
+         11.86-12.14ms) despite LoRA having MORE trainable parameters
+         (10,752 vs 6,928) -- the opposite of the naive param-implies-
+         latency intuition, and only visible once the right machine's
+         numbers were used. Section 4.9 reports this.
+
+     STILL NOT COVERED BY ANY TEST (Section 7): this bug's entire failure
+     mode -- correct exit code, no error, wrong number -- is exactly what
+     an automated regression test is for and exactly what none of the 294
+     tests in this repo currently check, on any of the three files it
+     touched.
 ================================================================================

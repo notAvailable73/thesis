@@ -200,8 +200,29 @@ def _eff_key(backbone: str, adapter: str, head: str) -> str:
     return f"{backbone}|{adapter}|{head}"
 
 
+def _non_canonical_profile_fragments(effic: dict) -> list[str]:
+    """Same exclusion as scripts/pareto_plots.py's function of the same
+    name -- see its docstring for the 2026-08-09 incident this fixes.
+    Kept as an independent copy (matching this codebase's existing pattern
+    of per-script latency-profile helpers) rather than a shared import, so
+    each fix is reviewable on its own; if a fourth copy is ever added,
+    promote this into src/utils/efficiency.py instead of copying again."""
+    import re
+    env = effic.get("environments", {}).get("local_cpu")
+    if not env:
+        return []
+    cpu_model = env.get("host", {}).get("cpu_model")
+    if not cpu_model:
+        return []
+    return [re.sub(r"[^a-z0-9]+", "-", cpu_model.lower()).strip("-")]
+
+
 def _eff_primary_latency(effic: dict, key: str, prefix: str) -> str:
     per_image = effic.get("measured", {}).get(key, {}).get("per_image", {})
+    excluded = _non_canonical_profile_fragments(effic)
+    for profile, timing in per_image.items():
+        if profile.startswith(prefix) and not any(f in profile for f in excluded):
+            return f"{timing['latency_ms']['median']:.2f}"
     for profile, timing in per_image.items():
         if profile.startswith(prefix):
             return f"{timing['latency_ms']['median']:.2f}"
