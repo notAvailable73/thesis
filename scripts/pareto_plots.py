@@ -134,21 +134,71 @@ def _quality_variant(mvt, dataset: str, k_shot: int, backbone: str,
     raise ValueError(f"Unknown quality variant: {variant!r}")
 
 
-def _load_efficiency() -> dict | None:
-    if not DEFAULT_EFFICIENCY.exists():
+def _load_efficiency(path: Path | None = None) -> dict | None:
+    """`path` defaults to DEFAULT_EFFICIENCY. Found 2026-08-09 alongside the
+    local_cpu profile-selection bug: this previously ignored its caller's
+    `--efficiency` argument entirely (main() called `_load_efficiency()`
+    with no arguments), so that CLI flag silently did nothing -- the same
+    class of dead-option bug as --env (see _non_canonical_profile_fragments)."""
+    p = path or DEFAULT_EFFICIENCY
+    if not p.exists():
         return None
-    return json.loads(DEFAULT_EFFICIENCY.read_text())
+    return json.loads(p.read_text())
+
+
+def _non_canonical_profile_fragments(effic: dict) -> list[str]:
+    """Slug fragments belonging to the `local_cpu` dev-machine environment
+    (step_writeups/step11.txt Section 4.1: "development artifact, not
+    reported as an edge number"), derived the same way
+    src/utils/efficiency.py:device_profile_slug() builds a profile key, so
+    they can be recognised and excluded from the primary-axis pick below
+    without needing environments[env_id]['device_profile_slug'] to be
+    populated (it is None in every session observed so far).
+
+    BUG THIS FIXES (found 2026-08-09, real Kaggle re-run data): without
+    this exclusion, _primary_cost_profile did a bare `profile.startswith(
+    prefer_prefix)` over per_image's dict-insertion order. Because
+    scripts/efficiency_table.py merges NEW sessions onto the EXISTING file
+    (never clobbers), local_cpu's cpu_1thread_* profile is always inserted
+    first, so it always won that match over the canonical
+    cpu_1thread_intel-...-2-00ghz Kaggle profile -- silently making every
+    committed Pareto latency figure and pareto_frontier.json read from an
+    uncontrolled personal laptop instead of the Kaggle CPU edge proxy
+    (80.43ms local vs 62.38ms Kaggle for resnet18/bottleneck_parallel/
+    evidential, a ~29% error on the RQ4 headline number)."""
+    import re
+    env = effic.get("environments", {}).get("local_cpu")
+    if not env:
+        return []
+    cpu_model = env.get("host", {}).get("cpu_model")
+    if not cpu_model:
+        return []
+    return [re.sub(r"[^a-z0-9]+", "-", cpu_model.lower()).strip("-")]
 
 
 def _primary_cost_profile(effic: dict, key: str, *, prefer_prefix: str = "cpu_1thread_"
                           ) -> tuple[str, dict] | None:
     """Median per-image latency under the pre-registered primary profile
-    (CPU, 1 thread); falls back to any CPU profile, then anything present,
-    so a Kaggle-only (GPU) file still produces SOME latency-vs-AUROC figure
-    rather than nothing."""
+    (CPU, 1 thread) -- excluding the local_cpu dev machine's profile, which
+    would otherwise win on dict-insertion order alone (see
+    _non_canonical_profile_fragments's docstring for the incident this
+    fixes). Falls back to any CPU profile, then anything present INCLUDING
+    local_cpu, so a local_cpu-only file (Section 3's offline dev runs, no
+    Kaggle session yet) still produces SOME figure rather than nothing."""
     per_image = effic.get("measured", {}).get(key, {}).get("per_image", {})
     if not per_image:
         return None
+    excluded = _non_canonical_profile_fragments(effic)
+
+    def is_excluded(profile: str) -> bool:
+        return any(frag in profile for frag in excluded)
+
+    for profile, timing in per_image.items():
+        if profile.startswith(prefer_prefix) and not is_excluded(profile):
+            return profile, timing
+    for profile, timing in per_image.items():
+        if profile.startswith("cpu_") and not is_excluded(profile):
+            return profile, timing
     for profile, timing in per_image.items():
         if profile.startswith(prefer_prefix):
             return profile, timing
@@ -399,16 +449,23 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    effic = _load_efficiency()
+    efficiency_path = Path(args.efficiency)
+    effic = _load_efficiency(efficiency_path)
     if effic is None:
-        print(f"[pareto_plots] {args.efficiency} not found -- "
+        print(f"[pareto_plots] {efficiency_path} not found -- "
              "latency-vs-AUROC figures will render with 0 points "
              "(run scripts/efficiency_table.py first for real data).")
 
+    if effic is not None and efficiency_path.is_relative_to(REPO_ROOT):
+        efficiency_provenance = str(efficiency_path.relative_to(REPO_ROOT))
+    elif effic is not None:
+        efficiency_provenance = str(efficiency_path)
+    else:
+        efficiency_provenance = None
+
     frontier_json: dict = {"generated_from": {
         "mvt": str(mvt_path.relative_to(REPO_ROOT)) if mvt_path.is_relative_to(REPO_ROOT) else str(mvt_path),
-        "efficiency": (str(DEFAULT_EFFICIENCY.relative_to(REPO_ROOT))
-                       if effic is not None else None),
+        "efficiency": efficiency_provenance,
     }, "tol_accuracy": TOL_ACCURACY, "tol_auroc": TOL_AUROC}
 
     _render_family(mvt, None, cost="params", quality_variant="accuracy",

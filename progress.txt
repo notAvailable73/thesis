@@ -5,8 +5,10 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-08-07 (Step 11 CODE COMPLETE, measurement pending — see
-           below; Step 10 CLOSED 2026-08-06 — all 120 grid cells ran)
+Updated:   2026-08-09 (Step 11 CLOSED — canonical measurement ran, RQ4
+           answered, two real bugs found+fixed during closeout; Step 10
+           CLOSED 2026-08-06 — all 120 grid cells ran. All four RQs now
+           have numerical answers.)
 ================================================================================
 
 
@@ -19,10 +21,12 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              fully rigorous: real TinyImageNet near-OOD + VAL-swept evidential
              config, no open caveats; see below); Step 9 (MiniImageNet 2nd
              in-distribution dataset, CLOSED — see below); Step 10 (MVT grid,
-             CLOSED 2026-08-06 — all 120 cells ran; see below).
-In progress: Step 11 (RQ4, efficiency/Pareto) — CODE COMPLETE 2026-08-07, the
-             canonical Kaggle T4 GPU + Kaggle CPU measurement session has not
-             yet run. See below and step_writeups/step11.txt.
+             CLOSED 2026-08-06 — all 120 cells ran; see below); Step 11 (RQ4,
+             efficiency/Pareto, CLOSED 2026-08-09 — canonical Kaggle
+             measurement ran, RQ4 answered, see below).
+In progress: none. All four research questions now have numerical answers.
+             Next is Step 12 (optional breadth) or Phase 6 (thesis writing) —
+             see "Next" below.
 
 Step 10 headline (CLOSED 2026-08-06). All 120 grid cells trained and
              evaluated on real data: results/mvt_results.json reports
@@ -67,63 +71,60 @@ Step 10 headline (CLOSED 2026-08-06). All 120 grid cells trained and
              STILL open by design: the recipe stayed FROZEN across all 120
              cells (plan.md §3) so the grid is a controlled comparison, and
              10.9 is deferred, not dropped.
-Step 11 headline (CODE COMPLETE 2026-08-07, measurement PENDING). Every
-             piece of infrastructure exists and was verified against real
-             (non-canonical) data this session: src/utils/efficiency.py +
-             src/utils/pareto.py (56 new tests, zero regressions to the
-             pre-existing 233-test suite — see the exact count in the
-             decisions log below); scripts/efficiency_table.py (12
-             (backbone, adapter, head) measurement keys derived from
-             configs/grid/_index.json, covering all 40 mvt_results.json
-             cells; `--check-params-only` reproduced 40/40 mvt cells'
-             n_params from a fresh build_model(cfg), independent of Step
-             10's training run); scripts/pareto_plots.py (strict + eps
-             Pareto frontiers, baseline-eligible, six PNGs +
-             results/pareto_frontier.json + the quality-axis audit family);
-             scripts/make_master_tables.py / make_results_master.py
-             extended additively (verified: the 3 pre-existing
-             mvt_table_*.tex files and docs/RESULTS_MASTER.md's pre-Step-11
-             content are BYTE-IDENTICAL before/after); notebooks/
-             step11_efficiency.ipynb (NOT YET RUN). A real local-CPU run
-             (env_id `local_cpu`, this repo's own dev machine) exercised
-             the full 12-key pipeline end-to-end as a development artifact
-             — explicitly NOT the reported edge-latency figure (Section 5
-             of step_writeups/step11.txt explains why). What remains: one
-             ~15-20 min Kaggle T4 session (notebooks/step11_efficiency.ipynb)
-             and transcribing its output into step_writeups/step11.txt §4
-             and docs/RESULTS_MASTER.md's Table 8 / RQ4 section. Reference
-             gate (measured MACs vs published Howard 2019 / ResNet-18
-             figures) PASSES for both backbones. Full reasoning, the
-             pre-registered axes/tolerances (fixed BEFORE any number
-             exists, per thesis_implementation_instructions.txt §5), and
-             every honest caveat: step_writeups/step11.txt.
-Next:        Finish Step 11: run notebooks/step11_efficiency.ipynb on
-             Kaggle (GPU T4, Internet ON, no dataset attach — build_model
-             needs no data), merge its artifact zip into results/, then
-             locally run scripts/pareto_plots.py → make_master_tables.py →
-             make_results_master.py in that order and transcribe
-             step_writeups/step11.txt §4's placeholders from the committed
-             JSON. This closes all four RQs.
-             Backlog re-carried (now explicitly Step 12 items, per
-             step_writeups/step11.txt §7): 10.9 (VAL-only KL-warmup/
-             patience side-study — motivating symptom still does not
-             reproduce); energy score on evidential logits (the cheapest
-             open follow-up — no retraining, just a re-run of the 120-cell
-             eval); the from-scratch-backbone control run that would make
-             any accuracy number here comparable to published few-shot SOTA
-             (docs/RESULTS_MASTER.md §4.8); and a trained ViT-Tiny/
-             DeiT-Small arm (Step 11's `--include-reference-backbones` only
-             gives the architecture-only params/MACs/latency for this, not
-             a trained accuracy number).
-             Also new: docs/DEFENCE_BRIEF.md answers the pre-defence
-             objection that CNN backbones are outdated -- see the
-             2026-08-06 entry in the decisions log.
-             ORDERING (2026-08-06, unchanged): Step 12 (incl. 12.F baseline
-             coverage for MobileNetV3-Small + MiniImageNet, ~19 GPU-h) stays
-             deferred until Step 11 fully closes (canonical measurement +
-             transcription), not just code-complete.
+Step 11 headline (CLOSED 2026-08-09). The canonical Kaggle T4 session ran
+             (GPU + CPU, all 12 (backbone, adapter, head) measurement keys,
+             plus a stability re-run and real architecture-only ViT-B/16 /
+             DeiT-Tiny reference rows). RQ4 is answered: recommended Pareto
+             point is MobileNetV3-Small + parallel bottleneck + evidential
+             on CIFAR-FS (11.86ms/image, 6,930 params); ResNet-18 + parallel
+             + evidential on MiniImageNet (62.38ms) where MobileNetV3-Small
+             falls outside accuracy tolerance. Most novel finding: BACKBONE
+             choice drives latency (5.12x, ResNet-18 vs MobileNetV3-Small at
+             matched adapter), ADAPTER choice barely does (3.9-5.8% despite
+             up to 2.6x parameter differences) — the frozen trunk dominates
+             inference cost. "Evidential uncertainty is free at inference"
+             is now measured (mean 1.29% head-cost delta, below the
+             session's own 5.91% noise floor), not asserted.
+             Two real bugs found and fixed during closeout, full detail
+             step_writeups/step11.txt §8: (1) a crash in an optional bonus
+             feature that discarded a correct measurement before it could
+             save (found+fixed 08-07/08-09 by the teammate); (2) a SILENT
+             bug (no crash, no test failure) where three independent
+             latency-selection functions across scripts/pareto_plots.py,
+             make_master_tables.py, make_results_master.py all picked this
+             repo's own noisy dev-laptop latency over the canonical Kaggle
+             CPU number, by dict-insertion-order accident — errors up to
+             47% on individual cells, silently, until this session's manual
+             cross-check caught it. Fixed and verified against real data;
+             every downstream artifact (Table 8, pareto_frontier.json, all
+             six Pareto PNGs) regenerated from corrected code. Neither bug
+             has a regression test yet for the second one — flagged as the
+             top open follow-up. Full reasoning, the pre-registered axes/
+             tolerances, every honest caveat, and both incidents in full:
+             step_writeups/step11.txt.
+Next:        Step 12 (optional breadth) or Phase 6 (thesis writing) — see
+             the ORDERING note in Step 12's own section below (Step 12 was
+             deliberately held until Step 11 fully closed; that condition
+             is now met).
+             Backlog re-carried (Step 12 items, per step_writeups/
+             step11.txt §7): a regression test for the §8.7 silent-data
+             bug (top priority — the bug class that produces no error is
+             the one a test suite exists to catch); 10.9 (VAL-only
+             KL-warmup/patience side-study — motivating symptom still does
+             not reproduce); energy score on evidential logits (the
+             cheapest open follow-up — no retraining, just a re-run of the
+             120-cell eval); the from-scratch-backbone control run
+             (docs/RESULTS_MASTER.md §4.8); a trained ViT-Tiny/DeiT-Small
+             arm (Step 11's --include-reference-backbones now gives a REAL
+             measured architecture-only number for this, not just
+             literature — but still not a trained accuracy number); and
+             12.F baseline coverage for MobileNetV3-Small + MiniImageNet
+             (~19 GPU-h).
+             docs/DEFENCE_BRIEF.md answers the pre-defence objection that
+             CNN backbones are outdated -- see the 2026-08-06 entry in the
+             decisions log.
 Blocker:     none.
-Today:       2026-08-07
+Today:       2026-08-09
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -914,16 +915,80 @@ Exit criteria:
       cell per (dataset, shot, head); see step_writeups/step10.txt §5.
 
 --------------------------------------------------------------------------------
-STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)          [~] CODE COMPLETE 2026-08-07
-                                                       (canonical measurement
-                                                       ATTEMPTED, CRASHED
-                                                       BEFORE WRITING, FIX
-                                                       APPLIED, RE-RUN NEEDED)
+STEP 11 — EFFICIENCY + PARETO FRONTIER (RQ4)          [x] CLOSED 2026-08-09
 --------------------------------------------------------------------------------
 Phase: 5     RQ: RQ4 (primary)                        Est: 1 week
-Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending a
-         successful Kaggle session; §0/§1/§2/§3/§5/§6/§7 complete; §8 is
-         the 2026-08-07 crash incident + root cause + fix, see below)
+Writeup: step_writeups/step11.txt (CLOSED — §4 filled with real transcribed
+         numbers; §8 records TWO incidents: 8.1-8.6 the 2026-08-07 crash +
+         its fix, 8.7 a second, more serious SILENT wrong-data bug found
+         during this closeout's own verification pass, see below)
+
+2026-08-09 CANONICAL RUN SUCCEEDED, THEN A SECOND BUG FOUND AND FIXED (full
+  detail: step_writeups/step11.txt §8.7). The teammate re-ran
+  notebooks/step11_efficiency.ipynb on Kaggle T4 with the 08-07/08-09 crash
+  fixes in place — succeeded cleanly this time, full 12-key GPU+CPU
+  measurement plus real (not literature) ViT-B/16 (86.6M params, 16.87
+  GMACs) and DeiT-Tiny (5.7M params, 1.08 GMACs) reference rows. User asked
+  to "copy the results in and check if everything is okay."
+  Copied results/efficiency_table.json + results/efficiency_table_rerun.json
+  + results/step11_session.log into the repo, then AUDITED rather than
+  assumed correct. Verification caught a real, SILENT bug (no crash, no
+  test failure, exit 0 everywhere): three independently-implemented
+  latency-selection functions (scripts/pareto_plots.py
+  _primary_cost_profile, scripts/make_master_tables.py
+  _eff_primary_latency, scripts/make_results_master.py's _eff_lat closure)
+  each picked a key's "cpu_1thread_*" profile by bare first-match over
+  dict-insertion order — and because efficiency_table.py MERGES new
+  sessions onto the existing file, the pre-existing `local_cpu` dev-laptop
+  profile (present since Step 11's first offline implementation session)
+  always sorted first and always won, on every commit, over the actual
+  canonical `kaggle_t4_cpu` profile the pre-registered primary axis
+  (step_writeups/step11.txt §0.4) requires. Measured blast radius:
+  local_cpu/kaggle_t4_cpu per-image ratio ranges 0.568x-1.289x across the
+  12 keys (NOT a fixed offset) — errors up to 47% on individual Table 8 /
+  pareto_frontier.json cells had this shipped uncaught. A related, smaller
+  bug found alongside it: scripts/pareto_plots.py's --efficiency CLI flag
+  was silently ignored (main() called _load_efficiency() with no
+  arguments) — same class of dead-option bug as the pre-existing --env gap.
+  FIXED (all three files) and VERIFIED against the real Kaggle data (not
+  reasoned through — executed): a _non_canonical_profile_fragments helper
+  (independently added to each file) excludes local_cpu's profile from
+  selection by deriving its exact slug from
+  environments['local_cpu']['host']['cpu_model'], the same regex
+  src/utils/efficiency.py:device_profile_slug already uses.
+  resnet18/bottleneck_parallel/evidential's cost in pareto_frontier.json
+  changed from 80.435 (wrong, local_cpu) to 62.381 (correct, matches
+  efficiency_table.json's own kaggle_t4_cpu value exactly) after the fix,
+  spot-checked on all 12 keys. docs/RESULTS_MASTER.md Table 8,
+  results/mvt_table_efficiency.tex/.png, and all six Pareto PNGs
+  regenerated from corrected code.
+  WHAT SURVIVED THE BUG: every panel's recommended_point is identical
+  before/after — the headline RQ4 answer did not change.
+  WHAT DID NOT SURVIVE (a real, reported correction): CIFAR-FS's strict
+  frontier gained mobilenetv3_small/lora/evidential and .../lora/softmax —
+  wrongly shown as dominated under local_cpu's noisy numbers, genuinely on
+  the frontier under Kaggle's real numbers, because LoRA's real latency on
+  MobileNetV3-Small is slightly LOWER than the parallel bottleneck's
+  despite having MORE trainable parameters (10,752 vs 6,928) — the
+  opposite of the naive param-implies-latency intuition, visible only once
+  the correct hardware's numbers were used.
+  NEITHER BUG IS TEST-COVERED YET (step_writeups/step11.txt §7): the crash
+  bug (§8.1-8.2) got a regression test in the teammate's 08-09 fix; this
+  second bug has none anywhere, on any of the three files it touched —
+  flagged as the top open follow-up.
+  ANSWER TO "did we answer RQ4 perfectly / did we fail" (the question that
+  started this): RQ4 is now ANSWERED. Recommended point: MobileNetV3-Small
+  + parallel bottleneck + evidential on CIFAR-FS (11.86ms, 6,930 params);
+  ResNet-18 + parallel + evidential on MiniImageNet (62.38ms) where
+  MobileNetV3-Small's accuracy falls outside tolerance. Most novel finding:
+  BACKBONE choice drives latency (5.12x between ResNet-18 and
+  MobileNetV3-Small), ADAPTER choice barely does (3.9-5.8% despite up to
+  2.6x parameter differences) — the frozen trunk dominates inference cost,
+  not the adapter. "Evidential uncertainty is free at inference" is now
+  measured (mean 1.29% head-cost delta, smaller than the session's own
+  5.91% measurement-noise floor), not merely asserted. Full RQ4 paragraph:
+  step_writeups/step11.txt §4.9; docs/RESULTS_MASTER.md's RQ4 section
+  carries the same answer.
 
 2026-08-07 UPDATE: the first real canonical Kaggle T4 session ran and
   actually completed the FULL 12-key GPU+CPU measurement correctly
@@ -986,52 +1051,55 @@ Writeup: step_writeups/step11.txt (TEMPLATE — §4 placeholders pending a
 
 Actions:
   [x] 11.1 src/utils/efficiency.py — params (trainable + total), FLOPs
-           (fvcore), latency (T4 + Colab CPU), peak memory. DONE + 30 tests
-           (tests/test_efficiency.py); also src/utils/pareto.py (26 tests,
-           tests/test_pareto.py, incl. 2 scientific regressions against the
-           committed grid) and an ADDITION beyond spec:
-           measure_train_step_peak_memory (flagged in every record).
+           (fvcore), latency (T4 + Colab CPU), peak memory. DONE + tests
+           (tests/test_efficiency.py, 294 passing after the 08-09 fix
+           round); also src/utils/pareto.py (26 tests, tests/test_pareto.py,
+           incl. 2 scientific regressions against the committed grid) and
+           an ADDITION beyond spec: measure_train_step_peak_memory
+           (flagged in every record).
   [x] 11.2 scripts/efficiency_table.py → results/efficiency_table.json —
            DONE; 12 keys derived from configs/grid/_index.json (never
            hardcoded), architecture-homogeneity asserted per key, reference
            gate (measured MACs vs published Howard 2019/ResNet-18 figures)
-           runs first, `--check-params-only` reproduced 40/40 mvt cells'
-           n_params. Exercised against real (non-canonical) local-CPU data
-           this session; the canonical Kaggle GPU+CPU run has not happened.
-  [x] 11.3 results/pareto_latency_vs_auroc.png (one per dataset) —
-           scripts/pareto_plots.py DONE; renders correctly against real
-           mvt_results.json + local-CPU efficiency data (0 points until the
-           canonical session exists, by design — no efficiency_table.json
-           committed yet).
+           PASSES for both real backbones on the canonical session. 3 real
+           environments committed: kaggle_t4_cuda, kaggle_t4_cpu, local_cpu.
+  [x] 11.3 results/pareto_latency_vs_auroc.png (+ per-dataset variants) —
+           DONE; regenerated 2026-08-09 AFTER the §8.7 selection-bug fix,
+           correctly reading the Kaggle CPU profile.
   [x] 11.4 results/pareto_params_vs_accuracy.png — DONE, needs NO new
            measurement; fully populated from the already-committed
            results/mvt_results.json (see step_writeups/step11.txt §4.6).
-  [x] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted — TEMPLATE
-           written with the pre-registered axes/tolerances (§0) and every
-           §4 placeholder named; the RQ4 paragraph itself is NOT YET
-           FILLED (needs the canonical session).
+  [x] 11.5 step_writeups/step11.txt with RQ4 paragraph drafted — DONE, §4.9,
+           real numbers transcribed from the corrected data.
 
 Exit criteria:
-  [~] efficiency_table.json complete for all MVT cells + baselines —
-      pipeline verified end-to-end against real local-CPU data; canonical
-      Kaggle GPU+CPU session not yet run.
-  [~] Two Pareto plots saved at 300 dpi — script verified, real (non-final)
-      PNGs rendered; committed canonical versions pending the session above.
-  [ ] RQ4 paragraph: numerical Pareto-optimal point — NOT FILLED (the
-      params-only half IS filled, §4.6, and needs no further measurement).
+  [x] efficiency_table.json complete for all MVT cells + baselines —
+      12/12 keys, canonical Kaggle GPU+CPU session ran and is committed.
+  [x] Two Pareto plots saved at 300 dpi — all six PNGs (2 stems x
+      {combined, cifar_fs, mini_imagenet}) regenerated post-fix, committed.
+  [x] RQ4 paragraph: numerical Pareto-optimal point — FILLED,
+      step_writeups/step11.txt §4.9 + docs/RESULTS_MASTER.md's RQ4 section.
   [x] Limitation noted: "no Jetson Nano access; CPU as edge proxy" —
-      present verbatim in step_writeups/step11.txt §5 and
-      docs/RESULTS_MASTER_template.md's RQ4 section; quantification (the
-      two-environment ratio) pending the canonical CPU session.
+      present verbatim in step_writeups/step11.txt §5 caveat 1, now
+      QUANTIFIED (local/Kaggle ratio mean 0.825x, range 0.568x-1.289x —
+      the same measurement that explains why the §8.7 bug's error size
+      varied so much per key) and in docs/RESULTS_MASTER.md's RQ4 section.
+
+  Extra, not in the original checklist: a real (not literature-only) ViT-B/16
+  and DeiT-Tiny architecture-only measurement (--include-reference-
+  backbones), feeding docs/DEFENCE_BRIEF.md's transformer comparison with
+  an actual number instead of only published figures.
 
 --------------------------------------------------------------------------------
 STEP 12 — OPTIONAL EXTENSIONS                                   [ ] NOT STARTED
 --------------------------------------------------------------------------------
 Phase: 5     RQ: breadth only                         Est: variable
-DO NOT START BEFORE STEP 11 — explicit ordering decision, 2026-08-06 (see
-below). Step 11 (RQ4) is the last unanswered research question and the
-thesis's most exposed gap; everything in this step is coverage/polish on
-top of an already-complete RQ1-RQ3 story and should wait.
+UNBLOCKED 2026-08-09 — the 2026-08-06 ordering decision was "do not start
+before Step 11 closes"; Step 11 closed 2026-08-09 with RQ4 answered (see
+above), so this step may now begin. Everything here is coverage/polish on
+top of an already-complete RQ1-RQ4 story, not a blocker to anything else —
+prioritise per the drop order below and against Phase 6 (thesis writing),
+which can now also start in parallel since all four RQs have answers.
 
 Drop order (priority top → bottom):
   [ ] 12.A ConvNeXt-Nano backbone (proposal §5A line 3)
@@ -1137,6 +1205,22 @@ Drop order (priority top → bottom):
            (docs/RESULTS_MASTER.md §4.2/§4.8 item 1) and removing the
            "your accuracy is contaminated by ImageNet pretraining overlap"
            objection entirely. Now ranked BELOW 12.I (2026-08-06 decision).
+  [ ] 12.K Regression tests for the two Step 11 closeout bugs
+           (step_writeups/step11.txt §8, 2026-08-09) — cheap, no GPU
+           needed, should be done FIRST despite its letter (letters here
+           are drop order under time pressure, not priority; this one
+           costs almost nothing and closes a real gap). Two tests needed:
+           (a) already partly done — 8.6(c) added a CUDA-gated test for
+           the §8.1 crash bug that runs on Kaggle; (b) STILL MISSING — an
+           assertion that when `environments` contains both `local_cpu`
+           and a Kaggle-named entry with overlapping profile prefixes,
+           scripts/pareto_plots.py, make_master_tables.py, and
+           make_results_master.py's latency-selection functions all
+           exclude local_cpu. This is the higher-priority half: the §8.7
+           bug produced a wrong number with exit 0 and no warning, exactly
+           the failure mode a test suite exists to catch and nothing else
+           currently does (grep confirms zero test coverage of any of
+           these three files today).
 
 Exit criteria: per extension, a result JSON + one paragraph in step12.txt.
   12.F specifically: 24/24 new configs present in configs/grid/_index.json
@@ -1872,6 +1956,95 @@ NOTES / DECISIONS LOG
             --include-reference-backbones wrote its JSON. NOT verified:
             the CUDA branch itself — unreachable without a GPU. Full
             detail: step_writeups/step11.txt §8.6.
+
+2026-08-09  Step 11 CLOSED, and a second real bug found + fixed during
+            closeout verification (full incident:
+            step_writeups/step11.txt §8.7). Context: the teammate's re-run
+            of the canonical Kaggle session (after the crash-bug fix above)
+            succeeded; user asked to copy the results in and "check if
+            everything is okay" before accepting them. Rather than copy
+            and trust, cross-checked pareto_frontier.json's cost values
+            against efficiency_table.json's raw `measured` block by hand —
+            and found resnet18/bottleneck_parallel/evidential's Pareto cost
+            (80.435) did NOT match its own kaggle_t4_cpu value (62.381); it
+            matched the local_cpu (dev laptop) value instead.
+            ROOT CAUSE: three independently-written latency-selection
+            functions (scripts/pareto_plots.py _primary_cost_profile,
+            scripts/make_master_tables.py _eff_primary_latency,
+            scripts/make_results_master.py's _eff_lat closure) each did a
+            bare `for profile in per_image: if profile.startswith(
+            "cpu_1thread_"): return profile` — first-match over Python
+            dict-insertion order, with NO exclusion of which MACHINE a
+            profile came from. Because scripts/efficiency_table.py's write
+            path is `_deep_merge(existing, result)` (new sessions merged
+            ONTO the old file, never replacing it), local_cpu's profile —
+            present in the committed file since Step 11's very first
+            offline implementation session — always sorted first and
+            always won, on every commit, over whatever a later Kaggle
+            session contributed. This was NOT a regression from the
+            2026-08-07/08-09 crash-bug fix (git log confirms 33ae489, the
+            teammate's crash fix, never touched these three files) — it
+            predates that fix entirely and was simply never triggered,
+            because no real canonical Kaggle data had ever reached these
+            functions before this session.
+            MEASURED, not assumed, how bad: local_cpu/kaggle_t4_cpu
+            per-image ratio across all 12 keys ranges 0.568x-1.289x (mean
+            0.825x) — ranging up to a 47% error on individual Table 8 /
+            pareto_frontier.json cells depending on which key was read, not
+            a correctable fixed offset.
+            WHY THIS ONE MATTERED MORE THAN THE CRASH: the crash was loud
+            (exit 1, traceback, unmissable in the session log). This bug
+            was completely silent — exit 0, no warning, no test failure
+            (zero of the 294 tests in this repo touch any of the three
+            files it lived in), a plausible-looking number in every
+            downstream artifact. Uncaught, the thesis's actual RQ4
+            headline figures would have shipped sourced from an
+            uncontrolled personal laptop instead of the designated
+            edge-proxy hardware — discoverable only by exactly the kind of
+            manual cross-check performed here, which is not a repeatable
+            safety net. This is the argument for 12.K (regression tests)
+            being higher priority than its alphabetical position suggests.
+            FIXED AND VERIFIED (executed against the real data, not
+            reasoned through): a `_non_canonical_profile_fragments` helper,
+            independently added to each of the three files, derives
+            local_cpu's exact profile-slug fragment from
+            `environments['local_cpu']['host']['cpu_model']` via the same
+            regex src/utils/efficiency.py:device_profile_slug already uses,
+            and excludes any profile containing it from the primary/
+            fallback selection (falling through to local_cpu only if
+            nothing else exists, preserving the original offline-dev use
+            case). A second, smaller, related bug fixed alongside it:
+            scripts/pareto_plots.py's `--efficiency` CLI flag was silently
+            ignored (`main()` called `_load_efficiency()` with no
+            arguments) — same class of dead-option bug as the pre-existing
+            `--env` gap already documented in step_writeups/step11.txt
+            Section 5 caveat 11 (that caveat's claim that local-CPU data
+            "cannot become the headline by accident" was itself corrected
+            in this pass — it was aspirational text, not true, until now).
+            All three fixed files re-run against the real Kaggle data:
+            resnet18/bottleneck_parallel/evidential's cost changed from
+            80.435 to 62.381 (exact match to efficiency_table.json's own
+            kaggle_t4_cpu value), spot-checked on all 12 keys.
+            docs/RESULTS_MASTER.md Table 8, results/mvt_table_efficiency.
+            tex/png, and all six Pareto PNGs regenerated from the corrected
+            code and are the versions now committed.
+            WHAT SURVIVED: every panel's recommended_point is identical
+            before/after the fix — the RQ4 headline answer is unchanged.
+            WHAT DID NOT SURVIVE (a genuine, reported correction):
+            CIFAR-FS's strict Pareto frontier gained
+            mobilenetv3_small/lora/evidential and .../lora/softmax, wrongly
+            shown as dominated under the buggy local_cpu numbers — under
+            the correct Kaggle numbers, LoRA's real latency on
+            MobileNetV3-Small is slightly LOWER than the parallel
+            bottleneck's despite having MORE trainable parameters (10,752
+            vs 6,928), the opposite of the naive param-implies-latency
+            intuition, visible only once the right machine's numbers were
+            used.
+            NOT YET TEST-COVERED (carried to Step 12 as 12.K): this bug's
+            entire failure signature — correct exit code, no error, wrong
+            number — is exactly what an automated test exists to catch,
+            and none of this repo's 294 tests check any of the three files
+            it lived in.
 
 ================================================================================
 END OF PROGRESS.TXT

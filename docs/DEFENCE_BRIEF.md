@@ -128,6 +128,8 @@ From [RESULTS_MASTER.md](RESULTS_MASTER.md), CIFAR-FS 5-way 5-shot:
 
 Between mid-2024 and mid-2026 the field has produced a steady stream of work on **exactly** this thesis's question: *does uncertainty quantification survive parameter-efficient adaptation, and does it stay calibrated?*
 
+**What this section establishes, and what it does not.** The table below shows the *topic* is active — that is motivation for why the vision/edge gap in §5 is worth closing, not evidence that this thesis's specific *findings* are novel. Keep those separate when presenting this: "the question is trendy elsewhere" and "my answer to it is new" are different claims. §5.1 and §5.2 carry the actual findings-level novelty claims.
+
 | Work | Year | What it does | Domain |
 |---|---|---|---|
 | [Laplace-LoRA](https://proceedings.iclr.cc/paper_files/paper/2024/file/07c256a163a7559186ec1c71e95b9ec9-Paper-Conference.pdf) (ICLR 2024) | 2024 | Post-hoc Laplace approximation over LoRA parameters; cuts ECE from 31.2 % → 2.1 % on Winogrande-small (LLaMA2-7B) at 1–5 % memory overhead | LLM |
@@ -138,6 +140,7 @@ Between mid-2024 and mid-2026 the field has produced a steady stream of work on 
 | [BaRA: Bayesian Adaptive Rank Allocation for PEFT](https://arxiv.org/pdf/2606.29184) | 2026 | Bayesian rank allocation | LLM |
 | [Bayesian Sparse LoRA for LLM Uncertainty Estimation](https://arxiv.org/html/2607.02182v1) | 2026 | Sparse Bayesian posterior over LoRA | LLM |
 | [Bayesian Adaptation Gym](https://arxiv.org/pdf/2606.22188) | 2026 | A *benchmark* for Bayesian low-rank adaptation — the field now has enough entries to need one | Multi-modal LM |
+| [BayesAdapter](https://arxiv.org/abs/2412.09718) | 2025–26 | Variational Bayes over a linear CLIP few-shot adapter's weights; ~2.5% ECE gain over deterministic | **Vision (CLIP, non-edge)** |
 | **B-PEFT (this thesis)** | 2026 | Evidential Dirichlet uncertainty over a parameter-free prototype head on a **frozen lightweight CNN**, ≤31.7 k trainable params, few-shot episodic, with calibration **and** OOD **and** parameter budget all reported | **Vision, edge** |
 
 **The point to make in the room:** a *benchmark paper* for Bayesian PEFT appeared in 2026. Fields do not build benchmarks for dated questions. This thesis is asking the field's current question — in the one setting the field has not covered.
@@ -157,10 +160,11 @@ This is the strongest single slide, because each row was checked against the sou
 | Literature | Representative work | Accuracy | Macro-F1 | Calibration (ECE) | OOD AUROC | Param budget | Few-shot episodic | Edge-deployable backbone |
 |---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Classical few-shot meta-learning | ProtoNet, MAML, R2D2, MetaOptNet | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Foundation-model few-shot | P>M>F, CoOp, Tip-Adapter, DINOv3 | ✅ | ❌ | ❌ | ❌ | partial | ✅ | ❌ |
+| Foundation-model few-shot | P>M>F, CoOp, [Tip-Adapter](https://arxiv.org/abs/2207.09519), [CLIP-Adapter](https://arxiv.org/abs/2110.04544), DINOv3 | ✅ | ❌ | ❌ | ❌ | partial | partial | ❌ |
 | PEFT for vision transformers | VPT, AdaptFormer, SSF, FacT, NOAH | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| PEFT for CNNs on edge | LoRA-C, LoRA-Edge, CoLoRA | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| Bayesian PEFT | Laplace-LoRA, BLoB, BaRA, Stiefel-Bayes | ✅ | ❌ | ✅ | partial | ✅ | ❌ | ❌ |
+| PEFT for CNNs on edge | [Conv-Adapter (arXiv:2208.07463)](https://arxiv.org/abs/2208.07463), LoRA-C, LoRA-Edge, CoLoRA | ✅ | ❌ | ❌ | ❌ | ✅ | partial | ✅ |
+| Frozen-CNN episodic few-shot adapters | [TSA (arXiv:2107.00358)](https://arxiv.org/abs/2107.00358), [FiT (arXiv:2206.08671)](https://arxiv.org/pdf/2206.08671) | ✅ | ❌ | ❌ | ❌ | ✅ | partial | partial |
+| Bayesian PEFT | Laplace-LoRA, BLoB, BaRA, Stiefel-Bayes, [BayesAdapter (arXiv:2412.09718)](https://arxiv.org/abs/2412.09718) | ✅ | ❌ | ✅ | partial | ✅ | ❌ | ❌ |
 | Evidential few-shot | [BEL (arXiv:2207.13137)](https://ar5iv.labs.arxiv.org/html/2207.13137) | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | partial |
 | TinyML / TinyDL | [TinyDL survey (arXiv:2506.18927)](https://arxiv.org/html/2506.18927v2) | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
 | **B-PEFT (this thesis)** | | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -182,7 +186,33 @@ That difference is the thesis's contribution, and it must be stated carefully be
 
 > BEL shows evidential uncertainty improving calibration when the backbone is meta-trained and two networks' evidence is fused. We show it **degrading** calibration when the backbone is frozen and the entire trainable budget is ≤31,744 parameters — including a configuration with just **2**. Both can be true: they are different regimes. Establishing *where the boundary lies* is a contribution, and it is the regime that matters for edge deployment, because meta-training a backbone is exactly what a 256 kB device cannot do.
 
-If a reviewer raises BEL, this is the answer — and it converts an apparent contradiction into the thesis's actual finding.
+**A second, independent paper points the same way as BEL.** [BayesAdapter](https://arxiv.org/abs/2412.09718) (Morales-Álvarez et al., IJCV 2025–26) uses a different Bayesian mechanism — variational Bayes over a linear adapter's weights, not evidential Dirichlet — on a frozen CLIP backbone with up to 32 shots, and finds calibration *improving* by ~2.5% ECE over the deterministic baseline. That is now two independent papers, two different Bayesian mechanisms, both finding calibration improves with more capacity or data than this thesis's grid provides. It sharpens the boundary claim rather than contradicting it: the degradation this thesis reports sits at the low-capacity end of a pattern the field has now shown on both sides of.
+
+If a reviewer raises BEL or BayesAdapter, this is the answer — and it converts an apparent contradiction into the thesis's actual finding.
+
+### 5.2 The closest prior work for RQ1 (adapter placement), and how ours differs
+
+**Task-Specific Adapters (TSA)** ([Li, Liu & Bilen, CVPR 2022, arXiv:2107.00358](https://arxiv.org/abs/2107.00358)) is the nearest neighbour here — closer than a first literature check found. Verified from the full text: it runs the exact serial-vs-parallel adapter-placement comparison on a **frozen ResNet-18**, evaluated over **600 sampled episodic tasks** per dataset on held-out domains (Meta-Dataset), classified with a **parameter-free nearest-centroid head** — the same backbone, the same episode count, the same placement question, and the same head-design philosophy as this thesis. Its finding: *"residual [parallel] connections perform better than the serial one in almost all cases."* Same direction as Step 6. TSA reports no ECE, no OOD AUROC, and its adapters (1.57%–13.27% of ResNet-18's parameters, ~175K–1.22M) are far above this thesis's 6,928–31,746 range, but the placement question itself is not new.
+
+**Conv-Adapter** ([Chen et al., arXiv:2208.07463](https://arxiv.org/abs/2208.07463)) — flagged in this project's own paper notes as *"the single most direct precedent"* before TSA was found — remains relevant for a narrower, separate reason: it independently shows locality-preserving adapters beat 1×1/linear-style ones. This should **not** be equated with the LoRA-vs-bottleneck result below, as an earlier draft of this document did: our LoRA arm targets a 1×1 downsample conv, and a 1×1 convolution — low-rank or not — still preserves per-pixel spatial locality, so it does not obviously fall into Conv-Adapter's named "loss of locality" failure mode. The LoRA result is a separate, corroborating data point, not an instance of an already-named mechanism.
+
+**FiT** ([Bateni et al., arXiv:2206.08671](https://arxiv.org/pdf/2206.08671)) is a third close relative: frozen CNN backbones with FiLM adapters as small as **11,648 parameters** and a ProtoNets head option — genuinely close in scale — but it does not compare adapter placement or type, and its evaluation is on fixed downstream benchmarks, not disjoint-class episodic testing.
+
+**RQ1's headline finding is therefore a replication of a principle established across at least three prior papers, not an independent discovery of it.** What remains new after all three are accounted for: the LoRA-vs-bottleneck adapter-*type* comparison itself (none of the three run it), trainable budgets down to **2** parameters (below all three), a second backbone (MobileNetV3-Small, none of them test), and the evidential-uncertainty/calibration/OOD layer.
+
+> Say this plainly if RQ1 comes up: "The placement principle — parallel beats sequential — was already established, and TSA is the closest match: same backbone, same episode protocol, same parameter-free head, same answer. What we're contributing is confirming it holds at a far smaller parameter budget than anyone has tested, with a second backbone, and pairing it with calibration and OOD numbers nobody in that space reports."
+
+### 5.3 The closest prior work for the overall "frozen backbone + adapter + few-shot" recipe, and how ours differs
+
+**Tip-Adapter** ([Zhang et al., arXiv:2207.09519](https://arxiv.org/abs/2207.09519), ECCV 2022) and **CLIP-Adapter** ([Gao et al., arXiv:2110.04544](https://arxiv.org/abs/2110.04544)) are the nearest neighbours to the *general recipe* this thesis uses — freeze a large pretrained backbone, attach a small adapter, classify with few labelled examples, no full retraining. Both were read in full (not name-dropped) before this claim was made, because the general recipe is genuinely close enough that it needed checking rather than assuming.
+
+**Three things verified, not assumed, that separate the protocols:**
+
+1. **Class overlap.** Both papers train and test on the *same* classes — Tip-Adapter's own text contrasts itself directly with meta-learning protocols that *"split the same dataset into three sub-sets of different categories,"* stating it instead *"adapts the pre-trained CLIP into a totally new dataset for evaluation"* using all of, e.g., ImageNet's 1,000 classes for both the few-shot training examples and the full test set. This thesis (and the classical few-shot literature: ProtoNet, MAML, MetaOptNet) tests on classes **never seen at all**, resampled fresh across 600 episodes.
+2. **Evaluation style.** Both report one fixed-test-set accuracy per dataset, not an average over sampled episodes. No episodic accuracy exists in either paper.
+3. **Scale and metrics.** CLIP-Adapter's visual adapter alone is 0.52M parameters on a ResNet-50 backbone — 17–75× this thesis's 6,928–31,746 range; Tip-Adapter-F's fine-tuned cache runs into the millions on ImageNet. Neither reports ECE, Brier score, or OOD-detection AUROC (CLIP-Adapter reports accuracy under distribution shift — ImageNet-A/R/Sketch/V2 — which is related but is a different measurement from an uncertainty-score-based OOD detector).
+
+**The honest framing:** the frozen-backbone-plus-adapter *idea* is shared with this line of work, and it should not be presented as though this thesis discovered that idea. What is not shared — verified by reading both papers directly, not inferred from their category — is the disjoint-class episodic protocol, the parameter scale (down to 2, not hundreds of thousands or millions), and the calibration/OOD measurement.
 
 ---
 
@@ -233,6 +263,11 @@ All verified during this session; each was fetched and read rather than recalled
 - [SSF: Scaling & Shifting Your Features — arXiv:2210.08823](https://ar5iv.labs.arxiv.org/html/2210.08823) (VTAB-1k table, ViT-B/16)
 - [PEFT for Pre-Trained Vision Models: A Survey — arXiv:2402.02242](https://arxiv.org/html/2402.02242v1) (no calibration/uncertainty/OOD coverage)
 - [CoOp: Learning to Prompt for Vision-Language Models — arXiv:2109.01134](https://ar5iv.labs.arxiv.org/html/2109.01134)
+- [Li, Liu & Bilen, Cross-domain Few-shot Learning with Task-specific Adapters (TSA), CVPR 2022 — arXiv:2107.00358](https://arxiv.org/abs/2107.00358) (primary closest prior work for RQ1 — §5.2)
+- [Conv-Adapter: Exploring Parameter Efficient Transfer Learning for ConvNets — arXiv:2208.07463](https://arxiv.org/abs/2208.07463) (secondary precedent for RQ1 — §5.2)
+- [Bateni et al., FiT: Parameter Efficient Few-shot Transfer Learning — arXiv:2206.08671](https://arxiv.org/pdf/2206.08671) (§5.2)
+- [Tip-Adapter: Training-free Adaption of CLIP for Few-shot Classification — arXiv:2207.09519](https://arxiv.org/abs/2207.09519) (§5.3) · [CLIP-Adapter — arXiv:2110.04544](https://arxiv.org/abs/2110.04544) (§5.3)
+- [Morales-Álvarez et al., BayesAdapter, IJCV 2025–26 — arXiv:2412.09718](https://arxiv.org/abs/2412.09718) (second confirming data point for the RQ2 boundary — §5.1)
 - [LoRA-C — arXiv:2410.16954](https://arxiv.org/abs/2410.16954) · [LoRA-Edge — arXiv:2511.03765](https://arxiv.org/abs/2511.03765) · [CoLoRA — arXiv:2505.18315](https://arxiv.org/html/2505.18315)
 
 **Bayesian / uncertainty-aware PEFT**
