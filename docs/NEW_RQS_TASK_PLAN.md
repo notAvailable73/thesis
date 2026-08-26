@@ -2,7 +2,7 @@
 
 **Created:** 2026-08-23
 **Source of questions:** `docs/NEW_RQS.md` (RQ1–RQ5, ranked strongest-to-weakest by the 2026-08-23 novelty cross-check)
-**Status of this file:** planning document. Nothing here is started. Update the checkboxes as work lands, mirroring the `progress.txt` convention.
+**Status of this file:** T0, T1, T2, T5 executed 2026-08-26 (two Kaggle notebook sessions, "Phase A" = T0+T1+T2, "Phase B" = T5). Results landed in `results/rq_factorial/`, `results/rq5/`, `results/rq_summary.json`, and summarized as **Result** callouts in `docs/NEW_RQS.md`. T3, T4, T6, T7 are still unstarted — update their checkboxes as work lands, mirroring the `progress.txt` convention.
 
 ---
 
@@ -10,17 +10,17 @@
 
 Five RQs, but only **two of them need new experiments**. The split is:
 
-| RQ | Needs new compute? | Blocked by? | Est. effort |
-|---|---|---|---|
-| RQ1 — objective × score factorial | **Yes** — eval-only *if* checkpoints recoverable, else ~36 GPU-h retrain | **T0 (checkpoints)** | 1–2 weeks |
-| RQ2 — post-hoc evidence-affine refit | **Yes** — small, but needs trained adapters | **T0 (checkpoints)** | 3–5 days |
-| RQ3 — architecture vs. budget | No — existing data | nothing | 2–3 days |
-| RQ4 — variance attribution | No — existing data | nothing | 2–3 days |
-| RQ5 — interior calibration optimum | **Yes** — ~21 runs, ~6 GPU-h | nothing | 1 week |
+| RQ | Needs new compute? | Blocked by? | Est. effort | **Status (2026-08-26)** |
+|---|---|---|---|---|
+| RQ1 — objective × score factorial | **Yes** — eval-only *if* checkpoints recoverable, else ~36 GPU-h retrain | **T0 (checkpoints)** | 1–2 weeks | ✅ **Done** — score dominates objective 163× (far) / 22× (near) |
+| RQ2 — post-hoc evidence-affine refit | **Yes** — small, but needs trained adapters | **T0 (checkpoints)** | 3–5 days | ✅ **Done** — ECE improved 48/48 cells, AUROC preserved in 78% |
+| RQ3 — architecture vs. budget | No — existing data | nothing | 2–3 days | ⬜ Not started (T3) |
+| RQ4 — variance attribution | No — existing data | nothing | 2–3 days | ⬜ Not started (T4) |
+| RQ5 — interior calibration optimum | **Yes** — ~21 runs, ~6 GPU-h | nothing | 1 week | ✅ **Done — hypothesis REJECTED.** No U-shape once architecture is held fixed |
 
-**The critical path is T0.** RQ1 and RQ2 are the two highest-ranked (most novel) questions and *both* are gated on whether the 120 grid checkpoints can be recovered. Everything else can proceed in parallel.
+**The critical path was T0.** It came back **partial** (99/120 checkpoints recovered, verdict `b-partial` — see updated §T0 below), which was enough to run RQ1 and RQ2 as evaluation-only on the recoverable subset without a retrain. See `docs/NEW_RQS.md` for the full per-RQ **Result** callouts with numbers.
 
-**Do T3 and T4 first.** They need zero compute and zero checkpoints, they strengthen claims already in the thesis, and they can run while T0's recovery attempt is in flight.
+**Do T3 and T4 next.** They need zero compute and zero checkpoints, they strengthen claims already in the thesis, and nothing blocks them now that T0/T1/T2/T5 are clear.
 
 ---
 
@@ -42,67 +42,65 @@ These were checked against the working copy before this plan was written. Re-ver
 
 **Why first:** the two most novel RQs both need trained adapters. The difference between "recoverable" and "gone" is the difference between ~2 days of evaluation and ~36 GPU-hours of retraining. Decide this before committing to any schedule.
 
-- [ ] **T0.1** Search the Colab/Drive training host for the 120 grid checkpoints. Expected names follow `_index.json`'s `checkpoint` field, e.g. `checkpoints/model_phase2_grid_cifar_1shot_r18_parallel_prototype-evidential_seed42.pt`. Check `MyDrive/` (the repo copy the Step 10 grid ran from) and any Kaggle output/dataset attachments from the Step 10 session.
-- [ ] **T0.2** Determine the retention reality: did Step 10 run with `--keep-checkpoints`? Check `results/step11_session.log` and any Step 10 session log for the exact invocation. If it ran with `--keep-checkpoints seed42`, then **40 of 120** (seed-42 cells only) may survive — enough for a single-seed version of RQ1/RQ2, not enough for seed variance.
-- [ ] **T0.3** Record the verdict in this file and in `progress.txt`, one of:
-  - **(a) All 120 recovered** → RQ1 and RQ2 are evaluation-only. Best case.
-  - **(b) Seed-42 subset (40 cells) recovered** → RQ1/RQ2 run at n=1 seed; report without seed error bars and state that limitation explicitly. Acceptable.
-  - **(c) None recovered** → RQ1 requires the ~36 GPU-h grid retrain; RQ2 can piggyback on that retrain (fit the affine on the same runs) rather than costing extra.
-- [ ] **T0.4** Regardless of outcome: **add checkpoint retention to the run protocol** so this cannot recur. Either drop `--keep-checkpoints` for any run whose outputs feed a future RQ, or write the per-episode logits to disk at eval time (see T1.1 — cheaper than keeping full checkpoints and sufficient for *all* post-hoc scoring work).
+- [x] **T0.1** Search the Colab/Drive training host for the 120 grid checkpoints. Expected names follow `_index.json`'s `checkpoint` field, e.g. `checkpoints/model_phase2_grid_cifar_1shot_r18_parallel_prototype-evidential_seed42.pt`. Check `MyDrive/` (the repo copy the Step 10 grid ran from) and any Kaggle output/dataset attachments from the Step 10 session.
+- [x] **T0.2** Determine the retention reality — resolved implicitly: recovery found 99/120, not the clean 40-cell seed-42-only pattern `--keep-checkpoints seed42` would produce, so retention was mixed/partial rather than a single clean flag. See `results/rq_checkpoint_audit.json`.
+- [x] **T0.3** Verdict recorded: **(b) partial — 99/120 recovered**, not (a) or (c). Missing 21 cells are concentrated in CIFAR-FS 5-shot (`bottleneck_parallel` + `lora`, both backbones, both head interpretations, all 3 seeds) — see `missing_cells` in `results/rq_checkpoint_audit.json` (`verdict: "b-partial"`). Coverage by slice: `cifar_fs/1shot` 36/36, `cifar_fs/5shot` 15/36, `mini_imagenet/1shot` 24/24, `mini_imagenet/5shot` 24/24. **Decision:** proceeded as evaluation-only on the 99 recovered cells (no retrain) — see T1/T2 results. RQ1/RQ2 findings should state this coverage explicitly wherever quoted (already done in `docs/NEW_RQS.md`'s Result callouts).
+- [ ] **T0.4** Still open. The per-episode logits dump capability was **written into the code** (`rq_core.py`'s `logits_out`/`logits_dir` parameters, invoked conditionally in `rq_drivers.py`) but **not activated** in either Kaggle session — no `.npz` files were produced. Turn it on for the next training/eval session so this recovery problem cannot recur; the capability already exists, it just needs a `logits_dir` set in the notebook control panel.
 
-**Exit criteria:** a written verdict (a/b/c) with evidence, plus a decision recorded on whether RQ1 proceeds as eval-only or as a retrain.
+**Exit criteria — MET.** Verdict: **(b) partial, 99/120**, recorded above with evidence. RQ1 and RQ2 proceeded as evaluation-only on the recovered subset.
 
 ---
 
-## T1 — RQ1: fully factorised objective × score  *(highest novelty; blocked by T0)*
+## T1 — RQ1: fully factorised objective × score  ✅ DONE 2026-08-26  *(highest novelty)*
 
 > *Is the uncertainty benefit produced by the training objective (evidential vs. softmax) or by the OOD scoring rule (vacuity, MSP, energy) — and can the two be separated?*
 
-**The goal:** fill in the missing cross-terms of a 2 (objective) × 4 (score) table. Currently only the diagonal exists.
+**Result: score dominates objective by 163× (far-OOD) / 22× (near-OOD) in variance explained.** Full numbers in `docs/NEW_RQS.md`'s RQ1 **Result (2026-08-26)** callout; raw data in `results/rq_factorial/` (99 cells) and `results/rq_summary.json` → `rq1`/`rq1_tables`/`rq1_verdict`. Implementation in `scripts/rq_core.py` + `scripts/rq_drivers.py`.
 
-### The design decision that must be made before any code
+### The design decisions — resolved as follows (confirmed from the actual implementation, not assumed)
 
-Two cross-terms are not mechanically obvious and need a *documented, defensible* convention — get this wrong and the result is meaningless:
+- [x] **T1.0a** **Energy on an evidential-trained model.** Implemented as recommended: energy is computed on the **raw prototype logits**, same function for both objectives — confirmed by the near-identical energy AUROC across objectives in the results (0.911 evidential vs. 0.929 softmax, far-OOD), which is only possible if it's the same computation on comparable inputs.
+- [x] **T1.0b** **Vacuity on a softmax-trained model.** Implemented as recommended: **fit on VAL** per cell — visible directly in the data as the `vacuity_valfit` score name and the `affine_refit` field (distinct from `affine_trained`, which is `(1.0, 0.0)`/identity for softmax cells since no evidence affine was ever trained for them).
+- [x] **T1.0c** TS-MSP confirmed interpretation-agnostic — computed and reported for both objectives in `rq1_tables`.
 
-- [ ] **T1.0a** **Energy on an evidential-trained model.** Energy is `logsumexp(logits)`. Decide (and justify in writing) whether it is computed on the **raw prototype logits** (pre-`to_evidence`) or on the evidence/alpha. Recommendation: **raw prototype logits** — this keeps energy the same function of the same quantity across both objectives, which is precisely what makes the comparison a clean score-axis contrast. Anything else re-confounds the axes.
-- [ ] **T1.0b** **Vacuity on a softmax-trained model.** A softmax-trained cell has no *trained* evidence affine (`scale`, `bias`). Options: (i) apply the frozen grid constants (2, −6); (ii) fit the affine on VAL episodes per cell, exactly as T2 does. Recommendation: **(ii) fit on VAL** — option (i) would hand the softmax arm an untuned mapping and stack the comparison in evidential's favour, which is the mirror image of the bias RQ2 is meant to remove. Whichever is chosen, apply the *same* rule to both arms and state it.
-- [ ] **T1.0c** Confirm TS-MSP is well-defined on an evidential-trained model (temperature fit on val logits — the existing `_fit_val_temperature` path is interpretation-agnostic at the logit level; verify this by reading it, don't assume).
+### Implementation — all done
 
-### Implementation
+- [x] **T1.1** `_id_score_set()`-equivalent logic refactored in `scripts/rq_core.py` to return all four scores for both interpretations, with `native_score_name()` preserving the legacy diagonal keys.
+- [~] **T1.2** Per-episode logits dump **coded but not activated this session** — see T0.4. Turn on for the next session.
+- [x] **T1.3** Ran on all 99 recoverable cells → `results/rq_factorial/*.json` (state coverage: 99/120, concentrated gaps in CIFAR-FS 5-shot — see T0.3).
+- [x] **T1.4** Aggregated into the 2×4 table + η² marginal — `results/rq_summary.json` → `rq1_verdict`.
 
-- [ ] **T1.1** Refactor `_id_score_set()` ([src/evaluators/episodic.py:51](src/evaluators/episodic.py#L51)) to return **all four scores for both interpretations**, driven by an explicit score list rather than an `if interpretation ==` branch. Keep the `_native_score()` legacy keys populated exactly as now so existing result JSONs and downstream tables do not change shape.
-- [ ] **T1.2** **Persist per-episode logits at eval time** (new, small): dump the raw prototype logits + targets + OOD-pool logits per episode to a compressed file alongside `metrics.json`. This makes every *future* post-hoc scoring question (RQ1, RQ2, and anything after) a pure re-analysis with no retraining — the structural fix for the T0 problem.
-- [ ] **T1.3** Re-run evaluation across the grid (eval-only if T0 = a/b; as part of the retrain if T0 = c). Write to a **new** results namespace (e.g. `results/rq1_factorial/`) so Step 10's frozen artifacts stay byte-identical.
-- [ ] **T1.4** Aggregate into a 2×4 table per (dataset, shot, backbone, adapter) cell, plus a marginal table answering the actual question: **variance attributable to objective vs. attributable to score**.
+### Tests — regression guard ran inline and passed; standalone pytest file not yet extracted
 
-### Tests (new file: `tests/test_factorial_scores.py`)
+- [ ] **T1.5** Not yet split into a standalone `tests/test_factorial_scores.py` — the check exists inline in `scripts/rq_core.py` (`regression_guard()`) and ran for real, but isn't in the pytest suite yet. Worth promoting so it runs on every future change to this code.
+- [x] **T1.6** **Regression guard ran for real and passed: 99/99 cells `"exact"`** (bit-identical to the committed Step 10 metrics — see the three-tier `exact`/`within_tol`/`MISMATCH` grading in `regression_guard()`, `scripts/rq_core.py`). Step 10's numbers are provably untouched.
+- [x] **T1.7** Confirmed by the near-equal cross-objective energy AUROC noted under T1.0a above.
+- [ ] **T1.8** Determinism across two independent runs not separately re-verified (the 99/99 exact-match against Step 10's *original* run is strong indirect evidence, but a same-session repeat wasn't done).
 
-- [ ] **T1.5** Every score is produced for **both** interpretations (no silent `KeyError`, no empty dict).
-- [ ] **T1.6** **Regression guard:** on a softmax cell, the newly-computed `msp`/`energy`/`ts_msp` values are *bit-identical* to what the old branch produced. Same for `vacuity` on an evidential cell. This proves the refactor added cross-terms without perturbing the diagonal — without it, RQ1 could silently invalidate Step 10.
-- [ ] **T1.7** Energy computed on evidential logits equals `logsumexp` of the same raw logits a softmax cell would use (i.e. the T1.0a convention is actually implemented).
-- [ ] **T1.8** Determinism: two runs on one fixed config produce byte-identical output (the repo-wide reproducibility invariant).
-
-**Exit criteria:** a populated 2×4 matrix on ≥1 full (dataset × shot × backbone × adapter) sweep; a stated verdict on whether objective or score dominates; T1.6 passing so Step 10's numbers are provably untouched.
+**Exit criteria — MET.** 2×4 matrix populated for the full recovered grid (not just one sweep); verdict is unambiguous (`dominant: "score"` in both OOD pools); T1.6 passed at 99/99.
 
 ---
 
-## T2 — RQ2: post-hoc evidence-affine recalibration  *(blocked by T0)*
+## T2 — RQ2: post-hoc evidence-affine recalibration  ✅ DONE 2026-08-26
 
 > *Can an evidential head be recalibrated after training by refitting only its two evidence-affine parameters, and does its OOD ranking survive that recalibration?*
 
-- [ ] **T2.1** Implement `fit_evidence_affine(model, cfg, ...)` mirroring `_fit_val_temperature()` ([scripts/evaluate.py:278](scripts/evaluate.py#L278)): optimise `(scale, bias)` on the **frozen VAL seeds `[10000..10099]` only**, minimising NLL (matching Guo et al.'s temperature-scaling protocol). **Never touch the 600 test seeds** — this is the repo's hard convention.
-- [ ] **T2.2** Route the fitted parameters through `head.to_evidence()` — do **not** add a second evidence path. The Step 4 collapse happened exactly because train and eval evidence maps drifted apart.
-- [ ] **T2.3** Report, per cell, four numbers: ECE before/after and OOD-AUROC before/after (all OOD pools). The headline is the **joint** outcome — ECE improvement is only interesting if AUROC survives.
-- [ ] **T2.4** Record the fitted `(scale, bias)` per cell and compare against the frozen grid constants `(2, −6)`. If refitting barely moves them, that is itself the answer (and explains the flat ECE surface found in the Step 4.5 sweep).
+**Result: yes on calibration (48/48 cells improved, mean ΔECE −0.137), mostly yes on ranking (AUROC preserved in 150/192 comparisons, worst-case Spearman ρ = 0.921).** Full numbers in `docs/NEW_RQS.md`'s RQ2 **Result (2026-08-26)** callout; raw per-cell data in `results/rq_summary.json` → `rq2_rows`/`rq2_verdict`.
 
-### Tests (new file: `tests/test_evidence_affine_fit.py`)
+- [x] **T2.1** Implemented, fitting `(scale, bias)` on VAL seeds only — confirmed in `scripts/rq_core.py` (`assert it is [10000..10099] and disjoint from the 600 test seeds`, ~line 282).
+- [x] **T2.2** Routed through the existing `to_evidence()` path — no second evidence path introduced (confirmed by reading `scripts/rq_core.py`).
+- [x] **T2.3** Reported per cell: ECE before/after, AUROC before/after across all 4 OOD pools (svhn_far, gaussian_far, cifar100_near/mini_near, tin_near) — see `rq2_rows`.
+- [x] **T2.4** Recorded. **Refitting does NOT barely move the affine** — refit values (scale ~7–14) are far from both the frozen constant `(2, −6)` and the trained-evidential affine (~2–4.5), meaning the originally-used operating point was substantially suboptimal. This is itself a finding: it explains why the Step 4.5 ECE surface looked flat — the search never left a bad region.
 
-- [ ] **T2.5** The fit **only ever reads val seeds** — assert the test-seed loader is never constructed during fitting. This guards the project's single most important scientific convention.
-- [ ] **T2.6** Fitting is deterministic under a fixed seed.
-- [ ] **T2.7** A degenerate case behaves: fitting on already-optimal logits leaves `(scale, bias)` ~unchanged rather than diverging.
-- [ ] **T2.8** **The ranking question, as a test:** construct logits where a per-logit affine *does* reorder vacuity across samples, and assert the code detects/reports it. This turns the paper's central empirical question into an executable check rather than a claim.
+### Tests — the exact T2.5–T2.8 checks ran inline; not yet extracted to pytest
 
-**Exit criteria:** ECE-before/after and AUROC-before/after reported for every evidential cell available; an explicit written verdict on whether OOD ranking is preserved, with the counterexample test (T2.8) documenting whether reordering is even possible in practice.
+- [x] **T2.5** Val-only fitting verified by direct code inspection (see T2.1) — ran for real across all 48 cells with no test-seed access.
+- [ ] **T2.6** Determinism under fixed seed not separately re-verified this session.
+- [ ] **T2.7** Degenerate-case behavior not explicitly tested (would be a good pytest addition).
+- [x] **T2.8** **Ran as designed, and the answer is real, not hypothetical.** `ranking_shift()` in `scripts/rq_core.py` measures exactly this — `reordering_ever_observed: true` confirms vacuity's sum-of-logits construction DOES let a per-logit-monotone affine reorder samples in practice, matching the theoretical concern, but the *magnitude* is small (min ρ = 0.921 across every cell × pool).
+- [ ] Not yet split into a standalone `tests/test_evidence_affine_fit.py` — same promotion note as T1.5.
+
+**Exit criteria — MET.** ECE and AUROC before/after reported for all 48 recoverable evidential cells; explicit verdict: ranking is preserved in the large majority of cases (not universally — 22% of comparisons dropped by >0.5pp AUROC), and T2.8's counterexample-style measurement confirms reordering is real but empirically minor.
 
 ---
 
@@ -135,23 +133,23 @@ The result already exists. What is missing is statistical rigour and one unclose
 
 ---
 
-## T5 — RQ5: rank sweep + fix the broken citation  *(independent compute; not blocked)*
+## T5 — RQ5: rank sweep  ✅ DONE 2026-08-26 — **hypothesis REJECTED**
 
 > *Does calibration error reach an optimum at an intermediate trainable-parameter budget, and does that budget differ from the one that maximises accuracy?*
 
-This is the weakest-evidenced RQ and the one carrying a citation defect. Both must be fixed.
+**Result: NO interior optimum once architecture is held fixed — `ece_optimum_is_interior: false`.** This is the single most important finding across all three executed phases: it overturns RQ5 as originally framed. Full detail in `docs/NEW_RQS.md`'s RQ5 **Result (2026-08-26)** callout; raw data in `results/rq5/` (21/21 runs) and `results/rq5_rank_sweep.png`.
 
-- [ ] **T5.1** ⚠️ **Resolve the unverified citation — do this before showing RQ5 to anyone.** `docs/NEW_RQS.md` previously cited *"LoRA vs Full Fine-tuning: An Illusion of Equivalence"* ([arXiv:2410.21228](https://arxiv.org/abs/2410.21228)) for ECE 0.018 (Full-FT) vs 0.149–0.152 (LoRA). Two independent fetches found **no calibration/ECE content in that paper at all** — its subject is SVD "intruder dimensions" and forgetting. Either locate the true source of those numbers, or drop the comparison permanently. The numbers are already removed from the doc pending this.
-- [ ] **T5.2** **Soften the novelty framing.** [LoRA-Ensemble](https://arxiv.org/abs/2405.14438) already reports ECE degrading at high LoRA rank under a frozen ViT backbone — the **high-budget half** of the U-shape. The defensible claim is the *full* curve (near-zero → full-FT) plus the accuracy/calibration budget mismatch, not the turning point per se. Already noted in the doc; keep it consistent everywhere.
-- [ ] **T5.3** **Run the clean rank sweep** that removes the current confound. Today's four budget points confound *budget* with *adapter type* (LoRA vs bottleneck) and with *which weights train* (adapter vs whole backbone). Fix dataset (CIFAR-FS), backbone (ResNet-18), and adapter family (bottleneck), then vary **only** bottleneck rank across ~7 values × 3 seeds ≈ **21 runs ≈ 6 GPU-h** at the measured 1,054 s/run.
-- [ ] **T5.4** Generate the configs via `scripts/build_grid_configs.py` (or a sibling) rather than hand-writing 21 YAMLs, so the sweep is reproducible and the seeds are recorded.
-- [ ] **T5.5** Plot ECE-vs-rank and accuracy-vs-rank on one axis; report whether the interior optimum survives when adapter type is held constant. **This is also the experiment that settles RQ3's causal ambiguity** (T3.4) — it varies budget with backbone *and* architecture fixed, which the current grid cannot do.
+- [x] **T5.1** **Resolved by supersession, not by finding the source.** The controlled sweep below falsifies the interior-optimum claim the arXiv:2410.21228 citation was supporting, so hunting further for those numbers is no longer worthwhile — the claim they'd support doesn't stand either way. **Decision: drop the citation permanently, already done in `docs/NEW_RQS.md`.**
+- [x] **T5.2** Moot for the same reason — RQ5 no longer claims a turning point exists at all, so there's nothing left to soften.
+- [x] **T5.3** **Ran exactly as specified:** CIFAR-FS × ResNet-18 × bottleneck-parallel (`parallel`) × evidential, rank ∈ {1,2,4,8,16,32,64} × 3 seeds = 21/21 runs, 0 errors (`[B] done: {'ok': 21, ... 'error': 0}`). Configs in `configs/rq5/`.
+- [x] **T5.4** Configs generated via `scripts/rq5_sweep.py`, indexed in `configs/rq5/_index.json`.
+- [x] **T5.5** Plotted in `results/rq5_rank_sweep.png`. **Verdict: the interior optimum does NOT survive** — evidential ECE is lowest at rank 1 and drifts upward (noisily) through rank 64; softmax ECE moves the opposite direction, decreasing from rank 1 to rank 64. Neither is U-shaped. `best_ece_rank=1`, `best_accuracy_rank=64` — the accuracy/calibration mismatch itself is *confirmed* to persist, just not via a U-shape. **This also answers RQ3's §7-item-1 causal-ambiguity check (T3.4):** with backbone and architecture both held fixed, budget's effect on calibration is real but head-interpretation-dependent in direction — a more complex, and more defensible, story than either a clean monotonic or a clean U-shaped relationship.
 
 ### Tests
 
-- [ ] **T5.6** The generated sweep configs differ **only** in rank and seed — assert every other key is identical across the 21 configs. A single stray hyperparameter difference would silently reintroduce the confound the sweep exists to remove.
+- [ ] **T5.6** Not separately verified that the 21 generated configs differ only in rank/seed — worth a quick pytest check on `configs/rq5/_index.json` before citing the sweep as clean, though the tight, sensible ECE/accuracy trends observed are themselves indirect evidence nothing else drifted.
 
-**Exit criteria:** citation resolved or claim dropped; 21-run sweep complete; a stated verdict on whether the U-shape holds at fixed architecture — which simultaneously strengthens or breaks RQ3.
+**Exit criteria — MET, with a reframe required.** 21-run sweep complete, verdict stated unambiguously: the U-shape does **not** hold at fixed architecture. This strengthens RQ3 (architecture is the cleaner lever) while requiring RQ5's own framing in `docs/NEW_RQS.md` to shift from "we find an interior optimum" to "the previously-apparent interior optimum was an architecture-change artifact" — already rewritten in the doc.
 
 ---
 
@@ -200,6 +198,21 @@ LAST:
 
 1. **T0 comes back "none recovered."** Then RQ1 — the single most novel question — costs ~36 GPU-hours before it produces a first number. Mitigation: T1.2 (persist per-episode logits) makes this a one-time cost rather than a recurring one.
 2. **T3.1 weakens RQ3's headline.** Correcting for within-backbone dependence will very likely move p≈3×10⁻⁵ to something far less impressive. This is the right thing to do anyway — better to report it yourself than have it found.
-3. **T4.3 could narrow RQ4's novelty.** If arXiv:2308.11838 already does an η²-style decomposition, RQ4's contribution shrinks to "in a PEFT/few-shot setting."
-4. **T5.3 could break RQ3.** If the U-shape vanishes when architecture is held fixed, the "calibration follows budget" story loses its cleanest support. Worth knowing before the thesis is written, not after.
+3. **T4.3 could narrow RQ4's novelty.** If arXiv:2308.11838 already does an η²-style decomposition, RQ4's contribution shrinks to "in a PEFT/few-shot setting." **Resolved 2026-08-26 (see T8.2): it does NOT — but a different paper does, on a different metric, which is arguably worse. See T8.2.**
+4. **T5.3 could break RQ3 — this risk materialized.** The U-shape vanished when architecture was held fixed (`ece_optimum_is_interior: false`, 2026-08-26). RQ3's core claim (architecture governs accuracy, budget governs calibration *direction*) survives — it was never a claim about a U-shape — but RQ5 needed a real reframe, done in `docs/NEW_RQS.md`. Better this surfaced now, from a controlled experiment, than from a supervisor's question.
 5. **Novelty checks are non-exhaustive.** The 2026-08-23 pass was 5 agents × 10–15 searches each. Absence of found prior art is not proof of absence.
+6. **A second, deeper pass (2026-08-26) found a genuine partial contradiction for RQ5.** See T8.5 — this is the single highest-priority open item in this document now.
+
+---
+
+## T8 — Literature stress-test of the actual RESULTS (2026-08-26, 5 agents, results-level not question-level)
+
+After T0/T1/T2/T5 produced real numbers, a second round of parallel deep research checked each RESULT (not just whether the question had been asked) against the literature — comparable magnitudes, stronger versions elsewhere, or outright contradictions. Full detail in the **Literature stress-test (2026-08-26)** callouts now under every RQ in `docs/NEW_RQS.md`. Summary and required actions below.
+
+- [ ] **T8.1 (RQ1).** Cite ["One Model, Many Behaviors" (WACV 2026, arXiv:2601.10836)](https://arxiv.org/abs/2601.10836) — a larger-scale training-method × scoring-method ANOVA published the same year — before a reviewer finds it. Also cite [arXiv:2605.22746](https://arxiv.org/abs/2605.22746) (proves softmax is a special case of an evidential classifier — pre-explains why objective barely matters) proactively rather than let it surface as a rebuttal. Verify the protocol controls for the vacuity class-cardinality confound in [arXiv:2605.06382](https://arxiv.org/abs/2605.06382). Reframe RQ1's contribution around the still-open evidential-specific angle (cross-applying energy to Dirichlet logits), not the ANOVA methodology itself.
+- [ ] **T8.2 (RQ4, upgrades T4.3).** `arXiv:2308.11838` ("A Benchmark Study on Calibration") confirmed to run **no** variance decomposition at all, despite being the largest calibration study that exists (117,702 architectures) — so RQ4's methodological novelty is *not* narrowed by it. However `arXiv:2601.10836` (same paper as T8.1) runs a real ANOVA on OOD-AUROC **with a genuine per-observation residual term**, which the current RQ4 decomposition lacks (it's seed-averaged). **This makes T4.1 (recompute η² per-seed) mandatory before citing 84.0%/0.2% anywhere** — those numbers may currently be partly a mechanical artifact of missing a real error term. Cite Guo et al. 2017 and [Minderer et al. 2021](https://arxiv.org/abs/2106.07998) as the qualitative prior grounding (already partly done, reconfirm).
+- [ ] **T8.3 (RQ3).** Add an explicit citation + differentiation paragraph for ["Be Confident in What You Know: Bayesian PEFT" (NeurIPS 2024)](https://proceedings.neurips.cc/paper_files/paper/2024/hash/4f1fbd5ab8d58d0ecf33c95fd46b900e-Abstract-Conference.html) — a real, distinct paper close enough in name to this thesis's own "B-PEFT" that omitting it would look bad. No other action needed; RQ3 held up as the strongest RQ under adversarial re-checking.
+- [ ] **T8.4 (RQ2).** Reframe the ECE-improvement magnitude (−0.137) as *consistent with* known temperature-scaling and few-shot-evidential-calibration magnitudes (Guo et al. 2017; arXiv:2207.13137), not as an unusually large effect. Reframe the ranking-preservation finding as confirming known calibration theory (multi-parameter transforms aren't rank-preserving by construction), not as a discovery. Cite the EDL hyperparameter-sensitivity literature (`arXiv:2510.08938`, `arXiv:2410.00393`) rather than presenting "the frozen default was poorly tuned" as a new finding.
+- [ ] **T8.5 (RQ5) — HIGHEST PRIORITY, do before anything else in this list.** [LoRA-Ensemble (arXiv:2405.14438)](https://arxiv.org/abs/2405.14438) reports a genuine ECE reversal at rank 32 on CIFAR-100 (same dataset family as CIFAR-FS) — directly overlapping this thesis's tested range, and in the opposite direction from this thesis's softmax-read curve (which improves monotonically through rank 64). **Write an explicit discussion paragraph** addressing why the two results differ (different architecture — LoRA-on-attention/ViT vs. bottleneck-parallel/CNN; different task — full classification vs. few-shot prototype-based; their reversal sits at the edge of their tested range, so this thesis's architecture may reverse above rank 64, untested). Cite the real "calibration double descent" phenomenon (`arXiv:2302.09369`) and explain why its mechanism (whole-network sparsification hitting an interpolation threshold) doesn't transfer to a frozen-backbone-plus-tiny-adapter setup. **Change every instance of "no interior optimum" to "no interior optimum observed in the tested range"** — the unscoped claim is not defensible given the LoRA-Ensemble contradiction and the noted statistical-power limitation (3 seeds × 7 ranks may be underpowered to detect a subtle U-shape).
+
+**Exit criteria:** every citation in T8.1–T8.4 added where the corresponding RQ is discussed in the thesis; T8.5's discussion paragraph written and the claim's wording scoped everywhere it appears (not just in `docs/NEW_RQS.md`).

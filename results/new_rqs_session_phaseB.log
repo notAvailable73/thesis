@@ -1,0 +1,177 @@
+=== session start 2026-08-25 17:19:46 device=cuda ===
+
+  checkpoints present: 0/120
+  by seed: (none)
+    cifar_fs/1shot             0/36
+    cifar_fs/5shot             0/36
+    mini_imagenet/1shot        0/24
+    mini_imagenet/5shot        0/24
+
+  VERDICT (c): None recovered — RQ1 needs the grid retrain; RQ2 piggybacks on it rather than costing extra.
+
+--- scanning attached datasets for Step 10 artifacts ---
+  scanned ('/kaggle/input',): 0 zip(s), 99 loose checkpoint(s)
+  copied 99 checkpoint(s) into checkpoints/
+
+--- audit after recovery ---
+
+  checkpoints present: 99/120
+  by seed: {42: 33, 43: 33, 44: 33}
+    cifar_fs/1shot             36/36
+    cifar_fs/5shot             15/36
+    mini_imagenet/1shot        24/24
+    mini_imagenet/5shot        24/24
+
+  VERDICT (b-partial): Partial recovery (99/120). Usable, but state the coverage explicitly.
+
+  NOTE: partial recovery. Whatever you report from this must state the seed coverage explicitly -- with one seed there are no seed error bars, and saying so is the difference between a limitation and a flaw.
+[B] 21 sweep configs; T5.6 guard ok=True
+[B] 0 already done; ~441 min (7.3 h) estimated for the rest
+[B] (1/21) rq5_r18_parallel_evidential_rank1_seed42  (rank=1, seed=42)
+    training…
+    T=0.6104  affine native=(3.6302, -6.9822)  refit=(12.2982, -18.2479)
+    ep 200/600  acc=0.9101
+    ep 400/600  acc=0.9125
+    ep 600/600  acc=0.9146
+    acc=0.9146 ECE(evid)=0.2917 params=2886  [1576.4s]
+[B] (2/21) rq5_r18_parallel_evidential_rank1_seed43  (rank=1, seed=43)
+    training…
+    T=0.6087  affine native=(3.6359, -6.9723)  refit=(12.3745, -18.4888)
+    ep 200/600  acc=0.9107
+    ep 400/600  acc=0.9129
+    ep 600/600  acc=0.9146
+    acc=0.9146 ECE(evid)=0.2909 params=2886  [225.7s]
+[B] (3/21) rq5_r18_parallel_evidential_rank1_seed44  (rank=1, seed=44)
+    training…
+    T=0.6141  affine native=(3.9612, -8.0831)  refit=(12.0571, -17.6448)
+    ep 200/600  acc=0.9120
+    ep 400/600  acc=0.9128
+    ep 600/600  acc=0.9148
+    acc=0.9148 ECE(evid)=0.2907 params=2886  [216.6s]
+[B] (4/21) rq5_r18_parallel_evidential_rank2_seed42  (rank=2, seed=42)
+    training…
+    T=0.6212  affine native=(3.6111, -6.9953)  refit=(12.1538, -17.1693)
+    ep 200/600  acc=0.9101
+    ep 400/600  acc=0.9121
+    ep 600/600  acc=0.9143
+    acc=0.9143 ECE(evid)=0.2923 params=4810  [213.6s]
+[B] (5/21) rq5_r18_parallel_evidential_rank2_seed43  (rank=2, seed=43)
+    training…
+    T=0.6167  affine native=(3.6052, -7.0084)  refit=(12.1519, -17.6355)
+    ep 200/600  acc=0.9101
+    ep 400/600  acc=0.9124
+    ep 600/600  acc=0.9143
+    acc=0.9143 ECE(evid)=0.2927 params=4810  [225.0s]
+[B] (6/21) rq5_r18_parallel_evidential_rank2_seed44  (rank=2, seed=44)
+    training…
+    T=0.6152  affine native=(3.6048, -6.9989)  refit=(12.1424, -17.7412)
+    ep 200/600  acc=0.9108
+    ep 400/600  acc=0.9127
+    ep 600/600  acc=0.9146
+    acc=0.9146 ECE(evid)=0.2926 params=4810  [223.2s]
+[B] (7/21) rq5_r18_parallel_evidential_rank4_seed42  (rank=4, seed=42)
+    training…
+    T=0.6058  affine native=(3.5856, -7.0759)  refit=(12.0787, -18.3815)
+    ep 200/600  acc=0.9109
+    ep 400/600  acc=0.9128
+    ep 600/600  acc=0.9152
+    acc=0.9152 ECE(evid)=0.2952 params=8658  [230.4s]
+[B] (8/21) rq5_r18_parallel_evidential_rank4_seed43  (rank=4, seed=43)
+    training…
+    T=0.6096  affine native=(3.5854, -7.0725)  refit=(12.0420, -18.1135)
+    ep 200/600  acc=0.9101
+    ep 400/600  acc=0.9126
+    ep 600/600  acc=0.9144
+    acc=0.9144 ECE(evid)=0.2952 params=8658  [222.1s]
+[B] (9/21) rq5_r18_parallel_evidential_rank4_seed44  (rank=4, seed=44)
+    training…
+    T=0.6078  affine native=(3.5820, -7.0877)  refit=(12.0078, -18.5605)
+    ep 200/600  acc=0.9139
+    ep 400/600  acc=0.9152
+    ep 600/600  acc=0.9166
+    acc=0.9166 ECE(evid)=0.2958 params=8658  [217.7s]
+[B] (10/21) rq5_r18_parallel_evidential_rank8_seed42  (rank=8, seed=42)
+    training…
+    T=0.6398  affine native=(2.3118, -5.8591)  refit=(9.0916, -20.3608)
+    ep 200/600  acc=0.9103
+    ep 400/600  acc=0.9104
+    ep 600/600  acc=0.9111
+    acc=0.9111 ECE(evid)=0.3615 params=16354  [215.0s]
+[B] (11/21) rq5_r18_parallel_evidential_rank8_seed43  (rank=8, seed=43)
+    training…
+    T=0.6382  affine native=(2.3130, -5.8582)  refit=(9.0573, -20.4997)
+    ep 200/600  acc=0.9105
+    ep 400/600  acc=0.9107
+    ep 600/600  acc=0.9114
+    acc=0.9114 ECE(evid)=0.3601 params=16354  [214.2s]
+[B] (12/21) rq5_r18_parallel_evidential_rank8_seed44  (rank=8, seed=44)
+    training…
+    T=0.6253  affine native=(4.2036, -9.0725)  refit=(11.7508, -15.4726)
+    ep 200/600  acc=0.9115
+    ep 400/600  acc=0.9118
+    ep 600/600  acc=0.9143
+    acc=0.9143 ECE(evid)=0.2837 params=16354  [219.0s]
+[B] (13/21) rq5_r18_parallel_evidential_rank16_seed42  (rank=16, seed=42)
+    training…
+    T=0.6302  affine native=(4.1793, -9.0369)  refit=(11.8658, -16.4273)
+    ep 200/600  acc=0.9120
+    ep 400/600  acc=0.9124
+    ep 600/600  acc=0.9146
+    acc=0.9146 ECE(evid)=0.2824 params=31746  [210.9s]
+[B] (14/21) rq5_r18_parallel_evidential_rank16_seed43  (rank=16, seed=43)
+    training…
+    T=0.6252  affine native=(2.6175, -5.7443)  refit=(10.0009, -21.2674)
+    ep 200/600  acc=0.9140
+    ep 400/600  acc=0.9145
+    ep 600/600  acc=0.9146
+    acc=0.9146 ECE(evid)=0.3339 params=31746  [209.7s]
+[B] (15/21) rq5_r18_parallel_evidential_rank16_seed44  (rank=16, seed=44)
+    training…
+    T=0.6269  affine native=(3.7554, -7.8224)  refit=(11.9873, -19.0598)
+    ep 200/600  acc=0.9146
+    ep 400/600  acc=0.9166
+    ep 600/600  acc=0.9182
+    acc=0.9182 ECE(evid)=0.2867 params=31746  [220.2s]
+[B] (16/21) rq5_r18_parallel_evidential_rank32_seed42  (rank=32, seed=42)
+    training…
+    T=0.6621  affine native=(2.6161, -5.7793)  refit=(10.3660, -17.9141)
+    ep 200/600  acc=0.9143
+    ep 400/600  acc=0.9153
+    ep 600/600  acc=0.9159
+    acc=0.9159 ECE(evid)=0.3347 params=62530  [233.7s]
+[B] (17/21) rq5_r18_parallel_evidential_rank32_seed43  (rank=32, seed=43)
+    training…
+    T=0.6582  affine native=(2.3362, -5.8205)  refit=(9.3429, -18.7863)
+    ep 200/600  acc=0.9127
+    ep 400/600  acc=0.9133
+    ep 600/600  acc=0.9139
+    acc=0.9139 ECE(evid)=0.3567 params=62530  [225.5s]
+[B] (18/21) rq5_r18_parallel_evidential_rank32_seed44  (rank=32, seed=44)
+    training…
+    T=0.6231  affine native=(3.7815, -7.8493)  refit=(12.0091, -18.5957)
+    ep 200/600  acc=0.9157
+    ep 400/600  acc=0.9171
+    ep 600/600  acc=0.9189
+    acc=0.9189 ECE(evid)=0.2838 params=62530  [222.0s]
+[B] (19/21) rq5_r18_parallel_evidential_rank64_seed42  (rank=64, seed=42)
+    training…
+    T=0.6355  affine native=(2.6296, -5.8069)  refit=(10.3517, -20.0331)
+    ep 200/600  acc=0.9162
+    ep 400/600  acc=0.9164
+    ep 600/600  acc=0.9174
+    acc=0.9174 ECE(evid)=0.3290 params=124098  [215.2s]
+[B] (20/21) rq5_r18_parallel_evidential_rank64_seed43  (rank=64, seed=43)
+    training…
+    T=0.6540  affine native=(2.6299, -5.7909)  refit=(10.2582, -20.6197)
+    ep 200/600  acc=0.9139
+    ep 400/600  acc=0.9155
+    ep 600/600  acc=0.9159
+    acc=0.9159 ECE(evid)=0.3294 params=124098  [217.4s]
+[B] (21/21) rq5_r18_parallel_evidential_rank64_seed44  (rank=64, seed=44)
+    training…
+    T=0.6415  affine native=(4.1733, -9.1431)  refit=(11.8183, -16.2667)
+    ep 200/600  acc=0.9125
+    ep 400/600  acc=0.9166
+    ep 600/600  acc=0.9182
+    acc=0.9182 ECE(evid)=0.2691 params=124098  [213.1s]
+[B] done: {'ok': 21, 'skipped_done': 0, 'trained': 21, 'reused_grid': 0, 'error': 0}

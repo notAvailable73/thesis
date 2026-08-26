@@ -1,0 +1,235 @@
+{
+  "cells": [
+    {
+      "cell": "rq5_r18_parallel_evidential_rank1_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank1_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank1_seed42.yaml",
+      "head": "evidential",
+      "rank": 1,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank1_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank1_seed42",
+      "run_tag": "rq5_r18_parallel_rank1",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank1_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank1_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank1_seed43.yaml",
+      "head": "evidential",
+      "rank": 1,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank1_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank1_seed43",
+      "run_tag": "rq5_r18_parallel_rank1",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank1_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank1_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank1_seed44.yaml",
+      "head": "evidential",
+      "rank": 1,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank1_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank1_seed44",
+      "run_tag": "rq5_r18_parallel_rank1",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank2_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank2_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank2_seed42.yaml",
+      "head": "evidential",
+      "rank": 2,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank2_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank2_seed42",
+      "run_tag": "rq5_r18_parallel_rank2",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank2_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank2_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank2_seed43.yaml",
+      "head": "evidential",
+      "rank": 2,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank2_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank2_seed43",
+      "run_tag": "rq5_r18_parallel_rank2",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank2_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank2_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank2_seed44.yaml",
+      "head": "evidential",
+      "rank": 2,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank2_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank2_seed44",
+      "run_tag": "rq5_r18_parallel_rank2",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank4_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank4_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank4_seed42.yaml",
+      "head": "evidential",
+      "rank": 4,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank4_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank4_seed42",
+      "run_tag": "rq5_r18_parallel_rank4",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank4_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank4_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank4_seed43.yaml",
+      "head": "evidential",
+      "rank": 4,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank4_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank4_seed43",
+      "run_tag": "rq5_r18_parallel_rank4",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank4_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank4_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank4_seed44.yaml",
+      "head": "evidential",
+      "rank": 4,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank4_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank4_seed44",
+      "run_tag": "rq5_r18_parallel_rank4",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank8_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank8_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank8_seed42.yaml",
+      "head": "evidential",
+      "rank": 8,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank8_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank8_seed42",
+      "run_tag": "rq5_r18_parallel_rank8",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank8_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank8_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank8_seed43.yaml",
+      "head": "evidential",
+      "rank": 8,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank8_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank8_seed43",
+      "run_tag": "rq5_r18_parallel_rank8",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank8_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank8_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank8_seed44.yaml",
+      "head": "evidential",
+      "rank": 8,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank8_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank8_seed44",
+      "run_tag": "rq5_r18_parallel_rank8",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank16_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank16_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank16_seed42.yaml",
+      "head": "evidential",
+      "rank": 16,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank16_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank16_seed42",
+      "run_tag": "rq5_r18_parallel_rank16",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank16_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank16_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank16_seed43.yaml",
+      "head": "evidential",
+      "rank": 16,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank16_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank16_seed43",
+      "run_tag": "rq5_r18_parallel_rank16",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank16_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank16_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank16_seed44.yaml",
+      "head": "evidential",
+      "rank": 16,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank16_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank16_seed44",
+      "run_tag": "rq5_r18_parallel_rank16",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank32_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank32_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank32_seed42.yaml",
+      "head": "evidential",
+      "rank": 32,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank32_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank32_seed42",
+      "run_tag": "rq5_r18_parallel_rank32",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank32_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank32_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank32_seed43.yaml",
+      "head": "evidential",
+      "rank": 32,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank32_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank32_seed43",
+      "run_tag": "rq5_r18_parallel_rank32",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank32_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank32_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank32_seed44.yaml",
+      "head": "evidential",
+      "rank": 32,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank32_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank32_seed44",
+      "run_tag": "rq5_r18_parallel_rank32",
+      "seed": 44
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank64_seed42",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank64_prototype-evidential_seed42.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank64_seed42.yaml",
+      "head": "evidential",
+      "rank": 64,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank64_seed42_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank64_seed42",
+      "run_tag": "rq5_r18_parallel_rank64",
+      "seed": 42
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank64_seed43",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank64_prototype-evidential_seed43.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank64_seed43.yaml",
+      "head": "evidential",
+      "rank": 64,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank64_seed43_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank64_seed43",
+      "run_tag": "rq5_r18_parallel_rank64",
+      "seed": 43
+    },
+    {
+      "cell": "rq5_r18_parallel_evidential_rank64_seed44",
+      "checkpoint": "checkpoints/model_phase2_rq5_r18_parallel_rank64_prototype-evidential_seed44.pt",
+      "config": "configs/rq5/rq5_r18_parallel_evidential_rank64_seed44.yaml",
+      "head": "evidential",
+      "rank": 64,
+      "results_json": "results/rq5/rq5_r18_parallel_evidential_rank64_seed44_bottleneck_prototype-evidential_metrics.json",
+      "results_suffix": "rq5_r18_parallel_evidential_rank64_seed44",
+      "run_tag": "rq5_r18_parallel_rank64",
+      "seed": 44
+    }
+  ]
+}
