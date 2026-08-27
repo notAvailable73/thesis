@@ -1,8 +1,24 @@
-# RQ3 Matched-Budget Experiment — Implementation Plan
+# RQ3 Matched-Budget Experiment — Pre-Registration
 
-**Owner:** whoever is implementing this. **Goal:** resolve an open causal-identification gap in RQ3 (below)
+> ## ✅ RUN — 2026-08-27. Verdict: `backbone_intrinsic` (H3.2-alt).
+>
+> This document is now the **pre-registration record**: the design, the parameter formulas and the §5
+> decision rule below were fixed *before* any of the numbers existed, which is what makes the verdict
+> non-post-hoc. It is preserved as written — nothing in §1–§6 was edited after the run — except this
+> banner and the §7 checkboxes.
+>
+> - **Result and interpretation:** [RQ_RESULTS_SUMMARY.md](RQ_RESULTS_SUMMARY.md) §5.1.
+> - **Raw verdict:** `results/rq3_matched/verdict.json`; per-cell JSONs in `results/rq3_matched/`.
+> - **Executed:** 48 runs, not the 30 planned — the three existing grid arms were **re-trained** rather
+>   than reused from Step 10 checkpoints (see §6 Step 4). Strictly stronger; it turned the §7 reuse check
+>   into a full end-to-end reproduction, which passed exactly.
+> - **H3.2 (budget) fired in 0 of 4 cells; H3.2-alt in 3 of 4.** Equalising the budget left ResNet-18's
+>   calibration gap intact (collapse ratios 1.01 / 0.92) and roughly halved MobileNetV3-Small's
+>   (0.50 / 0.61). Secondary: bottleneck still wins accuracy and near-OOD **8/8**, all beyond 2σ.
+
+**Owner:** implemented 2026-08-27. **Goal:** resolve an open causal-identification gap in RQ3 (below)
 that the existing 120-run grid cannot separate on its own. **Cost:** 30 runs ≈ **8.8 GPU-hours** at the
-grid's measured mean of 1,054 s/run.
+grid's measured mean of 1,054 s/run (actual: 48 runs, ≈ 6.5 h wall on one Kaggle T4).
 
 Every parameter count in this document was **derived from source and validated against committed run
 values**; every config key was checked against the actual files in this repo. If you find a discrepancy,
@@ -250,17 +266,24 @@ decision rules in §5 fired; and an explicit `verdict` field ∈ {`budget`, `arc
 
 ---
 
-## 7. Acceptance criteria
+## 7. Acceptance criteria — all met (2026-08-27)
 
-- [ ] 30/30 runs complete, no errors in `_run_log.jsonl`.
-- [ ] Parameter assertion passed for all 5 new arms (instantiated == intended).
-- [ ] Matched-budget mismatch ≤ 3.1% at every level, recorded in the verdict file.
-- [ ] Control guard passed: only the allowed keys differ across all 30 merged configs.
-- [ ] Existing-arm numbers reproduce the committed grid values for the three reused arms (sanity check that
-      the harness is measuring the same thing).
-- [ ] `verdict.json` names exactly one of the four outcomes, by the pre-registered rule, without post-hoc
-      adjustment.
-- [ ] Secondary accuracy outcome reported whichever way it falls.
+- [x] 30/30 runs complete, no errors in `_run_log.jsonl`. → **48/48**, every row `status: ok`.
+- [x] Parameter assertion passed for all 5 new arms (instantiated == intended). → **16/16 arms exact**,
+      0 failures; the 5 new ranks instantiated to 12,504/12,506 · 31,488/31,490 · 6,720/6,722 ·
+      9,448/9,450 · 9,408/9,410 exactly as §4 predicted.
+- [x] Matched-budget mismatch ≤ 3.1% at every level, recorded in the verdict file. → max **3.095%**
+      (MobileNetV3 Level L), min 0.425%.
+- [x] Control guard passed: only the allowed keys differ across all 30 merged configs. → **48 merged
+      configs, 0 unaccounted keys**; within each (backbone, head) group, 0 offending keys.
+- [x] Existing-arm numbers reproduce the committed grid values for the three reused arms. → the arms were
+      re-trained rather than reused, so this became a full reproduction: **18/18 cells `exact`**, max abs
+      diff **0.0** across 12–13 metric keys each.
+- [x] `verdict.json` names exactly one of the four outcomes, by the pre-registered rule, without post-hoc
+      adjustment. → **`backbone_intrinsic`**, 3/4 cells against a threshold of 3; `budget` 0/4,
+      `architecture` 0/4.
+- [x] Secondary accuracy outcome reported whichever way it falls. → bottleneck wins **8/8**, all beyond 2σ;
+      no cell's accuracy gap collapsed. Near-OOD AUROC likewise 8/8. Reported in §5.1's secondary table.
 
 ---
 
@@ -277,7 +300,7 @@ decision rules in §5 fired; and an explicit `verdict` field ∈ {`budget`, `arc
 
 ---
 
-## 9. If this does not get run
+## 9. If this does not get run — *moot; it was run 2026-08-27. Retained as written.*
 
 Report RQ3 exactly as [docs/RQ_RESULTS_SUMMARY.md](RQ_RESULTS_SUMMARY.md) §5 states it: H3.2 as the
 better-supported of two live explanations, H3.2-alt named explicitly, and **this experiment described as
