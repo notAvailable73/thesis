@@ -1,0 +1,425 @@
+================================================================================
+RQ3 MATCHED-BUDGET EXPERIMENT -- EXECUTION WRITE-UP
+================================================================================
+Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
+Phase:     post-Step-11 targeted experiment (NOT one of the 13 numbered steps)
+Scope:     settle a causal-identification gap in RQ3 that the CLOSED 120-run
+           Step 10 grid structurally cannot settle: whether the calibration
+           difference between bottleneck and LoRA adapters follows the
+           trainable-parameter BUDGET or something intrinsic to the BACKBONE.
+           Build both adapter architectures at the SAME parameter budget
+           WITHIN each backbone, which breaks the collinearity the grid has.
+Spec:      docs/RQ3_MATCHED_BUDGET_PLAN.md (pre-registration -- design,
+           parameter formulas, decision rule, acceptance criteria, all fixed
+           BEFORE any number in Section 4 below existed)
+Previous:  step_writeups/step11.txt (efficiency/Pareto, CLOSED 2026-08-09)
+Context:   docs/RQ_RESULTS_SUMMARY.md Section 5 (the 16-pair evidence this
+           adjudicates) and Section 5.1 (the result, written from this run)
+
+NUMBERING WARNING, read before anything else. This concerns the NEW four-RQ
+  RQ3 -- "does accuracy follow adapter architecture while calibration follows
+  trainable-parameter budget?" -- as numbered in docs/RQ_RESULTS_SUMMARY.md
+  Section 2. It is NOT the proposal's RQ3 (Bayesian prior vs. near-OOD
+  detection), which is Orig-RQ3 in that document's Appendix and is what
+  progress.txt's Step 10 headline calls "RQ3". Two different questions. The
+  files disagree on the label, not on the science.
+
+STATUS OF THIS WRITE-UP: CLOSED 2026-08-27 -- ALL 48 RUNS COMPLETE, ALL SEVEN
+  ACCEPTANCE CRITERIA MET, VERDICT NAMED BY THE PRE-REGISTERED RULE.
+  Every number below is transcribed from results/rq3_matched/verdict.json and
+  results/rq3_matched/_run_log.jsonl -- never estimated
+  (thesis_implementation_instructions.txt Section 6's honesty rule).
+
+  THE HEADLINE, STATED UP FRONT BECAUSE IT OVERTURNS A COMMITTED CLAIM:
+  the answer is `backbone_intrinsic`, NOT budget. docs/RQ_RESULTS_SUMMARY.md
+  Section 5 previously advanced "calibration follows the larger parameter
+  budget" (H3.2) as the better-supported of two live explanations, on
+  parsimony, with the identification limit stated explicitly in the main
+  text. That reading is now REFUTED by direct test and must not be cited.
+
+
+================================================================================
+0.  WHY THIS EXPERIMENT HAD TO EXIST
+================================================================================
+
+0.1  The observation it started from
+
+  RQ3's evidence is 16 matched bottleneck-vs-LoRA comparisons (2 datasets x
+  2 shot regimes x 2 backbones x 2 head interpretations). Across all 16:
+
+    - the ACCURACY winner is bottleneck, 16/16, and never changes;
+    - the CALIBRATION winner changes exactly in step with which adapter
+      happens to hold the larger parameter budget.
+
+  Bottleneck holds 2.58x MORE parameters than LoRA on ResNet-18 (31,744 vs
+  12,288) and 1.55x FEWER on MobileNetV3-Small (6,928 vs 10,752), purely as a
+  consequence of the two backbones' channel widths. Nobody designed that
+  reversal; it is an accident of architecture that partially deconfounds
+  adapter identity from adapter size, which is normally impossible.
+
+0.2  Why the grid could not finish the job
+
+  The reversal is WELDED TO THE BACKBONE. Budget ordering and backbone
+  identity are perfectly collinear across all 16 pairs. So:
+
+    H3.2      (budget)             -- the larger-budget arm wins calibration
+    H3.2-alt  (backbone-intrinsic) -- something about the backbone does
+
+  predict the IDENTICAL 16/16 pattern. No amount of extra seeds, episodes or
+  datasets separates them, because the confound is structural, not
+  statistical. A prior attempt to adjudicate via a rank sweep (varying only
+  bottleneck size, one backbone, one architecture -- docs/RQ_RESULTS_SUMMARY
+  Section 7) returned a direction-dependent result and did not settle it.
+
+  This is worth stating plainly because it is the kind of thing that survives
+  into a thesis unchallenged: the budget account was PREFERRED ON PARSIMONY
+  and was never DEMONSTRATED. The plan document was written specifically to
+  avoid shipping that as a causal claim.
+
+0.3  The fix
+
+  Build BOTH architectures at the SAME trainable-parameter budget WITHIN each
+  backbone. Budget then no longer co-varies with backbone, and for the first
+  time the three hypotheses make divergent predictions:
+
+    H3.2      -- the sign flip disappears; gaps collapse toward zero on BOTH
+                 backbones
+    H3.1      -- one architecture is better calibrated regardless of budget,
+                 so ΔECE keeps a CONSISTENT SIGN across both backbones
+    H3.2-alt  -- the original per-backbone signs PERSIST at matched budget
+
+
+================================================================================
+1.  WHAT WAS BUILT
+================================================================================
+
+1.1  Design (plan Section 4) -- 2 backbones x 2 matched budget levels
+
+  All cells: MiniImageNet, 5-shot, 5-way, the frozen 600 TEST-seed episodes,
+  seeds 42/43/44, both head interpretations TRAINED SEPARATELY.
+
+  ResNet-18
+    Level L (~12.4k)   LoRA r16 -> 12,288    btl-parallel r6  -> 12,504
+    Level H (~31.6k)   btl r16  -> 31,744    LoRA r41         -> 31,488
+  MobileNetV3-Small
+    Level L (~6.8k)    btl r16  -> 6,928     LoRA r10         -> 6,720
+    Level H (~9.4k)    btl r22  -> 9,448     LoRA r14         -> 9,408
+
+  (Softmax counts shown; evidential adds 2 for the learnable evidence affine.)
+
+  8 arms x 2 heads x 3 seeds = 48 runs.
+
+1.2  Three constraints that would have silently voided the experiment
+
+  These are the reason the plan document exists at all; each is a way to get
+  a clean-looking null that means nothing.
+
+  (a) BOTH ARMS MUST INHERIT ONE TRAINING RECIPE. Every generated config is a
+      minimal override -- `adapter.rank` plus bookkeeping -- on the parent the
+      Step 10 grid itself used. LR, epochs, patience, KL schedule and evidence
+      affine arrive by INHERITANCE and cannot be hand-copied out of sync. The
+      guard (Section 2.3) checks the MERGED configs, so a difference inherited
+      from a parent cannot hide.
+
+  (b) BOTTLENECK RANK MUST NOT EXCEED THE SHALLOWEST STAGE'S CHANNEL COUNT.
+      Conv1x1Bottleneck(channels, rank) builds Conv2d(channels, rank, 1); with
+      rank > channels that is an OVER-COMPLETE PROJECTION, not a bottleneck.
+      MobileNetV3-Small's shallowest placement stage is 24 channels, capping
+      its bottleneck ranks at 23. This is why Level H is rank 22/14 (a fresh
+      pair at ~9.4k, 0.42% mismatch) rather than the tighter-matching rank 25
+      against the existing LoRA-16 arm. One extra arm, bought to keep every
+      stage a genuine bottleneck.
+
+  (c) MINIIMAGENET ONLY, NOT CIFAR-FS. RQ3's ECE effects clear 2x the
+      across-seed SD in 8/8 MiniImageNet pairs but only 2/8 CIFAR-FS pairs. A
+      null on CIFAR-FS would have been indistinguishable from insufficient
+      power -- an uninterpretable result dressed as a finding.
+
+  A fourth, less obvious one: BOTH HEAD INTERPRETATIONS ARE TRAINED
+  SEPARATELY, never read off one checkpoint. The original 16 pairs used
+  separately trained evidential and softmax cells; reading softmax off an
+  evidential parent would not be the same experiment. This is why the run
+  count is x2 rather than a free extra axis.
+
+1.3  Code
+
+  scripts/rq3_matched.py     design constants, parameter assertion, control
+                             guard, artifact recovery, the sweep driver, and
+                             verdict.json assembly
+  scripts/rq_aggregate.py    "RQ3 -- matched budget" section: the metric
+                             extraction, the matched/unmatched tables, and the
+                             pre-registered decision rule
+  configs/rq3_matched/       48 generated configs + _index.json
+  notebooks/rq3_matched_budget.ipynb   source notebook (writes the module)
+  notebooks/rq3_budget.ipynb           the executed run record
+
+  The aggregation lives in rq_aggregate.py rather than in rq3_matched.py
+  because the plan's Section 6 Step 5 asks for that module to be EXTENDED
+  rather than for a parallel aggregator to be written. Consequence worth
+  knowing: verdict.json is rebuildable locally from results/rq3_matched/ with
+  NO GPU, and doing so reproduces the committed file exactly.
+
+  Nothing scientific is reimplemented. Training goes through the real
+  scripts/train.py:main(); evaluation through rq_core.factorial_evaluate and
+  therefore through PrototypeHead.to_evidence, the single source of truth for
+  the evidence map; checkpoint and results naming through scripts/train.py's
+  own _checkpoint_tag / _head_descriptor.
+
+
+================================================================================
+2.  THE GUARDS, AND WHAT EACH ONE ACTUALLY CAUGHT
+================================================================================
+
+2.1  Parameter assertion -- run BEFORE any GPU time
+
+  The Section 3 formulas were validated against committed rank-16 values, but
+  the five NEW ranks (6, 41, 10, 22, 14) had never been instantiated. So each
+  model is built and its INSTANTIATED trainable count compared to intent:
+
+    16/16 arms exact, 0 failures.
+    12,504/12,506 - 31,488/31,490 - 6,720/6,722 - 9,448/9,450 - 9,408/9,410
+
+  Then, per (backbone, level), the two arms' counts must differ by <= 3.1%:
+
+    mnv3  L  6,928 vs 6,720   3.095%   <- the binding case
+    r18   L  12,504 vs 12,290 1.758%
+    r18   H  31,744 vs 31,488 0.813%
+    mnv3  H  9,448 vs 9,408   0.425%
+
+  Against 55.2% (mnv3) and 158.3% (r18) in the original comparison. The arms
+  are NOT identical and are not described as such anywhere; the residual is
+  reported.
+
+2.2  What "it caught nothing" means here
+
+  Both guards passed first time. That is worth recording rather than
+  glossing: the formulas in the plan were derived from src/adapters/ source
+  and were correct, so the assertion bought certainty rather than a fix. The
+  alternative -- discovering at aggregation time that rank 41 LoRA was not
+  31,488 parameters -- would have cost the whole sweep.
+
+2.3  The control guard, on MERGED configs
+
+  Across all 48 merged configs, only these keys may differ:
+
+    seed; adapter.{type,rank,placement,block_ids,lora_targets,alpha,dropout};
+    output.{run_tag,results_dir}; wandb.{group,tags,mode,disabled}
+    -- plus, because this design deliberately spans two backbones and two
+    objectives, the backbone axis (backbone.name, backbone.feature_dim) and
+    the head axis (head.interpretation, head.evidence_*, loss.kl_*,
+    loss.prior_per_class, loss.use_variance).
+
+  Result: 48 configs, 19 globally differing keys, ZERO unaccounted. And
+  within each (backbone, head) group -- the level at which comparisons are
+  actually made -- zero offending keys in all four groups. LR, epochs,
+  patience, KL schedule, dataset, episode files, n_way and k_shot are
+  identical everywhere.
+
+
+================================================================================
+3.  HOW IT RAN
+================================================================================
+
+  One Kaggle T4 session, 2026-08-26 21:12 -> 2026-08-27 03:24 UTC.
+
+    48/48 cells, every _run_log.jsonl row status "ok", zero errors
+    6.21 h wall span; 2.56 h summed training time (mean 192 s/run,
+      range 165-228 s); ~476 s/cell end-to-end including the 600-episode
+      evaluation
+    30 new-arm runs + 18 re-runs of existing Step 10 grid arms
+
+  DEVIATION FROM THE PLAN, recorded rather than silent. The plan budgeted 30
+  runs and reused Step 10 checkpoints for the three arms that already exist in
+  the grid. This run TRAINED ALL 48 from scratch instead. That is strictly
+  stronger in two ways: every arm in every comparison comes from one identical
+  recipe executed in one session, and the plan's acceptance criterion
+  "existing-arm numbers reproduce the committed grid" upgrades from a
+  checkpoint-provenance check into a full end-to-end reproduction. It also
+  cost far less than feared -- the plan's 8.8 GPU-hour estimate for 30 runs
+  came from the grid's 1,054 s/run mean; actual was 192 s/run.
+
+  REPRODUCTION CHECK: all 18 re-run cells returned status "exact", max
+  absolute difference 0.0 across 12-13 numeric metric keys each. The harness
+  measures exactly what the Step 10 grid measured.
+
+
+================================================================================
+4.  RESULTS
+================================================================================
+
+  Sign convention THROUGHOUT, matching the unmatched table it is contrasted
+  with: every delta is LoRA arm MINUS bottleneck arm. Positive ΔECE means
+  LoRA is worse calibrated.
+
+4.1  Per (backbone, level, head) -- the matched arms
+
+  cell                       btl_r lora_r  mism%  ECE_btl ECE_lora    ΔECE      2σ  >2σ
+  resnet18/L/evidential          6     16   1.76   0.2973   0.4049 +0.1076  0.0186  yes
+  resnet18/L/softmax             6     16   1.76   0.0827   0.1930 +0.1103  0.0122  yes
+  resnet18/H/evidential         16     41   0.81   0.2938   0.4109 +0.1170  0.0520  yes
+  resnet18/H/softmax            16     41   0.81   0.0850   0.1728 +0.0878  0.0118  yes
+  mnv3/L/evidential             16     10   3.09   0.3177   0.3121 -0.0056  0.0017  yes
+  mnv3/L/softmax                16     10   3.10   0.1107   0.1140 +0.0033  0.0191  no
+  mnv3/H/evidential             22     14   0.43   0.3165   0.3097 -0.0068  0.0015  yes
+  mnv3/H/softmax                22     14   0.43   0.1137   0.0983 -0.0153  0.0103  yes
+
+4.2  Adjudication -- per (backbone x head) cell, averaging its two levels
+
+  cell                     ΔECE unm  ΔECE mat  collapse      2σ  rule fired
+  resnet18/evidential       +0.1111   +0.1123      1.01  0.0353  backbone_intrinsic
+  resnet18/softmax          +0.1080   +0.0991      0.92  0.0120  backbone_intrinsic
+  mnv3/evidential           -0.0124   -0.0062      0.50  0.0016  backbone_intrinsic
+  mnv3/softmax              -0.0152   -0.0060      0.61  0.0147  (none -- not >2σ)
+
+  VERDICT: `backbone_intrinsic` (H3.2-alt), 3 of 4 cells against a
+  pre-registered threshold of 3.
+    H3.2 (budget)       fired in 0 of 4.
+    H3.1 (architecture) fired in 0 of 4 -- the matched ΔECE sign is still
+                        positive on ResNet-18 and negative on MobileNetV3,
+                        so no single architecture is better calibrated.
+
+4.3  Secondary outcomes -- the architecture half of RQ3, genuinely at risk
+
+  The plan pre-registered this as a live test, not a formality: if the
+  ACCURACY gap had also collapsed at matched budget, accuracy would have been
+  tracking budget too and RQ3's headline dissociation would have weakened
+  substantially. It did not.
+
+  outcome            bottleneck wins   beyond 2σ   cells collapsed (<=50%)
+  accuracy                     8 / 8       8 / 8   none (ratios 0.68-1.22)
+  near-OOD AUROC               8 / 8       8 / 8   none (ratios 0.61-1.19)
+
+  Accuracy at matched budget, btl vs LoRA:
+    r18   L evid  0.9590 / 0.8832    H evid  0.9588 / 0.8725
+    r18   L soft  0.9552 / 0.9156    H soft  0.9556 / 0.8972
+    mnv3  L evid  0.9064 / 0.8869    H evid  0.9030 / 0.8859
+    mnv3  L soft  0.9010 / 0.8867    H soft  0.9003 / 0.8787
+
+  FAR-OOD, reported as the pre-stated control and NOT as evidence either way:
+  mixed, as expected -- bottleneck wins 5/8 (ΔAUROC -0.0942 to +0.0186). RQ1
+  attributes far-OOD predominantly to head interpretation, not adapter.
+
+
+================================================================================
+5.  WHAT THIS DOES AND DOES NOT SAY
+================================================================================
+
+5.1  Budget is not the mechanism
+
+  On ResNet-18 the calibration gap does not move AT ALL when budget is
+  equalised: collapse ratios 1.01 and 0.92, i.e. the matched gap is as large
+  as, or larger than, the unmatched one. A gap caused by a budget difference
+  should have vanished along with it. This is the strongest single result in
+  the experiment and it is not close -- +0.1123 matched vs +0.1111 unmatched
+  on the evidential cell.
+
+5.2  Budget is not irrelevant either
+
+  On MobileNetV3-Small the matched gaps are roughly HALF the unmatched ones
+  (0.50, 0.61). Some of that difference did track budget. The honest
+  statement is: budget modulates the MAGNITUDE, the backbone determines the
+  SIGN. Writing "budget has no effect on calibration" would overclaim in the
+  opposite direction and is not what these numbers say.
+
+5.3  The two directions are NOT symmetric halves of one phenomenon
+
+  ResNet-18's matched |ΔECE| is ~0.10-0.12. MobileNetV3-Small's is ~0.006 --
+  an order of magnitude smaller. It is real and statistically resolvable at 3
+  seeds (the mnv3 evidential across-seed SD is 0.0006-0.0008, tiny), but any
+  sentence that presents "ResNet-18 prefers bottleneck, MobileNetV3 prefers
+  LoRA" as two equal sides is misleading about the scale.
+
+5.4  THE MECHANISM IS NOT IDENTIFIED -- this is the real remaining limit
+
+  "Backbone-intrinsic" names where the evidence points; it is not an
+  explanation. Depth, width, normalisation placement, the inverted-residual
+  block, the feature-norm scale at the adapter sites -- all differ between
+  ResNet-18 and MobileNetV3-Small simultaneously, and TWO backbones cannot
+  separate them. Re-opening this needs more BACKBONES, not more seeds.
+
+  State it as a limit in the thesis text. Do not narrate a plausible-sounding
+  mechanism; that is exactly the failure mode this experiment was built to
+  correct in the first place.
+
+5.5  An observation worth flagging, offered as an observation only
+
+  best_val_epoch splits sharply by (backbone, arm) under the shared
+  early-stopping recipe:
+
+    resnet18 / lora   1,1,2,2,2,2,3,3,3,3,3,4      <- plateaus almost at once
+    resnet18 / btl    3,4,4,4,7,7,7,7,11,12,12,16
+    mnv3 / btl        2,6,6,6,6,6,6,6,6,6,10,11
+    mnv3 / lora       1,6,6,6,6,6,6,6,6,6,6,9
+
+  ResNet-18 LoRA stops 3-4x earlier than every other arm. That co-occurs with
+  its worse accuracy AND its worse calibration, and is a natural next thing to
+  look at. It is NOT offered as the mechanism: the recipe is shared by
+  construction (that is the point of the guard in Section 2.3), early stopping
+  is selected on val accuracy exactly as the protocol specifies, and one
+  correlation across 12 runs is not a causal account.
+
+5.6  The restated RQ3 claim
+
+  RQ3's dissociation SURVIVES, and sharpens:
+
+    accuracy and near-OOD ranking follow adapter ARCHITECTURE, invariant to
+    budget -- now tested AT matched budget, not merely at a reversed one;
+    calibration follows NEITHER architecture NOR budget -- it follows the
+    BACKBONE.
+
+  That is narrower than "calibration follows the parameter budget," and it is
+  the claim the data supports. It is also arguably the more interesting one:
+  the dissociation is no longer architecture-vs-size but
+  adapter-property-vs-backbone-property.
+
+
+================================================================================
+6.  ACCEPTANCE CRITERIA (plan Section 7)
+================================================================================
+
+  [x] 30/30 runs complete, no errors in _run_log.jsonl
+      -> 48/48, every row status "ok"
+  [x] Parameter assertion passed for all new arms (instantiated == intended)
+      -> 16/16 arms exact, 0 failures
+  [x] Matched-budget mismatch <= 3.1% at every level, recorded in the verdict
+      -> max 3.095% (mnv3 L), min 0.425%
+  [x] Control guard: only allowed keys differ across all merged configs
+      -> 48 configs, 0 unaccounted keys; 0 offending keys within all 4 groups
+  [x] Existing-arm numbers reproduce the committed grid values
+      -> upgraded to full reproduction: 18/18 "exact", max abs diff 0.0
+  [x] verdict.json names exactly one outcome by the pre-registered rule,
+      without post-hoc adjustment
+      -> `backbone_intrinsic`, 3/4 cells, threshold 3
+  [x] Secondary accuracy outcome reported whichever way it falls
+      -> 8/8 to bottleneck, all beyond 2σ, no collapse; Section 4.3
+
+
+================================================================================
+7.  WHAT THE THESIS TEXT INHERITS
+================================================================================
+
+  MUST CHANGE:
+    - Any sentence of the form "calibration follows the trainable-parameter
+      budget" is now wrong. docs/RQ_RESULTS_SUMMARY.md Section 5.1 has the
+      replacement wording; CLAUDE.md carries the same correction so it cannot
+      be re-derived from the old text by accident.
+    - RQ3's identification limit is no longer "we cannot tell budget from
+      backbone." It is "we cannot tell WHICH backbone property."
+
+  CAN BE STRENGTHENED:
+    - H3.1 (accuracy/near-OOD follow architecture) is no longer inferred from
+      a reversed budget ordering; it is measured at matched budget. 8/8, all
+      beyond 2σ, on both outcomes.
+    - The pre-registration is a genuine defence asset: the decision rule,
+      including its power check and its explicit "inconclusive" outcome, was
+      committed before the numbers existed, and the verdict went AGAINST the
+      hypothesis the project had been leaning on. That is the strongest form
+      this result could have taken.
+
+  OPEN, carried to docs/RQ_RESULTS_SUMMARY.md Section 9.1:
+    - Which backbone property. Needs additional backbones (a third and fourth
+      would begin to separate depth from block type), not additional seeds.
+
+  NOT INHERITED: no new bug, no new caveat about the harness. Both guards
+  passed first time, the 18-cell reproduction was exact, and the verdict is
+  rebuildable offline from the committed per-cell JSONs.

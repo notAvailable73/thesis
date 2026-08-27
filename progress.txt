@@ -5,10 +5,20 @@ Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
 Read order: proposal.txt → plan.txt → implementation.txt → this file.
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
-Updated:   2026-08-09 (Step 11 CLOSED — canonical measurement ran, RQ4
-           answered, two real bugs found+fixed during closeout; Step 10
-           CLOSED 2026-08-06 — all 120 grid cells ran. All four RQs now
-           have numerical answers.)
+Updated:   2026-08-27 (RQ3 matched-budget experiment CLOSED — 48 runs,
+           verdict `backbone_intrinsic`, see the headline block below and
+           the 2026-08-27 decisions-log entry; Step 11 CLOSED 2026-08-09 —
+           canonical measurement ran, RQ4 answered, two real bugs
+           found+fixed during closeout; Step 10 CLOSED 2026-08-06 — all 120
+           grid cells ran. All four RQs now have numerical answers.)
+
+NUMBERING WARNING. This file uses the ORIGINAL proposal RQ numbering
+           (Orig-RQ1..4 in docs/RQ_RESULTS_SUMMARY.md's Appendix). The
+           thesis text now uses a DIFFERENT four-RQ numbering. "RQ3" in
+           the Step 10 headline below means Orig-RQ3 (Bayesian prior vs.
+           near-OOD detection). "RQ3 matched-budget" means the NEW RQ3
+           (adapter architecture vs. parameter budget) and is a different
+           question entirely. Do not conflate them.
 ================================================================================
 
 
@@ -23,7 +33,9 @@ Done:        Steps 1, 2, 3 (Phase 1); Step 4 pipeline (Phase 2, negative result)
              in-distribution dataset, CLOSED — see below); Step 10 (MVT grid,
              CLOSED 2026-08-06 — all 120 cells ran; see below); Step 11 (RQ4,
              efficiency/Pareto, CLOSED 2026-08-09 — canonical Kaggle
-             measurement ran, RQ4 answered, see below).
+             measurement ran, RQ4 answered, see below); the RQ3
+             matched-budget experiment (new-numbering RQ3, CLOSED
+             2026-08-27 — 48 runs, causal gap settled, see below).
 In progress: none. All four research questions now have numerical answers.
              Next is Step 12 (optional breadth) or Phase 6 (thesis writing) —
              see "Next" below.
@@ -102,6 +114,57 @@ Step 11 headline (CLOSED 2026-08-09). The canonical Kaggle T4 session ran
              top open follow-up. Full reasoning, the pre-registered axes/
              tolerances, every honest caveat, and both incidents in full:
              step_writeups/step11.txt.
+RQ3 matched-budget headline (CLOSED 2026-08-27). NOTE this is the NEW-numbering
+             RQ3 (adapter architecture vs. trainable-parameter budget), not
+             the Orig-RQ3 in the Step 10 block above. Pre-registration:
+             docs/RQ3_MATCHED_BUDGET_PLAN.md; result and interpretation:
+             docs/RQ_RESULTS_SUMMARY.md §5.1; raw verdict:
+             results/rq3_matched/verdict.json.
+             THE GAP IT CLOSED: RQ3's 16 bottleneck-vs-LoRA pairs showed the
+             ACCURACY winner never changing when the parameter ordering
+             reverses between backbones, while the CALIBRATION winner
+             changed exactly in step with it. But the reversal is welded to
+             the backbone (bottleneck is the larger arm on ResNet-18, the
+             smaller on MobileNetV3-Small), so "budget drives calibration"
+             (H3.2) and "the backbone does" (H3.2-alt) predicted the
+             identical 16/16 pattern and the 120-run grid could not
+             separate them.
+             WHAT RAN: both architectures built at the SAME budget WITHIN
+             each backbone — MiniImageNet 5-shot, 2 backbones x 2 budget
+             levels x 2 arms x 2 heads (trained separately) x 3 seeds = 48
+             runs, ~6.5 h on one Kaggle T4. Residual budget mismatch <=
+             3.10% against 55-158% in the original comparison.
+             VERDICT: `backbone_intrinsic` (H3.2-alt), fired in 3 of the 4
+             pre-registered (backbone x head) cells against a threshold of
+             3. H3.2 (budget) fired in 0 of 4; H3.1 (one architecture
+             better calibrated regardless) fired in 0 of 4. Equalising the
+             budget left ResNet-18's calibration gap entirely intact
+             (collapse ratios 1.01 and 0.92, matched dECE +0.112/+0.099)
+             and roughly halved MobileNetV3-Small's already-tiny one
+             (0.50/0.61, matched dECE -0.006 both heads). Sign convention
+             throughout: LoRA minus bottleneck.
+             SECONDARY (this was genuinely at risk): bottleneck still wins
+             ACCURACY 8/8 and near-OOD AUROC 8/8 at matched budget, all
+             beyond 2 sigma, no cell's gap collapsing. So RQ3's
+             dissociation SURVIVES and is restated: accuracy and near-OOD
+             follow adapter ARCHITECTURE; calibration follows neither
+             architecture nor budget — it follows the BACKBONE.
+             HARNESS VALIDATION: 48/48 runs ok, zero errors in
+             results/rq3_matched/_run_log.jsonl; instantiated trainable
+             params == intended for 16/16 arms; control guard clean on all
+             48 MERGED configs (0 unaccounted keys); and the 18 re-runs of
+             existing Step 10 grid arms reproduced the committed grid
+             metrics EXACTLY (max abs diff 0.0 over 12-13 keys per cell).
+             All seven §7 acceptance criteria met.
+             WHAT IS STILL OPEN: the MECHANISM. "Backbone-intrinsic" is
+             where the evidence points, not an explanation, and two
+             backbones cannot separate depth / width / normalisation /
+             block type / feature-norm scale at the adapter sites. State
+             this as a limit in the thesis; do not narrate a mechanism.
+             FULL WRITE-UP: step_writeups/rq3_matched_budget.txt (guards,
+             the plan deviation, the honest asymmetry, and one flagged
+             observation about ResNet-18 LoRA's early-stopping behaviour
+             that is offered as an observation, not a mechanism).
 Next:        Step 12 (optional breadth) or Phase 6 (thesis writing) — see
              the ORDERING note in Step 12's own section below (Step 12 was
              deliberately held until Step 11 fully closed; that condition
@@ -124,7 +187,7 @@ Next:        Step 12 (optional breadth) or Phase 6 (thesis writing) — see
              CNN backbones are outdated -- see the 2026-08-06 entry in the
              decisions log.
 Blocker:     none.
-Today:       2026-08-09
+Today:       2026-08-27
 
 Step 4 headline (real CIFAR-FS Bertinetto, N=600) — the R1 claim did NOT survive:
   evidential:  acc 0.870   far-OOD SVHN AUROC 0.843   ECE 0.344   Brier 0.353
@@ -2045,6 +2108,65 @@ NOTES / DECISIONS LOG
             number — is exactly what an automated test exists to catch,
             and none of this repo's 294 tests check any of the three files
             it lived in.
+
+2026-08-27  RQ3 matched-budget experiment CLOSED — the causal-identification
+            gap docs/RQ3_MATCHED_BUDGET_PLAN.md was written to close is
+            settled, and it did NOT go the way the plan's parsimony
+            argument expected. (NUMBERING: this is the NEW-numbering RQ3,
+            adapter architecture vs. parameter budget — not Orig-RQ3.)
+            SUPERSEDES: docs/RQ_RESULTS_SUMMARY.md §5's earlier reading
+            that "calibration follows the larger parameter budget" (H3.2),
+            which was advanced there on parsimony and explicitly flagged as
+            not established by discrimination. It is now REFUTED by direct
+            test and must not be cited anywhere in the thesis text. The
+            surviving account is H3.2-alt (backbone-intrinsic).
+            WHY THE OLD READING WAS UNTESTABLE ON THE GRID: bottleneck is
+            the larger arm on ResNet-18 and the smaller one on
+            MobileNetV3-Small purely as a side effect of channel widths, so
+            budget ordering and backbone identity are perfectly collinear
+            in all 16 original pairs — every outcome consistent with one is
+            arithmetically consistent with the other.
+            WHAT THE EXPERIMENT DID: built both architectures at the SAME
+            trainable-parameter budget within each backbone (ResNet-18
+            btl-r6 vs lora-r16 at ~12.4k, btl-r16 vs lora-r41 at ~31.6k;
+            MobileNetV3-Small btl-r16 vs lora-r10 at ~6.8k, btl-r22 vs
+            lora-r14 at ~9.4k), MiniImageNet 5-shot, both head
+            interpretations TRAINED SEPARATELY, 3 seeds. Residual mismatch
+            <= 3.10%. Decision rule pre-registered in the plan's §5 before
+            any number existed.
+            RESULT: verdict `backbone_intrinsic`, 3 of 4 cells (threshold
+            3). H3.2 0/4, H3.1 0/4. ResNet-18's dECE did not shrink at all
+            when budget was equalised (collapse ratio 1.01 evidential /
+            0.92 softmax); MobileNetV3-Small's halved (0.50 / 0.61) but
+            kept its sign. Budget modulates MAGNITUDE; the backbone
+            determines the SIGN.
+            HONEST ASYMMETRY, do not present as symmetric halves: matched
+            |dECE| is ~0.10-0.12 on ResNet-18 and ~0.006 on
+            MobileNetV3-Small — resolvable at 3 seeds, but an order of
+            magnitude smaller.
+            WHAT SURVIVED: RQ3's headline dissociation, and it sharpened.
+            Bottleneck still wins accuracy 8/8 and near-OOD AUROC 8/8 at
+            matched budget, all beyond 2 sigma — so accuracy was NOT
+            tracking budget. Restated claim: accuracy and near-OOD follow
+            adapter ARCHITECTURE; calibration follows the BACKBONE.
+            DEVIATION FROM PLAN (recorded, not silent): the plan budgeted
+            30 runs and reused Step 10 checkpoints for the 3 already-
+            existing arms. The run trained 48 — all arms from scratch under
+            one identical recipe. Strictly stronger, and it converted the
+            plan's §7 "reused arms reproduce the grid" criterion into a
+            full end-to-end reproduction, which passed exactly (18/18
+            cells, max abs diff 0.0).
+            STILL OPEN: which backbone property. Two backbones cannot
+            separate depth / width / normalisation / inverted-residual
+            block / feature-norm scale at the adapter sites. Carried as an
+            open item in docs/RQ_RESULTS_SUMMARY.md §9.1.
+            CODE: scripts/rq3_matched.py (design, guards, driver, verdict
+            assembly); the aggregation and the pre-registered decision rule
+            live in scripts/rq_aggregate.py's "RQ3 — matched budget"
+            section, per the plan's §6 Step 5 instruction to extend that
+            module rather than write a parallel aggregator. The verdict is
+            rebuildable locally with no GPU from results/rq3_matched/ and
+            reproduces the committed verdict.json exactly.
 
 ================================================================================
 END OF PROGRESS.TXT

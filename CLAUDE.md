@@ -135,4 +135,19 @@ grid scale: 37–38/40 wins on every pool. Do not cite "evidential is on par wit
 without this correction; the defensible claim is narrower — vacuity is a substantially better OOD ranker than
 softmax-probability scores, but a well-chosen logit-space score (energy) still beats it.
 
+**Correction (2026-08-27) — RQ3's causal claim changed; see `progress.txt`'s "RQ3 matched-budget headline"
+and `docs/RQ_RESULTS_SUMMARY.md` §5.1.** Note the numbering: this is the *new* four-RQ RQ3 — adapter
+architecture vs. trainable-parameter budget — not the proposal's RQ3 above. The 16-pair grid evidence showed
+the accuracy winner (bottleneck) never changing when the parameter-budget ordering reverses between
+backbones, while the calibration winner changed exactly in step with it; that was originally read as
+"calibration follows the larger budget" (H3.2). It was untestable on the grid, because the budget ordering
+is welded to the backbone. A pre-registered 48-run matched-budget experiment — both architectures at the
+same budget *within* each backbone, MiniImageNet 5-shot — returned verdict **`backbone_intrinsic`**: H3.2
+fired in **0 of 4** cells, H3.2-alt in 3 of 4. Equalising the budget leaves ResNet-18's calibration gap
+entirely intact and only halves MobileNetV3-Small's. **Do not write "calibration follows the parameter
+budget" anywhere in the thesis text.** The defensible claim is: accuracy and near-OOD ranking follow adapter
+*architecture* (bottleneck wins 8/8 at matched budget, all beyond 2σ); calibration follows the *backbone*,
+by a mechanism this two-backbone design cannot identify. Treat this as settled — re-opening it would take
+more backbones, not more seeds.
+
 Always Read `thesis_implementation_instructions.txt` before any implementation step.

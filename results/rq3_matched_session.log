@@ -1,0 +1,453 @@
+=== rq3-matched session start 2026-08-26 20:41:08 device=cuda ===
+
+=== §6 Step 1 — generate configs ===
+  48 configs in configs/rq3_matched/  (30 new-arm runs, 18 reuse a Step 10 arm)
+    resnet18           level L  lora rank 16  (existing, parent exp_phase5_mini_lora_{head}.yaml)
+    resnet18           level L  btl  rank 6   (new, parent exp_phase5_mini_parallel_{head}.yaml)
+    resnet18           level H  btl  rank 16  (existing, parent exp_phase5_mini_parallel_{head}.yaml)
+    resnet18           level H  lora rank 41  (new, parent exp_phase5_mini_lora_{head}.yaml)
+    mobilenetv3_small  level L  btl  rank 16  (existing, parent exp_phase5_mini_mbnet_parallel_{head}.yaml)
+    mobilenetv3_small  level L  lora rank 10  (new, parent exp_phase5_mini_mbnet_lora_{head}.yaml)
+    mobilenetv3_small  level H  btl  rank 22  (new, parent exp_phase5_mini_mbnet_parallel_{head}.yaml)
+    mobilenetv3_small  level H  lora rank 14  (new, parent exp_phase5_mini_mbnet_lora_{head}.yaml)
+
+=== §6 Step 2 — parameter assertion (instantiated vs intended) ===
+  mobilenetv3_small  btl  r16  evidential  expected=  6,930  built=  6,930  OK
+  mobilenetv3_small  btl  r16  softmax     expected=  6,928  built=  6,928  OK
+  mobilenetv3_small  btl  r22  evidential  expected=  9,450  built=  9,450  OK
+  mobilenetv3_small  btl  r22  softmax     expected=  9,448  built=  9,448  OK
+  mobilenetv3_small  lora r10  evidential  expected=  6,722  built=  6,722  OK
+  mobilenetv3_small  lora r10  softmax     expected=  6,720  built=  6,720  OK
+  mobilenetv3_small  lora r14  evidential  expected=  9,410  built=  9,410  OK
+  mobilenetv3_small  lora r14  softmax     expected=  9,408  built=  9,408  OK
+  resnet18           btl  r6   evidential  expected= 12,506  built= 12,506  OK
+  resnet18           btl  r6   softmax     expected= 12,504  built= 12,504  OK
+  resnet18           btl  r16  evidential  expected= 31,746  built= 31,746  OK
+  resnet18           btl  r16  softmax     expected= 31,744  built= 31,744  OK
+  resnet18           lora r16  evidential  expected= 12,290  built= 12,290  OK
+  resnet18           lora r16  softmax     expected= 12,288  built= 12,288  OK
+  resnet18           lora r41  evidential  expected= 31,490  built= 31,490  OK
+  resnet18           lora r41  softmax     expected= 31,488  built= 31,488  OK
+  level mobilenetv3_small  H evidential  btl=  9,450 lora=  9,410  mismatch= 0.43%  OK
+  level mobilenetv3_small  H softmax     btl=  9,448 lora=  9,408  mismatch= 0.43%  OK
+  level mobilenetv3_small  L evidential  btl=  6,930 lora=  6,722  mismatch= 3.09%  OK
+  level mobilenetv3_small  L softmax     btl=  6,928 lora=  6,720  mismatch= 3.10%  OK
+  level resnet18           H evidential  btl= 31,746 lora= 31,490  mismatch= 0.81%  OK
+  level resnet18           H softmax     btl= 31,744 lora= 31,488  mismatch= 0.81%  OK
+  level resnet18           L evidential  btl= 12,506 lora= 12,290  mismatch= 1.76%  OK
+  level resnet18           L softmax     btl= 12,504 lora= 12,288  mismatch= 1.76%  OK
+  all arms match the closed form; worst residual budget mismatch 3.10% (limit 3.1%)
+  NOTE: report this residual. The arms are MATCHED, not identical — the honest comparison is 0.43-3.10% here against 55-158% unmatched.
+
+=== §6 Step 3 — control guard on merged configs ===
+  within mobilenetv3_small/evidential     12 configs  OK
+  within mobilenetv3_small/softmax        12 configs  OK
+  within resnet18/evidential              12 configs  OK
+  within resnet18/softmax                 12 configs  OK
+  head-axis keys differing by design      : ['head.evidence_affine', 'head.evidence_bias_init', 'head.evidence_scale_init', 'head.interpretation', 'loss.kl_anneal_steps', 'loss.kl_weight_max', 'loss.prior_per_class', 'loss.use_variance']
+  backbone-axis keys differing by design  : ['backbone.feature_dim', 'backbone.name']
+  unaccounted differing keys              : none
+
+PRE-FLIGHT PASSED — the design is what the plan says it is.
+
+=== restore prior artifacts ===
+  scanned ['/kaggle/input']: 0 zip(s)
+  restored 18 checkpoint(s), 0 result JSON(s)
+
+  coverage of the 48 selected cell(s):
+    already evaluated      : 0
+    checkpoint on disk     : 0  (evaluate only, ~3 min each)
+    reusable Step 10 twin  : 18  (copy + evaluate, ~3 min each)
+    needs training         : 30  (~18 min each)
+  rough estimate for this session: ~684 min (11.4 h) against MAX_MINUTES=480.0
+
+=== smoke test: rq3m_r18_lora_evidential_r16_seed42 (5 episodes, throwaway output) ===
+    T=0.5312  affine native=(2.1270, -7.1733)  refit=(6.1495, -22.8726)
+  n_params=12290 (expected 12290)  val seeds 10000..10099  [378.0s]
+  SMOKE TEST PASSED -- every key the verdict needs is present.
+
+=== sweep: 48 cell(s), 600 episodes each ===
+[rq3m] (1/48) rq3m_r18_btl_evidential_r6_seed42  [resnet18 level L btl r6 evidential seed42]
+    training…
+    T=0.4830  affine native=(3.6453, -6.1173)  refit=(13.6270, -20.6718)
+    ep 200/600  acc=0.9560
+    ep 400/600  acc=0.9577
+    ep 600/600  acc=0.9589
+    acc=0.9589 ECE=0.2971 params=12506  guard=not_requested  [227.7s]
+[rq3m] (2/48) rq3m_r18_lora_evidential_r16_seed42  [resnet18 level L lora r16 evidential seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-evidential_seed42.pt
+    T=0.5312  affine native=(2.1270, -7.1733)  refit=(6.1495, -22.8726)
+    ep 200/600  acc=0.8851
+    ep 400/600  acc=0.8829
+    ep 600/600  acc=0.8832
+    acc=0.8832 ECE=0.4093 params=12290  guard=exact  [212.2s]
+[rq3m] (3/48) rq3m_r18_btl_evidential_r6_seed43  [resnet18 level L btl r6 evidential seed43]
+    training…
+    T=0.4816  affine native=(3.6406, -6.1312)  refit=(13.5918, -20.9295)
+    ep 200/600  acc=0.9568
+    ep 400/600  acc=0.9581
+    ep 600/600  acc=0.9592
+    acc=0.9592 ECE=0.2976 params=12506  guard=not_requested  [219.4s]
+[rq3m] (4/48) rq3m_r18_lora_evidential_r16_seed43  [resnet18 level L lora r16 evidential seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-evidential_seed43.pt
+    T=0.5541  affine native=(2.2454, -7.4996)  refit=(6.4299, -23.3384)
+    ep 200/600  acc=0.8801
+    ep 400/600  acc=0.8801
+    ep 600/600  acc=0.8789
+    acc=0.8789 ECE=0.3902 params=12290  guard=exact  [213.4s]
+[rq3m] (5/48) rq3m_r18_btl_evidential_r6_seed44  [resnet18 level L btl r6 evidential seed44]
+    training…
+    T=0.4851  affine native=(3.6465, -6.1216)  refit=(13.6332, -20.4845)
+    ep 200/600  acc=0.9561
+    ep 400/600  acc=0.9578
+    ep 600/600  acc=0.9589
+    acc=0.9589 ECE=0.2972 params=12506  guard=not_requested  [213.6s]
+[rq3m] (6/48) rq3m_r18_lora_evidential_r16_seed44  [resnet18 level L lora r16 evidential seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-evidential_seed44.pt
+    T=0.5170  affine native=(2.0911, -7.1885)  refit=(5.9400, -22.9392)
+    ep 200/600  acc=0.8903
+    ep 400/600  acc=0.8886
+    ep 600/600  acc=0.8876
+    acc=0.8876 ECE=0.4153 params=12290  guard=exact  [210.6s]
+[rq3m] (7/48) rq3m_r18_btl_softmax_r6_seed42  [resnet18 level L btl r6 softmax seed42]
+    training…
+    T=0.5270  affine native=(1.0000, 0.0000)  refit=(8.5105, -11.4834)
+    ep 200/600  acc=0.9549
+    ep 400/600  acc=0.9546
+    ep 600/600  acc=0.9551
+    acc=0.9551 ECE=0.0810 params=12504  guard=not_requested  [217.4s]
+[rq3m] (8/48) rq3m_r18_lora_softmax_r16_seed42  [resnet18 level L lora r16 softmax seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-softmax_seed42.pt
+    T=0.4477  affine native=(1.0000, 0.0000)  refit=(3.7299, -16.6537)
+    ep 200/600  acc=0.9103
+    ep 400/600  acc=0.9079
+    ep 600/600  acc=0.9088
+    acc=0.9088 ECE=0.1837 params=12288  guard=exact  [213.9s]
+[rq3m] (9/48) rq3m_r18_btl_softmax_r6_seed43  [resnet18 level L btl r6 softmax seed43]
+    training…
+    T=0.5370  affine native=(1.0000, 0.0000)  refit=(8.5487, -11.2600)
+    ep 200/600  acc=0.9553
+    ep 400/600  acc=0.9567
+    ep 600/600  acc=0.9578
+    acc=0.9578 ECE=0.0857 params=12504  guard=not_requested  [219.1s]
+[rq3m] (10/48) rq3m_r18_lora_softmax_r16_seed43  [resnet18 level L lora r16 softmax seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-softmax_seed43.pt
+    T=0.4250  affine native=(1.0000, 0.0000)  refit=(3.6579, -17.0558)
+    ep 200/600  acc=0.9193
+    ep 400/600  acc=0.9179
+    ep 600/600  acc=0.9177
+    acc=0.9177 ECE=0.1958 params=12288  guard=exact  [214.6s]
+[rq3m] (11/48) rq3m_r18_btl_softmax_r6_seed44  [resnet18 level L btl r6 softmax seed44]
+    training…
+    T=0.5271  affine native=(1.0000, 0.0000)  refit=(8.4859, -11.5917)
+    ep 200/600  acc=0.9535
+    ep 400/600  acc=0.9529
+    ep 600/600  acc=0.9527
+    acc=0.9527 ECE=0.0813 params=12504  guard=not_requested  [212.7s]
+[rq3m] (12/48) rq3m_r18_lora_softmax_r16_seed44  [resnet18 level L lora r16 softmax seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_lora_prototype-softmax_seed44.pt
+    T=0.4001  affine native=(1.0000, 0.0000)  refit=(3.6576, -17.4835)
+    ep 200/600  acc=0.9225
+    ep 400/600  acc=0.9207
+    ep 600/600  acc=0.9202
+    acc=0.9202 ECE=0.1994 params=12288  guard=exact  [211.3s]
+[rq3m] (13/48) rq3m_r18_btl_evidential_r16_seed42  [resnet18 level H btl r16 evidential seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-evidential_seed42.pt
+    T=0.4723  affine native=(4.5204, -8.1881)  refit=(14.5378, -21.1150)
+    ep 200/600  acc=0.9591
+    ep 400/600  acc=0.9589
+    ep 600/600  acc=0.9601
+    acc=0.9601 ECE=0.2677 params=31746  guard=exact  [215.3s]
+[rq3m] (14/48) rq3m_r18_lora_evidential_r41_seed42  [resnet18 level H lora r41 evidential seed42]
+    training…
+    T=0.5481  affine native=(1.8404, -6.4406)  refit=(5.3779, -21.9117)
+    ep 200/600  acc=0.8806
+    ep 400/600  acc=0.8780
+    ep 600/600  acc=0.8792
+    acc=0.8792 ECE=0.4209 params=31490  guard=not_requested  [207.1s]
+[rq3m] (15/48) rq3m_r18_btl_evidential_r16_seed43  [resnet18 level H btl r16 evidential seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-evidential_seed43.pt
+    T=0.4761  affine native=(4.0073, -7.2497)  refit=(13.8088, -20.3163)
+    ep 200/600  acc=0.9587
+    ep 400/600  acc=0.9578
+    ep 600/600  acc=0.9591
+    acc=0.9591 ECE=0.2829 params=31746  guard=exact  [211.8s]
+[rq3m] (16/48) rq3m_r18_lora_evidential_r41_seed43  [resnet18 level H lora r41 evidential seed43]
+    training…
+    T=0.6171  affine native=(2.0210, -6.7925)  refit=(5.8642, -22.1941)
+    ep 200/600  acc=0.8648
+    ep 400/600  acc=0.8612
+    ep 600/600  acc=0.8609
+    acc=0.8609 ECE=0.3921 params=31490  guard=not_requested  [205.2s]
+[rq3m] (17/48) rq3m_r18_btl_evidential_r16_seed44  [resnet18 level H btl r16 evidential seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-evidential_seed44.pt
+    T=0.4639  affine native=(3.1572, -5.6836)  refit=(11.6581, -23.0000)
+    ep 200/600  acc=0.9571
+    ep 400/600  acc=0.9561
+    ep 600/600  acc=0.9573
+    acc=0.9573 ECE=0.3309 params=31746  guard=exact  [211.5s]
+[rq3m] (18/48) rq3m_r18_lora_evidential_r41_seed44  [resnet18 level H lora r41 evidential seed44]
+    training…
+    T=0.5702  affine native=(1.8476, -6.4407)  refit=(5.4141, -21.9003)
+    ep 200/600  acc=0.8804
+    ep 400/600  acc=0.8775
+    ep 600/600  acc=0.8776
+    acc=0.8776 ECE=0.4196 params=31490  guard=not_requested  [207.6s]
+[rq3m] (19/48) rq3m_r18_btl_softmax_r16_seed42  [resnet18 level H btl r16 softmax seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-softmax_seed42.pt
+    T=0.5209  affine native=(1.0000, 0.0000)  refit=(8.4073, -11.5010)
+    ep 200/600  acc=0.9546
+    ep 400/600  acc=0.9544
+    ep 600/600  acc=0.9550
+    acc=0.9550 ECE=0.0842 params=31744  guard=exact  [211.8s]
+[rq3m] (20/48) rq3m_r18_lora_softmax_r41_seed42  [resnet18 level H lora r41 softmax seed42]
+    training…
+    T=0.4720  affine native=(1.0000, 0.0000)  refit=(3.8259, -16.2329)
+    ep 200/600  acc=0.8966
+    ep 400/600  acc=0.8963
+    ep 600/600  acc=0.8953
+    acc=0.8953 ECE=0.1634 params=31488  guard=not_requested  [207.4s]
+[rq3m] (21/48) rq3m_r18_btl_softmax_r16_seed43  [resnet18 level H btl r16 softmax seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-softmax_seed43.pt
+    T=0.5263  affine native=(1.0000, 0.0000)  refit=(8.1903, -12.0951)
+    ep 200/600  acc=0.9545
+    ep 400/600  acc=0.9553
+    ep 600/600  acc=0.9558
+    acc=0.9558 ECE=0.0867 params=31744  guard=exact  [212.0s]
+[rq3m] (22/48) rq3m_r18_lora_softmax_r41_seed43  [resnet18 level H lora r41 softmax seed43]
+    training…
+    T=0.4752  affine native=(1.0000, 0.0000)  refit=(3.7893, -16.3457)
+    ep 200/600  acc=0.8974
+    ep 400/600  acc=0.8951
+    ep 600/600  acc=0.8940
+    acc=0.8940 ECE=0.1765 params=31488  guard=not_requested  [207.8s]
+[rq3m] (23/48) rq3m_r18_btl_softmax_r16_seed44  [resnet18 level H btl r16 softmax seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_r18_parallel_prototype-softmax_seed44.pt
+    T=0.5225  affine native=(1.0000, 0.0000)  refit=(8.3213, -11.6992)
+    ep 200/600  acc=0.9546
+    ep 400/600  acc=0.9550
+    ep 600/600  acc=0.9560
+    acc=0.9560 ECE=0.0840 params=31744  guard=exact  [212.8s]
+[rq3m] (24/48) rq3m_r18_lora_softmax_r41_seed44  [resnet18 level H lora r41 softmax seed44]
+    training…
+    T=0.4650  affine native=(1.0000, 0.0000)  refit=(3.6154, -16.7392)
+    ep 200/600  acc=0.9058
+    ep 400/600  acc=0.9035
+    ep 600/600  acc=0.9024
+    acc=0.9024 ECE=0.1786 params=31488  guard=not_requested  [208.5s]
+[rq3m] (25/48) rq3m_mnv3_btl_evidential_r16_seed42  [mobilenetv3_small level L btl r16 evidential seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-evidential_seed42.pt
+    T=0.5661  affine native=(3.5532, -6.1161)  refit=(13.0582, -20.2183)
+    ep 200/600  acc=0.9080
+    ep 400/600  acc=0.9063
+    ep 600/600  acc=0.9073
+    acc=0.9073 ECE=0.3176 params=6930  guard=exact  [177.1s]
+[rq3m] (26/48) rq3m_mnv3_lora_evidential_r10_seed42  [mobilenetv3_small level L lora r10 evidential seed42]
+    training…
+    T=0.6054  affine native=(3.4089, -6.2752)  refit=(12.3301, -18.8665)
+    ep 200/600  acc=0.8896
+    ep 400/600  acc=0.8874
+    ep 600/600  acc=0.8880
+    acc=0.8880 ECE=0.3116 params=6722  guard=not_requested  [173.7s]
+[rq3m] (27/48) rq3m_mnv3_btl_evidential_r16_seed43  [mobilenetv3_small level L btl r16 evidential seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-evidential_seed43.pt
+    T=0.5692  affine native=(3.5440, -6.1253)  refit=(12.9530, -20.1431)
+    ep 200/600  acc=0.9034
+    ep 400/600  acc=0.9033
+    ep 600/600  acc=0.9044
+    acc=0.9044 ECE=0.3172 params=6930  guard=exact  [174.4s]
+[rq3m] (28/48) rq3m_mnv3_lora_evidential_r10_seed43  [mobilenetv3_small level L lora r10 evidential seed43]
+    training…
+    T=0.6164  affine native=(3.3945, -6.3240)  refit=(12.2816, -19.7210)
+    ep 200/600  acc=0.8859
+    ep 400/600  acc=0.8835
+    ep 600/600  acc=0.8852
+    acc=0.8852 ECE=0.3114 params=6722  guard=not_requested  [175.9s]
+[rq3m] (29/48) rq3m_mnv3_btl_evidential_r16_seed44  [mobilenetv3_small level L btl r16 evidential seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-evidential_seed44.pt
+    T=0.5674  affine native=(3.5494, -6.1262)  refit=(13.0441, -20.4827)
+    ep 200/600  acc=0.9077
+    ep 400/600  acc=0.9067
+    ep 600/600  acc=0.9075
+    acc=0.9075 ECE=0.3182 params=6930  guard=exact  [176.5s]
+[rq3m] (30/48) rq3m_mnv3_lora_evidential_r10_seed44  [mobilenetv3_small level L lora r10 evidential seed44]
+    training…
+    T=0.6177  affine native=(3.4141, -6.2756)  refit=(12.3174, -19.5191)
+    ep 200/600  acc=0.8893
+    ep 400/600  acc=0.8861
+    ep 600/600  acc=0.8876
+    acc=0.8876 ECE=0.3134 params=6722  guard=not_requested  [171.4s]
+[rq3m] (31/48) rq3m_mnv3_btl_softmax_r16_seed42  [mobilenetv3_small level L btl r16 softmax seed42]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-softmax_seed42.pt
+    T=0.6184  affine native=(1.0000, 0.0000)  refit=(7.1549, -12.4381)
+    ep 200/600  acc=0.8951
+    ep 400/600  acc=0.8965
+    ep 600/600  acc=0.8980
+    acc=0.8980 ECE=0.1047 params=6928  guard=exact  [172.0s]
+[rq3m] (32/48) rq3m_mnv3_lora_softmax_r10_seed42  [mobilenetv3_small level L lora r10 softmax seed42]
+    training…
+    T=0.6481  affine native=(1.0000, 0.0000)  refit=(6.2374, -13.0776)
+    ep 200/600  acc=0.8847
+    ep 400/600  acc=0.8826
+    ep 600/600  acc=0.8829
+    acc=0.8829 ECE=0.1080 params=6720  guard=not_requested  [169.2s]
+[rq3m] (33/48) rq3m_mnv3_btl_softmax_r16_seed43  [mobilenetv3_small level L btl r16 softmax seed43]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-softmax_seed43.pt
+    T=0.5943  affine native=(1.0000, 0.0000)  refit=(7.5055, -12.2295)
+    ep 200/600  acc=0.9073
+    ep 400/600  acc=0.9057
+    ep 600/600  acc=0.9058
+    acc=0.9058 ECE=0.1172 params=6928  guard=exact  [170.4s]
+[rq3m] (34/48) rq3m_mnv3_lora_softmax_r10_seed43  [mobilenetv3_small level L lora r10 softmax seed43]
+    training…
+    T=0.5981  affine native=(1.0000, 0.0000)  refit=(6.5986, -12.9686)
+    ep 200/600  acc=0.8970
+    ep 400/600  acc=0.8952
+    ep 600/600  acc=0.8968
+    acc=0.8968 ECE=0.1277 params=6720  guard=not_requested  [169.8s]
+[rq3m] (35/48) rq3m_mnv3_btl_softmax_r16_seed44  [mobilenetv3_small level L btl r16 softmax seed44]
+    reused Step 10 checkpoint: checkpoints/model_phase2_grid_mini_5shot_mbnet_parallel_prototype-softmax_seed44.pt
+    T=0.6204  affine native=(1.0000, 0.0000)  refit=(7.2529, -12.3900)
+    ep 200/600  acc=0.8989
+    ep 400/600  acc=0.8990
+    ep 600/600  acc=0.8991
+    acc=0.8991 ECE=0.1100 params=6928  guard=exact  [172.0s]
+[rq3m] (36/48) rq3m_mnv3_lora_softmax_r10_seed44  [mobilenetv3_small level L lora r10 softmax seed44]
+    training…
+    T=0.6569  affine native=(1.0000, 0.0000)  refit=(6.2874, -13.0123)
+    ep 200/600  acc=0.8817
+    ep 400/600  acc=0.8804
+    ep 600/600  acc=0.8806
+    acc=0.8806 ECE=0.1062 params=6720  guard=not_requested  [170.5s]
+[rq3m] (37/48) rq3m_mnv3_btl_evidential_r22_seed42  [mobilenetv3_small level H btl r22 evidential seed42]
+    training…
+    T=0.5686  affine native=(3.5407, -6.1404)  refit=(12.9703, -21.5220)
+    ep 200/600  acc=0.9050
+    ep 400/600  acc=0.9047
+    ep 600/600  acc=0.9058
+    acc=0.9058 ECE=0.3166 params=9450  guard=not_requested  [173.6s]
+[rq3m] (38/48) rq3m_mnv3_lora_evidential_r14_seed42  [mobilenetv3_small level H lora r14 evidential seed42]
+    training…
+    T=0.6120  affine native=(3.3918, -6.2745)  refit=(12.2475, -18.9576)
+    ep 200/600  acc=0.8881
+    ep 400/600  acc=0.8846
+    ep 600/600  acc=0.8854
+    acc=0.8854 ECE=0.3099 params=9410  guard=not_requested  [174.8s]
+[rq3m] (39/48) rq3m_mnv3_btl_evidential_r22_seed43  [mobilenetv3_small level H btl r22 evidential seed43]
+    training…
+    T=0.5685  affine native=(3.5463, -6.1732)  refit=(12.9113, -20.3726)
+    ep 200/600  acc=0.9001
+    ep 400/600  acc=0.9005
+    ep 600/600  acc=0.9007
+    acc=0.9007 ECE=0.3171 params=9450  guard=not_requested  [182.2s]
+[rq3m] (40/48) rq3m_mnv3_lora_evidential_r14_seed43  [mobilenetv3_small level H lora r14 evidential seed43]
+    training…
+    T=0.6393  affine native=(3.3887, -6.3047)  refit=(12.2779, -19.3066)
+    ep 200/600  acc=0.8870
+    ep 400/600  acc=0.8847
+    ep 600/600  acc=0.8861
+    acc=0.8861 ECE=0.3088 params=9410  guard=not_requested  [172.1s]
+[rq3m] (41/48) rq3m_mnv3_btl_evidential_r22_seed44  [mobilenetv3_small level H btl r22 evidential seed44]
+    training…
+    T=0.5703  affine native=(3.5319, -6.1541)  refit=(12.9988, -20.9798)
+    ep 200/600  acc=0.9015
+    ep 400/600  acc=0.9022
+    ep 600/600  acc=0.9026
+    acc=0.9026 ECE=0.3158 params=9450  guard=not_requested  [172.0s]
+[rq3m] (42/48) rq3m_mnv3_lora_evidential_r14_seed44  [mobilenetv3_small level H lora r14 evidential seed44]
+    training…
+    T=0.6294  affine native=(3.3821, -6.3147)  refit=(12.2086, -18.1989)
+    ep 200/600  acc=0.8871
+    ep 400/600  acc=0.8844
+    ep 600/600  acc=0.8861
+    acc=0.8861 ECE=0.3104 params=9410  guard=not_requested  [169.9s]
+[rq3m] (43/48) rq3m_mnv3_btl_softmax_r22_seed42  [mobilenetv3_small level H btl r22 softmax seed42]
+    training…
+    T=0.5818  affine native=(1.0000, 0.0000)  refit=(6.8940, -12.7834)
+    ep 200/600  acc=0.9035
+    ep 400/600  acc=0.9028
+    ep 600/600  acc=0.9041
+    acc=0.9041 ECE=0.1172 params=9448  guard=not_requested  [167.7s]
+[rq3m] (44/48) rq3m_mnv3_lora_softmax_r14_seed42  [mobilenetv3_small level H lora r14 softmax seed42]
+    training…
+    T=0.6514  affine native=(1.0000, 0.0000)  refit=(6.1570, -13.0825)
+    ep 200/600  acc=0.8837
+    ep 400/600  acc=0.8818
+    ep 600/600  acc=0.8817
+    acc=0.8817 ECE=0.1023 params=9408  guard=not_requested  [164.9s]
+[rq3m] (45/48) rq3m_mnv3_btl_softmax_r22_seed43  [mobilenetv3_small level H btl r22 softmax seed43]
+    training…
+    T=0.6016  affine native=(1.0000, 0.0000)  refit=(7.1770, -12.6023)
+    ep 200/600  acc=0.8978
+    ep 400/600  acc=0.8990
+    ep 600/600  acc=0.8993
+    acc=0.8993 ECE=0.1116 params=9448  guard=not_requested  [168.6s]
+[rq3m] (46/48) rq3m_mnv3_lora_softmax_r14_seed43  [mobilenetv3_small level H lora r14 softmax seed43]
+    training…
+    T=0.6693  affine native=(1.0000, 0.0000)  refit=(6.0492, -13.0670)
+    ep 200/600  acc=0.8737
+    ep 400/600  acc=0.8745
+    ep 600/600  acc=0.8738
+    acc=0.8738 ECE=0.0907 params=9408  guard=not_requested  [166.3s]
+[rq3m] (47/48) rq3m_mnv3_btl_softmax_r22_seed44  [mobilenetv3_small level H btl r22 softmax seed44]
+    training…
+    T=0.5991  affine native=(1.0000, 0.0000)  refit=(6.9003, -12.7820)
+    ep 200/600  acc=0.8981
+    ep 400/600  acc=0.8972
+    ep 600/600  acc=0.8974
+    acc=0.8974 ECE=0.1121 params=9448  guard=not_requested  [165.1s]
+[rq3m] (48/48) rq3m_mnv3_lora_softmax_r14_seed44  [mobilenetv3_small level H lora r14 softmax seed44]
+    training…
+    T=0.6531  affine native=(1.0000, 0.0000)  refit=(6.1358, -13.0743)
+    ep 200/600  acc=0.8830
+    ep 400/600  acc=0.8807
+    ep 600/600  acc=0.8807
+    acc=0.8807 ECE=0.1020 params=9408  guard=not_requested  [166.3s]
+[rq3m] done: {'ok': 48, 'skipped_done': 0, 'trained': 30, 'reused_grid': 18, 'error': 0, 'not_run': 0}
+
+==============================================================================
+RQ3 MATCHED-BUDGET — RESULT
+==============================================================================
+protocol : mini_imagenet 5-shot, 5-way, frozen 600 TEST-seed episodes, seeds [42, 43, 44], both head interpretations trained separately
+signs    : every delta is LoRA arm minus bottleneck arm
+coverage : 48/48 cells evaluated (30/30 new-arm runs)
+
+--- per (backbone, level, head): matched arms ---
+  backbone/level/head                    btl r lora r  mism%  ECE btl  ECE lora     ΔECE      2σ  sig
+  mobilenetv3_small/H/evidential            22     14   0.43   0.3165    0.3097  -0.0068  0.0015  yes
+  mobilenetv3_small/H/softmax               22     14   0.43   0.1137    0.0983  -0.0153  0.0103  yes
+  mobilenetv3_small/L/evidential            16     10   3.09   0.3177    0.3121  -0.0056  0.0017  yes
+  mobilenetv3_small/L/softmax               16     10   3.10   0.1107    0.1140  +0.0033  0.0191   no
+  resnet18/H/evidential                     16     41   0.81   0.2938    0.4109  +0.1170  0.0520  yes
+  resnet18/H/softmax                        16     41   0.81   0.0850    0.1728  +0.0878  0.0118  yes
+  resnet18/L/evidential                      6     16   1.76   0.2973    0.4049  +0.1076  0.0186  yes
+  resnet18/L/softmax                         6     16   1.76   0.0827    0.1930  +0.1103  0.0122  yes
+
+--- per (backbone x head): matched vs unmatched, and which rule fires ---
+  cell                                ΔECE unm  ΔECE mat  collapse      2σ   rule fired                        
+  mobilenetv3_small/evidential         -0.0124   -0.0062      0.50  0.0016   backbone_intrinsic                
+  mobilenetv3_small/softmax            -0.0152   -0.0060      0.61  0.0147   —                                 
+  resnet18/evidential                  +0.1111   +0.1123      1.01  0.0353   backbone_intrinsic                
+  resnet18/softmax                     +0.1080   +0.0991      0.92  0.0120   backbone_intrinsic                
+
+  rule counts (need >= 3 of 4; 4 cell(s) present): budget=0, architecture=0, backbone_intrinsic=3
+
+>>> VERDICT: BACKBONE_INTRINSIC
+    H3.2-alt — the original per-backbone signs persist at matched budget: ΔECE_matched retains its unmatched sign per backbone (+ on ResNet-18, − on MobileNetV3) with |ΔECE| > 2σ, in >= 3 of 4 cells.
+
+--- secondary outcomes (control, and a live test of H3.1) ---
+  accuracy     bottleneck wins 8/8 matched comparisons (8 beyond 2σ); cells whose gap collapsed: none
+  auroc_near   bottleneck wins 8/8 matched comparisons (8 beyond 2σ); cells whose gap collapsed: none
+  -> bottleneck still wins accuracy in every matched comparison — the architecture half of RQ3 survives budget equalisation.
+
+--- acceptance criteria (§7) ---
+  [PASS] all_runs_complete
+  [PASS] budget_matched_everywhere
+  [PASS] control_guard_passed
+  [PASS] parameter_assertion_passed
+  [PASS] reused_arms_reproduce_grid
+  [PASS] secondary_accuracy_reported
+  [PASS] verdict_named
+==============================================================================
+
+wrote /kaggle/working/thesis/results/rq3_matched/verdict.json
