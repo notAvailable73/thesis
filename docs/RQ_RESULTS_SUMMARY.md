@@ -9,8 +9,8 @@ experiment, is retired: that experiment ran on 2026-08-27 and its result is in �
 **Status:** current as of 2026-08-27. Target framing: **masters defence** (not conference submission) —
 this affects which questions are load-bearing; see §2.
 
-**Numbering warning.** This document uses a **four-RQ** structure that supersedes the five-RQ draft in
-`docs/NEW_RQS.md`. The mapping is given in §2. Original proposal questions are labelled **Orig-RQ1…4**
+**Numbering warning.** This document uses a **four-RQ** structure that supersedes an earlier five-RQ draft
+(removed from the repo 2026-09-14; recoverable from git history). The mapping is given in §2. Original proposal questions are labelled **Orig-RQ1…4**
 throughout and appear only in the Appendix.
 
 ---
@@ -59,7 +59,9 @@ logits, read one of two ways:
   Probability = `α/S`. Uncertainty = *vacuity* = `K/S`, K = 5.
 
 The evidential mapping adds exactly **2 trainable parameters** (`scale`, `bias`) — hence counts like 31,746
-against softmax's 31,744. Frozen at (2, −6) across the base grid; RQ4 refits them.
+against softmax's 31,744. Initialised at (2, −6) and learned jointly with the adapter across the base grid
+(trained scale 1.5–4.5, bias −9.3 to −5.6); RQ4 refits them post hoc. *(Corrected 2026-09-14 — previously
+described as frozen.)*
 
 ### 1.2 Protocol
 
@@ -498,12 +500,12 @@ the NeurIPS 2024 Bayesian-PEFT paper above. Both prior open items closed.
 
 **Relation to RQ1.** RQ1 identifies head interpretation as the dominant source of calibration variance and
 the evidential head as the poorly-calibrated arm. RQ4 tests whether that deficit is *intrinsic to the head*
-or an artefact of a fixed default parameterisation.
+or an artefact of the operating point its affine reaches during training.
 
 **Sub-questions.** RQ4a: magnitude and consistency of the ECE change? RQ4b: is vacuity's sample ordering
 preserved?
 
-**Hypotheses.** H4.1 refitting reduces ECE relative to the fixed default. H4.2 OOD ranking is preserved
+**Hypotheses.** H4.1 refitting reduces ECE relative to the jointly-trained affine. H4.2 OOD ranking is preserved
 within a pre-specified tolerance.
 
 **Theoretical motivation for RQ4b.** The transform is monotone in each individual logit, which might suggest
@@ -520,8 +522,8 @@ tolerance of Δ ≥ −0.005, and Spearman ρ between pre- and post-refit vacuit
 **ANSWERED — mostly the good outcome.**
 
 - ECE improved in **48/48 evidential cells (100%)**, mean **−0.137 absolute** (many cells drop from
-  0.25–0.44 to 0.10–0.31). Refit values cluster around scale 7–14 vs. the frozen (2, −6), implying the
-  default sat well off the optimum throughout — and a much larger gain than the flat ~0.285–0.296 ECE
+  0.25–0.44 to 0.10–0.31). Refit values cluster around scale 7–14 vs. jointly-trained values of 1.5–4.5, implying
+  the trained operating point sat well off the NLL optimum throughout — and a much larger gain than the flat ~0.285–0.296 ECE
   surface an earlier single-configuration sweep had found.
 - OOD-AUROC preserved (Δ ≥ −0.005) in **150/192 comparisons (78%)**; mean ΔAUROC ≈ +0.004 (flat).
 - `reordering_ever_observed = true` — reordering does occur, confirming the affine is not automatically
@@ -749,8 +751,6 @@ corrections are reported.**
 
 ## Sources
 
-- [docs/NEW_RQS.md](NEW_RQS.md) — the earlier five-RQ draft this document supersedes; retains the full
-  original novelty-check narrative.
 - [docs/RESULTS_MASTER.md](RESULTS_MASTER.md) — full grid tables (accuracy, ECE, Brier, OOD AUROC/FPR@95,
   parameter efficiency, Pareto) and §4 "Positioning against the state of the art."
 - `results/mvt_results.json` (120 runs, 2026-08-06) — the aggregated grid every number here traces to.

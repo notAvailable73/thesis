@@ -5,40 +5,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 A masters thesis codebase: **B-PEFT** (Bayesian Parameter-Efficient Fine-Tuning for Reliable Few-Shot Vision with
-Lightweight CNN Backbones). It trains a frozen CNN backbone (ResNet-18) + a small trainable adapter (Bottleneck /
-LoRA / BitFit / Full-FT / Linear-Probe) + a classification head (Softmax, Evidential Dirichlet, or a parameter-free
-Prototype head), evaluated on few-shot episodes (CIFAR-FS, 5-way k-shot) for accuracy, calibration (ECE, Brier), and
-OOD detection (SVHN far-OOD, CIFAR-100-heldout / TinyImageNet near-OOD).
+Lightweight CNN Backbones). It trains a frozen ImageNet-pretrained CNN backbone (ResNet-18 or MobileNetV3-Small) + a
+small trainable adapter (parallel Bottleneck / LoRA; Full-FT and Linear-Probe as baselines; BitFit built but not in
+the grid) + a parameter-free Prototype head read as softmax or Evidential Dirichlet, evaluated on 5-way {1,5}-shot
+episodes (CIFAR-FS, MiniImageNet) for accuracy, calibration (ECE, Brier), and OOD detection (SVHN / Gaussian far-OOD,
+CIFAR-100- or MiniImageNet-heldout / TinyImageNet near-OOD).
 
-The four research questions (proposal.txt §4) that every experiment ultimately serves:
+**Current state (2026-09-14): all experiments are done; the remaining work is thesis writing and the defence.** The
+thesis uses a **new four-RQ framing** that replaced the proposal's original questions after a literature check
+found those had close precedent. Canonical statement: `docs/RQ_SUPERVISOR_REPORT.md`.
 
-- **RQ1**: adapter placement (serial vs parallel) — accuracy vs. parameter count tradeoff.
-- **RQ2**: does an Evidential Dirichlet head calibrate better than softmax under <500 trainable params?
-- **RQ3**: does a Bayesian loss prior improve near-OOD detection in low-data regimes?
-- **RQ4**: latency vs. uncertainty-quality Pareto frontier on edge hardware.
+- **RQ1** — how is variance in accuracy / calibration / OOD distributed across design axes? Shot count drives
+  accuracy; head type drives calibration.
+- **RQ2** — is OOD detection caused by the training objective or the scoring rule? The scoring rule, decisively.
+- **RQ3** — does accuracy follow adapter architecture and calibration follow parameter budget? Accuracy follows
+  architecture; calibration follows the *backbone* (pre-registered matched-budget experiment). Strongest claim.
+- **RQ4** — can the evidential head's calibration be fixed post-hoc without breaking OOD ranking? Yes, 48/48 cells.
+
+The proposal's original questions (placement, evidential calibration, Bayesian near-OOD, latency Pareto) are still
+answered and reported as **Orig-RQ1…4**. `progress.txt` and `step_writeups/step1-11.txt` use that *original*
+numbering — never mix the two.
 
 Git Repo link - https://github.com/notAvailable73/thesis.git
 
 ## Required reading before doing any work here
 
-This project tracks its own state in plain-text files at the repo root — read them in this order before touching
-code, and re-read `progress.txt` any time you're unsure what's already done:
+Read these before touching code or thesis text, and re-read `progress.txt` any time you're unsure what's done:
 
-1. **`instructions.txt`** (untracked, meant for whoever/whatever picks up the repo next) — current task, gotchas,
-   quick commands. Read this first, always.
+0. **`docs/guide/`** — plain-language map of the whole project (2026-09-14): research story, results with
+   safe wording, every experiment's files and checks (the only write-up of the Phase A/B new-RQ runs), and
+   known problems in the other docs (`05_problems_and_open_work.md` — e.g. do not quote "163×").
+1. **`docs/RQ_SUPERVISOR_REPORT.md`** — the four RQs, their answers, novelty assessment, limitations, and a
+   traceability table mapping every number to a result file.
 2. **`thesis_implementation_instructions.txt`** — the _process_ rule for this repo: implementation choices must be
    justified against the paper summaries in `PAPER SUMMARIES/*.txt` (pros/cons/fit reasoning), not implemented from
    general training-data knowledge. If a paper summary and general knowledge conflict, defer to the summary and flag
    it. Do not invent hyperparameters/results not stated in a summary.
-3. **`progress.txt`** — canonical status tracker: one section per step (13 steps across 6 phases), checkboxes, exit
-   criteria, and a running decisions log at the bottom. This is the single source of truth for "what's done" —
-   trust it over README.md, which is stale (describes a `src.train`/`src.evaluate` module layout that no longer
-   exists; the real entry points are `scripts/train.py` / `scripts/evaluate.py`).
-4. **`plan.txt`** / **`proposal.txt`** / **`implementation.txt`** — proposal → phased plan → step-by-step build spec,
-   in that order of increasing detail. `implementation.txt` has the exact spec (file list, config knobs, exit
-   criteria) for whichever step is next.
-5. **`step_writeups/stepN.txt`** — the write-up for the most recently closed step; explains _why_ results came out
-   the way they did, which matters for interpreting the next step's results.
+3. **`progress.txt`** — status tracker (13 original steps + the RQ3 matched-budget experiment) with a running
+   decisions log at the bottom. Single source of truth for "what's done". Uses Orig-RQ numbering.
+4. **`docs/RQ_RESULTS_SUMMARY.md`** (full evidence per RQ), **`docs/RESULTS_MASTER.md`** (all 120-run grid
+   tables — generated; edit `docs/RESULTS_MASTER_template.md` and run `scripts/make_results_master.py`),
+   **`docs/RQ3_MATCHED_BUDGET_PLAN.md`** (RQ3 pre-registration — do not edit §1–6).
+5. **Defence material**: `docs/DEFENCE_SLIDE_PLAN.md` (slide-by-slide plan), `docs/DEFENCE_BRIEF.md` ("CNNs are
+   outdated" objection; uses Orig-RQ numbering), `docs/CITATION_AUDIT.md` + `docs/refs.bib`.
+6. **`step_writeups/`** — dated, historical per-step write-ups explaining _why_ results came out as they did.
+   Headline claims in the Step 4.5–9 write-ups were later superseded by the grid (see corrections below); the
+   write-ups are kept as a record, not rewritten. `proposal.txt` is the original proposal.
+
+Real entry points are `scripts/train.py` / `scripts/evaluate.py`; the RQ analyses are `scripts/rq_core.py`,
+`scripts/rq_drivers.py`, `scripts/rq_aggregate.py`, `scripts/rq3_matched.py`, `scripts/rq5_sweep.py`.
 
 Do not treat this as a normal library-consumer codebase: correctness here means "matches the frozen protocol and is
 honestly reported," not just "code runs." Two conventions enforce that:
@@ -115,17 +130,13 @@ in a config makes it a true no-op (no init, no files, no console noise) — this
 
 ## Known state of the science (don't re-litigate without new evidence)
 
-Per `progress.txt`: on real CIFAR-FS (Bertinetto split, 600 test episodes, 5-way 5-shot), the evidential head's
-uncertainty (vacuity) decisively beats every softmax-based confidence score (plain max-prob, temperature-scaled
-max-prob) on far-OOD (SVHN) and both near-OOD sets (CIFAR-100-heldout, TinyImageNet) tested, by +0.076 to +0.141
-AUROC — but is still ~7x worse calibrated (ECE) than temperature-scaled softmax, and a real VAL-only hyperparameter
-sweep confirmed that calibration gap doesn't close easily (the ECE surface is flat ~0.285-0.296). This is the
-Tier-3 verdict from `scripts/step45_verdict.py` / `step_writeups/step4_5.txt`. Treat this as the current baseline
-any new PEFT method (LoRA, BitFit, Full-FT, Linear-Probe — Step 5) is compared against, not something to reprove
-from scratch.
+Answers to all four RQs are in `docs/RQ_SUPERVISOR_REPORT.md` §1. At grid scale (Step 10, 120 runs): evidential
+vacuity beats softmax-probability scores (MSP, TS-MSP) in 37–38/40 cells on every OOD pool, but the evidential head
+is worse calibrated than plain softmax in 20/20 matched pairs (Orig-RQ2 is a clean negative). Two earlier claims
+were overturned by the project's own follow-up experiments:
 
-**Correction (2026-08-06, superseding the paragraph above's energy comparison — see `progress.txt`'s Step 10 entry
-and `docs/RESULTS_MASTER.md` Table 5 / RQ3):** the Step 4.5 finding that evidential vacuity is roughly on par with
+**Correction (2026-08-06) — see `progress.txt`'s Step 10 entry and `docs/RESULTS_MASTER.md` Table 5 / RQ3:** the
+Step 4.5 finding that evidential vacuity is roughly on par with
 the non-probabilistic energy score (winning far-OOD and CIFAR-100-near, losing only TinyImageNet-near) was a
 single-configuration result and does **not** generalise. The Step 10 MVT grid (120 runs, 40 aggregated
 `(dataset, shot, backbone, adapter, head)` cells) found vacuity beats energy in only 10/40 far-OOD and 14/40
@@ -137,7 +148,7 @@ softmax-probability scores, but a well-chosen logit-space score (energy) still b
 
 **Correction (2026-08-27) — RQ3's causal claim changed; see `progress.txt`'s "RQ3 matched-budget headline"
 and `docs/RQ_RESULTS_SUMMARY.md` §5.1.** Note the numbering: this is the *new* four-RQ RQ3 — adapter
-architecture vs. trainable-parameter budget — not the proposal's RQ3 above. The 16-pair grid evidence showed
+architecture vs. trainable-parameter budget — not Orig-RQ3 (Bayesian prior vs. near-OOD). The 16-pair grid evidence showed
 the accuracy winner (bottleneck) never changing when the parameter-budget ordering reverses between
 backbones, while the calibration winner changed exactly in step with it; that was originally read as
 "calibration follows the larger budget" (H3.2). It was untestable on the grid, because the budget ordering

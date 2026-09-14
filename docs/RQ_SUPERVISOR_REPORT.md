@@ -90,8 +90,11 @@ logits, which are then read in one of two ways:
 - **Evidential (Dirichlet)** — `evidence = softplus(logits x scale + bias)`, `alpha = evidence + 1`,
   `S = sum(alpha)`. Probability = `alpha/S`. Uncertainty = *vacuity* = `K/S`, with K = 5.
 
-The evidential mapping adds exactly **two trainable parameters** (`scale`, `bias`). These are frozen at
-(2, −6) across the main grid; RQ4 is the experiment that refits them.
+The evidential mapping adds exactly **two trainable parameters** (`scale`, `bias`). Across the main grid
+they are initialised at (2, −6) and **learned jointly with the adapter** (`evidence_affine: true`); the
+trained values span scale 1.5–4.5 and bias −9.3 to −5.6 over the 48 evidential checkpoints. RQ4 is the
+experiment that refits them post hoc. *(Corrected 2026-09-14: an earlier version of this report described
+them as frozen at (2, −6).)*
 
 ### 2.2 Protocol
 
@@ -454,7 +457,7 @@ adapter-property-versus-backbone-property.
 
 **Relation to RQ1.** RQ1 identifies head interpretation as the dominant source of calibration variance, and
 the evidential head as the poorly-calibrated arm. RQ4 tests whether that deficit is *intrinsic to the head*
-or merely an artefact of a fixed default parameterisation. It is the remediation half of the thesis's
+or merely an artefact of the operating point its affine reaches during training. It is the remediation half of the thesis's
 overarching question.
 
 **Why the answer is not obvious.** The transform is monotone in each individual logit, which might suggest
@@ -469,8 +472,12 @@ frozen 600-episode test split.
 
 - **ECE improved in 48/48 evidential cells (100%)**, by a mean of **−0.137 absolute** — many cells drop from
   0.25–0.44 down to 0.10–0.31.
-- Refit values cluster around scale 7–14, against the frozen default of (2, −6), implying the default sat
-  well off the optimum throughout.
+- Refit values cluster around scale 7–14 (median 8.3), against jointly-trained values of scale 1.5–4.5
+  (median 2.9), implying that training the affine under the evidential loss left it well off the
+  NLL-optimal operating point throughout.
+- **The refit narrows the gap to softmax but does not close it.** Refitted evidential ECE remains worse
+  than plain softmax in 48/48 cells (mean ratio 2.18×, smallest 1.07×) and worse than temperature-scaled
+  softmax in 48/48 (mean 11.9×, smallest 2.27×) — `results/rq_summary.json` → `rq2_rows`.
 - **OOD-AUROC preserved** (delta at least −0.005) in **150/192 comparisons (78%)**; mean delta-AUROC ≈ +0.004
   (essentially flat).
 - Reordering **does** occur — confirming the affine is not automatically rank-preserving for vacuity — but
@@ -481,10 +488,12 @@ frozen 600-episode test split.
 (worst single-pool drops around −0.03). State this as *"survives in the large majority of cases, with a
 measured minority exception"* — never as *"always."*
 
-**A substantive correction of the project's own earlier finding.** The (2, −6) defaults were not arbitrary:
-they were tuned once on validation episodes in an earlier phase, and that sweep found a *flat* ECE surface
-(approximately 0.285–0.296), which is why they were frozen. The result above shows that the earlier sweep
-was searching the wrong parameter. This is a correction with 48 cells behind it, not a configuration typo.
+**A substantive correction of the project's own earlier finding.** An earlier phase swept the evidential
+*loss* on validation episodes (KL weight × variance term) and found a *flat* ECE surface (approximately
+0.285–0.296), which was read as a calibration ceiling for the head. That sweep never varied the evidence
+affine, which was left to be learned from its (2, −6) initialisation. The result above shows that the
+earlier sweep was searching the wrong parameter. This is a correction with 48 cells behind it, not a
+configuration typo.
 
 ### 6.2 Nearest prior work, and why it is not this
 

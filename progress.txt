@@ -3,7 +3,9 @@ PROGRESS.TXT
 Project:   B-PEFT (Bayesian Parameter-Efficient Fine-Tuning) thesis
 Tracks:    the 13 steps of implementation.txt — one section per step,
            one checkbox per action item, exit criteria at the end.
-Read order: proposal.txt → plan.txt → implementation.txt → this file.
+Read order: docs/RQ_SUPERVISOR_REPORT.md (current RQs) → this file.
+           (plan.txt / implementation.txt removed 2026-09-14 — see the
+           decisions log; recoverable from git history.)
 Status key: [x] DONE   [~] IN PROGRESS   [ ] NOT STARTED
 Updated:   2026-08-27 (RQ3 matched-budget experiment CLOSED — 48 runs,
            verdict `backbone_intrinsic`, see the headline block below and
@@ -2167,6 +2169,49 @@ NOTES / DECISIONS LOG
             module rather than write a parallel aggregator. The verdict is
             rebuildable locally with no GPU from results/rq3_matched/ and
             reproduces the committed verdict.json exactly.
+
+2026-09-14  Repo documentation cleanup. Removed files that were stale or
+            that presented superseded claims/framing as current. All are
+            recoverable from git history (last present at commit 8d706ea).
+            Historical references to them elsewhere in this file, in
+            step_writeups/, and in code comments are left as written.
+            PLANNING / HANDOFF (steps they planned are closed; they still
+            described Step 5/9/10 as the next task): instructions.txt,
+            plan.txt, plan.md, implementation.txt, supervisor_briefing.txt
+            (2026-05-14 meeting), docs/superpowers/ (Step 4.5/6/7 specs and
+            plans), docs/kaggle-step9-dataset.md.
+            SUPERSEDED RQ FRAMING (presented the original proposal RQs as
+            the thesis's questions, or the retired five-RQ draft):
+            docs/NEW_RQS.md, docs/NEW_RQS_TASK_PLAN.md (open citation items
+            carried into docs/CITATION_AUDIT.md §5.3),
+            docs/RQ_DEFENSE_SLIDES.md, docs/SUPERVISOR_MEETING_PREP.md,
+            docs/SUPERVISOR_PRESENTATION_SLIDES.md,
+            docs/SUPERVISOR_PRESENTATION_SPEECH.md (all superseded by
+            docs/RQ_SUPERVISOR_REPORT.md + docs/DEFENCE_SLIDE_PLAN.md), and
+            docs/explainers/ (plain-English Step 5-10 explainers).
+            PRE-DEFENCE ARTEFACTS (numbers from the bug Step 1 fixed):
+            notebooks/demo.ipynb, results/report.txt.
+            DUPLICATE NOTEBOOKS: step10a.ipynb (identical to
+            step10a_cifar_5shot.ipynb), step9-mini.ipynb (earlier run;
+            the completed run is step9-mini(1).ipynb),
+            step4_episodic__By_my__Friend.ipynb (scratch-branch variant).
+            The executed copies step10b/step10c/step11.ipynb replaced their
+            identical-source, output-less twins under the names the
+            write-ups cite: step10b_cifar_1shot.ipynb, step10c_mini.ipynb,
+            step11_efficiency.ipynb.
+            README.md rewritten (it described the pre-defence demo and a
+            module layout that no longer exists). CLAUDE.md's RQ list and
+            required-reading list updated to the four-RQ framing.
+            ADDED docs/guide/ (7 files): plain-language project guide.
+            Its 04_experiments.md §4.5-4.6 is the first written record
+            of the Phase A (RQ2 factorial + RQ4 refit) and Phase B (rank
+            sweep) runs, which never got an entry in this file. Its
+            05_problems_and_open_work.md lists problems found while
+            writing it, notably: the RQ2 "163x" ratio is unstable (394x
+            on the balanced subset — rq_aggregate.py's `balanced` flag
+            misses an absent cell), and the RQ4 write-up omits that the
+            refitted evidential head is still worse than plain softmax in
+            48/48 cells.
 
 ================================================================================
 END OF PROGRESS.TXT

@@ -880,7 +880,7 @@ remaining limit of RQ3, and closing it takes more backbones, not more seeds."
 | Outcome | Result |
 |---|---|
 | ECE improved | **48 / 48 cells (100%)**, mean **−0.137 absolute** |
-| Where the default sat | refit values cluster at scale 7–14 vs the frozen (2, −6) |
+| Where the trained head sat | refit values cluster at scale 7–14 vs jointly-trained 1.5–4.5 (init 2, −6) |
 | OOD ranking preserved (Δ ≥ −0.005) | **150 / 192 comparisons (78%)**, mean ΔAUROC +0.004 |
 | Worst-case rank correlation | Spearman ρ = **0.921** |
 

@@ -775,7 +775,7 @@ Honest gaps, in the order a reviewer would raise them:
 
 ## 5. Limitations that apply to every number in this document
 
-1. **Frozen recipe.** All 120 cells use one training recipe — LR 5e-3, LoRA rank 16, `kl_weight_max` 0.1, evidence affine (scale 2, bias −6) — VAL-tuned once on ResNet-18 × CIFAR-FS × 5-shot in Step 4.5 and carried unchanged across two backbones, two datasets and two shot regimes it was never re-tuned for. The grid answers *"how do these axes compare under one fixed recipe"*, not *"what is the best achievable number per cell"*. This was a deliberate design decision (`plan.md` §3) so that all 40 configurations remain a controlled comparison rather than 40 independently-tuned numbers.
+1. **Frozen recipe.** All 120 cells use one training recipe — LR 5e-3, LoRA rank 16, `kl_weight_max` 0.1, evidence affine (scale 2, bias −6) — VAL-tuned once on ResNet-18 × CIFAR-FS × 5-shot in Step 4.5 and carried unchanged across two backbones, two datasets and two shot regimes it was never re-tuned for. The grid answers *"how do these axes compare under one fixed recipe"*, not *"what is the best achievable number per cell"*. This was a deliberate design decision (`step_writeups/step10.txt`) so that all 40 configurations remain a controlled comparison rather than 40 independently-tuned numbers.
 2. **ImageNet-pretraining overlap** (§4.1). Central to any accuracy claim, acute on MiniImageNet.
 3. **Three seeds, and effectively one for the baselines.** Seed spread exceeds 1 pp in only 2 of 40 configurations, but n = 3 is thin for differences under ~1 pp — and for `Full-FT*` and `Linear-Probe*` the seed axis is inert by construction (Table 1 reading notes), so those two rows are single measurements with no variance estimate at all.
 4. **Evidential calibration is not temperature-scalable.** Softmax cells get a post-hoc TS column; evidential cells have no equivalent post-hoc correction in this codebase, so the TS comparison is inherently favourable to softmax. It remains the right comparison — TS is cheap and standard — but the asymmetry should be stated.
@@ -796,7 +796,6 @@ Honest gaps, in the order a reviewer would raise them:
 | Master tables, LaTeX + PNG | `results/mvt_table_{accuracy,calibration,ood_auroc}.{tex,png}` |
 | 16 reliability / OOD-histogram plots | `results/grid_plots/` + `_manifest.json` |
 | Step 10 write-up | `step_writeups/step10.txt` |
-| Step 10 explainer | `docs/explainers/step10.md` |
 | Pre-defence brief ("isn't a CNN backdated?") | `docs/DEFENCE_BRIEF.md` |
 | Step 11 efficiency measurement (params/FLOPs/latency/memory) | `results/efficiency_table.json` |
 | Step 11 Pareto-frontier membership under every axis variant | `results/pareto_frontier.json` |
