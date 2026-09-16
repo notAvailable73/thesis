@@ -1,4 +1,4 @@
-# B-PEFT — Thesis Defence Deck (25 slides + references)
+# B-PEFT — Thesis Defence Deck (23 slides + references)
 
 **Official thesis title (registered — do not alter):** *Bayesian Parameter-Efficient Fine-Tuning
 (B-PEFT) for Reliable Few-Shot Vision with Lightweight CNN Backbones*
@@ -8,7 +8,7 @@ design choices govern which aspects of reliability?*
 
 > The official title stays. The subtitle exists because the title names the **method family** while the
 > contribution is the **attribution study**. If you are asked why "Bayesian" is in the title when energy
-> outperforms vacuity as an OOD ranker, the answer is Slide 20 and Slide 24 — the evidential
+> outperforms vacuity as an OOD ranker, the answer is Slide 18 and Slide 22 — the evidential
 > formulation is what gives the model an explicit uncertainty representation to *measure*, and RQ2 is
 > the experiment that separates the objective from the score. See the "Bayesian" briefing box below.
 
@@ -17,25 +17,40 @@ put that on the slide and nothing more. **SAY** is your spoken line; it is not o
 **VISUAL** names a figure that already exists in this repo. Total speaking time ≈ 25 minutes,
 leaving room for questions.
 
-**Timing:** the 25 content slides sum to **~28.5 min** as written (Slide 21 is delivered as **21A + 21B**,
-which is one numbered slide's worth of story across two physical slides). References (2 slides) and
-backups B1–B17 are **not** counted in the 25 and are never shown unprompted.
+**Timing:** stated per-slide times sum to **~30 min** as scripted (Slide 19 is delivered as
+**19A + 19B**, one numbered slide's worth of story across two physical slides). Treat that as a floor:
+several slides carry disclosure content added after a fact-check pass, and dense boxes read slower than
+their word count suggests. **Budget 32–35 min for a live run-through and adjust from there** — do not
+walk in assuming 25–28. References (2 slides) are **not** counted.
+
+**This is a single self-contained deck — no backup slides.** Every number needed to defend a claim is
+either on the slide that makes it, in that slide's SAY line, or in the Q&A crib sheet below (presenter
+notes, not projected slides). Nothing lives only in a slide the audience never sees.
 
 **Fact-checked 2026-09-14 against `docs/guide/`** (the post-experiment project guide, files 01–10) plus
 `RESULTS_MASTER.md`, `DEFENCE_BRIEF.md`, `RQ_SUPERVISOR_REPORT.md` and `refs.bib`. Every figure on every
 slide traces to one of those. Where the guide's corrections list (A1–A8, C1–C15) contradicted an earlier
 version of this deck, **the guide wins** and the correction is stated on the slide rather than dropped.
 
-**If your slot is 20–25 minutes, trim in this order** — never cut Slides 2, 15, 21A/21B or 24:
+**Updated 2026-09-15 — coverage completed and interactions computed.** The 21 Phase A checkpoints that
+were missing have been trained and scored: coverage is now **120/120**, and all 21 reproduce the
+committed Step 10 grid **exactly** (max absolute difference 0.0, best-epoch match 21/21). RQ1's two-way
+interactions were computed at the same time, with 2000-resample bootstrap intervals. Three things change
+through this deck as a result: RQ2's coverage caveat is **closed**, RQ1's "main effects only" limitation
+is now a **computed result** that corroborates RQ3, and a **new self-correction** surfaced (Slide 22,
+item 5). Source: `results/rq_completion/REPORT.md`; code `scripts/rq_completion.py`.
+
+**If your slot is 20–25 minutes, trim in this order** — never cut Slides 2, 13, 19A/19B or 22:
 
 | Cut | Saves | How |
 |---|---:|---|
-| Slide 7 + 8 → merge into one prior-work slide | ~1.0 min | Keep TSA, BEL and energy; drop Conv-Adapter and BayesAdapter rows |
-| Slide 17 → drop the metrics table, keep protocol rigour | ~0.5 min | The metrics are self-evident from the results slides (and B14 holds the definitions) |
-| Slide 23 → keep only the three-row table | ~0.25 min | Move the Pareto figure to B13 |
-| Slide 6 → fold objectives into Slide 5 | ~0.5 min | Last resort — most departments expect objectives |
+| Slide 6 + 7 → merge into one prior-work slide | ~1.0 min | Keep TSA, BEL and energy; drop Conv-Adapter and BayesAdapter rows |
+| Slide 15 → drop the metrics table, keep protocol rigour | ~0.5 min | The metrics are self-evident from the results slides |
+| Slide 21 → keep only the three-row table | ~0.25 min | Drop the Pareto figure references from the trimmed version |
+| Slide 5 → fold objectives into Slide 4 | ~0.5 min | Last resort — most departments expect objectives |
 
-That lands at **~26 min** with all four load-bearing slides intact.
+That saves ~2.25 min off the scripted total — trim for margin, not to hit a specific number, since live
+delivery already runs longer than the script.
 
 ---
 
@@ -51,21 +66,21 @@ Everything in this deck is in service of that sentence, decomposed into four fin
 | **Accuracy** | shot count, then adapter **architecture** |
 | **Calibration** | **head** interpretation, then **backbone** |
 | **OOD detection** | the **scoring rule** |
-| **Calibration repair** | post-hoc recalibration — ECE improves in **48/48** cells (still short of softmax in 48/48); OOD ranking is preserved in **78%** of comparisons |
+| **Calibration repair** | post-hoc recalibration — ECE improves in **60/60** cells (still short of softmax in 60/60); OOD ranking is preserved in **80%** of comparisons |
 
 ---
 
 **Four rules this deck is built on** (they are what separates a deck that defends *this* thesis from
 one that defends a weaker one):
 
-1. **The centrepiece is Slide 15 (the experimental design), not a results table.** This thesis is a
+1. **The centrepiece is Slide 13 (the experimental design), not a results table.** This thesis is a
    controlled attribution study, not an architecture proposal. Its accuracy was never trying to be
    state of the art. If your headline is an accuracy table, the first question is "so you're behind a
    ViT?" and you have handed them the wrong frame.
 2. **Slide titles are conclusions, not labels.** "RQ3 results" is a label. "Matched budgets point to
    backbone dependence, not parameter count" is a conclusion. Committees read titles even after they
    stop listening.
-3. **Volunteer every weakness before it is found.** Slides 2, 17, 24 exist for this. A negative result
+3. **Volunteer every weakness before it is found.** Slides 2, 15, 22 exist for this. A negative result
    you present yourself is credibility; the same result discovered in Q&A is a wound.
 4. **Claim exactly what the design supports.** The word "proves" appears nowhere in this deck; neither
    does "always", "never", "universally" or "SOTA". Where the design supports only association, the
@@ -130,11 +145,11 @@ Then the scorecard:
 | | Question | What we found |
 |---|---|---|
 | **RQ1** | Which design axis drives which outcome? | Shot count dominates accuracy (**76%** of variance); head type dominates calibration (**83%**); the two axes are close to independent |
-| **RQ2** | Is OOD detection attributable to the training objective or the scoring rule? | The scoring rule — it explains **43.7%** of far-OOD variance against the objective's **0.27%** |
+| **RQ2** | Is OOD detection attributable to the training objective or the scoring rule? | The scoring rule — it explains **42.7%** of far-OOD variance against the objective's **0.17%** |
 | **RQ3** | Does accuracy follow adapter architecture and calibration follow parameter budget? | Accuracy — yes. Calibration was **not** explained by parameter budget; a matched-budget experiment supports **backbone** dependence |
-| **RQ4** | Can the evidential head's calibration be repaired after training without breaking its OOD ranking? | Partly: ECE improved in **48/48** cells and OOD ranking held in **78%** — but it stays worse-calibrated than softmax in **48/48** |
+| **RQ4** | Can the evidential head's calibration be repaired after training without breaking its OOD ranking? | Partly: ECE improved in **60/60** cells and OOD ranking held in **80%** — but it stays worse-calibrated than softmax in **60/60** |
 
-Footer: **189 training runs · 600 frozen test episodes each · 3 seeds · 0 run failures**
+Footer: **189 training runs · 600 frozen test episodes each · 3 seeds**
 
 **SAY:** "Four research questions, four answers — including two where our initial expectation was not
 supported, and I will show you both. One of them was overturned by an experiment we pre-registered
@@ -144,22 +159,29 @@ against ourselves."
 Say instead: "the four research questions were answered, including cases where the initial expectation
 was not supported."
 
-**Source:** `RQ_SUPERVISOR_REPORT.md` §1. Run count = 120 main grid + 48 matched-budget + 21 rank sweep.
+**Source:** `RQ_SUPERVISOR_REPORT.md` §1; `results/rq_completion/REPORT.md` (2026-09-15 coverage
+completion). Run count = 120 main grid + 48 matched-budget + 21 rank sweep. A further 21 grid cells were
+**re-trained** in September to recover lost checkpoints; they reproduce the originals exactly and are not
+counted again.
 
 ---
 
-## Slide 3 — A model that is wrong and confident is worse than one that says "I don't know"
+## Slide 3 — A model that is wrong and confident is worse than one that says "I don't know" — which is why this is a CNN thesis
 
-**Time:** 1.0 min · **Section: A. Problem**
+**Time:** 1.75 min · **Section: A/B. Problem and deployment constraint** · **Merged from two slides,
+and Slide 10 (old Research Questions) was cut outright, to buy back time — Slides 17, 18, 20 and 22 all
+grew a fact-check pass this round.** Also pre-empts the known pre-defence attack: "CNNs are
+outdated in 2026." Deliver that half as a design justification, before anyone asks.
 
 **ON THE SLIDE**
 
 - **Few-shot adaptation at the edge is a real deployment shape.** A device is handed 5 examples of a
-  new class and must work immediately — on hardware with kilobytes of SRAM and often no FPU.
-- **Full fine-tuning is not available there.** 25 support images against 11.7 million parameters
-  overfits, and the compute does not exist on the device anyway.
-- **Parameter-efficient adaptation solves the capacity problem and inherits a reliability problem.**
-  Adapters preserve accuracy. What happens to the *confidence numbers* is largely unreported.
+  new class and must work immediately — on hardware ranging from microcontrollers with kilobytes of
+  SRAM up through phone-class silicon, always tighter on memory and compute than a training-time GPU.
+- **Full fine-tuning is not available there** (25 support images against 11.7M parameters overfits,
+  and the compute does not exist on the device anyway), so parameter-efficient adaptation solves the
+  capacity problem — **and inherits a reliability problem.** Adapters preserve accuracy. What happens
+  to the *confidence numbers* is largely unreported.
 
 Boxed consequence:
 
@@ -167,26 +189,12 @@ Boxed consequence:
 > applications that motivate edge deployment: inspection, triage, screening.
 > **Accuracy alone does not characterise whether such a system is fit to deploy.**
 
-**VISUAL:** two reliability diagrams side by side —
-`results/grid_plots/cifar_fs_5shot_softmax_reliability.png` and `..._evidential_reliability.png`.
-Do **not** explain them yet; you explain them on Slide 19.
+**Why a lightweight CNN family, not a ViT:**
 
-**SAY:** "This thesis is about the sentence in that box. Not about making few-shot models more
-accurate — about finding out what happens to their *honesty* when you shrink them, and which design
-choice is responsible for which part of that."
-
----
-
-## Slide 4 — The deployment target chooses the backbone
-
-**Time:** 0.75 min · **Section: B. Deployment constraint** · **Pre-empts the known pre-defence attack:
-"CNNs are outdated in 2026."** Deliver it as a design justification, before anyone asks.
-
-**ON THE SLIDE** — one message, one table:
-
-> **The deployment regime selects the model family.** MCU-class targets run **32–512 kB SRAM**, under
-> ~1 MB flash, 20–200 MHz, often with no FPU. That budget is what rules out the large-ViT options —
-> before any accuracy argument is made.
+> **The target regime is edge/mobile-class compute — kilobytes to low megabytes of memory, no server
+> GPU — not any single deployment tier.** That regime is what rules the large-ViT options out; it is
+> not a claim that CNNs beat transformers in general, and it is not a claim about where *this thesis's*
+> models were measured.
 
 | Deployed at inference | Parameters | × ours |
 |---|---:|---:|
@@ -196,25 +204,38 @@ choice is responsible for which part of that."
 | ResNet-18 (ours) | 11,700,000 | 4.7× |
 | **MobileNetV3-Small (ours)** | **2,500,000** | — |
 
-One supporting line, small:
+> **The disqualifier is compute, not a specific memory threshold.** At the MCU end of the edge
+> spectrum, a 2025 survey measures a transformer attention block at **~180 ms** versus **~8-12 ms** for
+> CNN inference on the same device — roughly **15–20×** *(TinyDL survey, arXiv:2506.18927)*. **It is
+> their measurement, not ours: this thesis measured on a Kaggle T4 GPU and one CPU thread (Slide 21),
+> not on MCU hardware.** Our own backbone (about 2.5 MB at int8) also sits above the MCU tier's own
+> memory numbers — we target the edge/mobile-class family the MCU argument motivates, not the MCU tier
+> itself, and we say so rather than let the two get conflated.
 
-> In low-data regimes the 2025 literature reports CNNs **matching** ViTs *(arXiv:2510.04794)*, so the
-> usual accuracy argument for a transformer is at its weakest in exactly this regime. **This is not a
-> claim that CNNs are superior to transformers in general.**
+> In low-data regimes CNNs have been reported to **match** ViTs on other vision tasks
+> *(arXiv:2510.04794, a few-shot geometric-estimation study, cited for direction rather than as
+> classification-specific evidence)*, so the usual accuracy argument for a transformer is weaker in
+> exactly this regime. **This is not a claim that CNNs are superior to transformers in general.**
 
-**SAY (rehearse verbatim):** "The backbone choice here follows from the deployment regime, not from a
-claim about CNN superiority. An 86-million-parameter ViT does not fit in one megabyte of flash — that
-is arithmetic, not preference. And in the low-data regime, the accuracy argument for the transformer
-is at its weakest."
+**VISUAL:** two reliability diagrams side by side —
+`results/grid_plots/cifar_fs_5shot_softmax_reliability.png` and `..._evidential_reliability.png`.
+Do **not** explain them yet; you explain them on Slide 17.
 
-**Detail moved to backup (B13)** — the ~180 ms vs ~8–12 ms STM32F746 attention-block comparison
-*(TinyDL survey, arXiv:2506.18927, 2025)*, kept for the question "how much slower, exactly?"
+**SAY:** "This thesis is about the sentence in that box: accuracy alone does not characterise whether a
+system is fit to deploy. Not about making few-shot models more accurate — about what happens to their
+*honesty* when you shrink them, and which design choice is responsible for which part of that. And the
+backbone choice follows from that same deployment regime, not from a claim about CNN superiority: a
+transformer attention block costs roughly fifteen to twenty times more compute than CNN inference on
+comparable edge hardware — that order of magnitude is what rules large ViTs out, not a specific memory
+number. I want to be precise, though: we did not measure on MCU hardware ourselves — our own numbers,
+on Slide 21, are GPU and single-CPU-thread proxies for edge silicon more broadly. And in the low-data
+regime, the accuracy argument for the transformer is at its weakest anyway."
 
 **Source:** `DEFENCE_BRIEF.md` §1, §2, §3.4.
 
 ---
 
-## Slide 5 — Problem statement, challenges and objectives
+## Slide 4 — Problem statement, challenges and objectives
 
 **Time:** 1.25 min
 
@@ -259,7 +280,7 @@ same runs is uncommon — and several of our findings are only visible because w
 
 ---
 
-## Slide 6 — Background: four ideas the rest of the talk assumes
+## Slide 5 — Background: four ideas the rest of the talk assumes
 
 **Time:** 1.0 min · **Section: Background** · **This slide exists because the committee may want to
 test the fundamentals before they engage with the findings. Deliver it briskly — it is groundwork,
@@ -292,11 +313,11 @@ per class: **α = evidence + 1**, **S = Σα**, probability **p = α/S**. The sp
 quantity that makes the evidential head different from softmax, and it is what most of the OOD
 results turn on."
 
-**Full definitions of every metric and statistic used in this deck: backup B14.**
+
 
 ---
 
-## Slide 7 — Prior work I: adapters on frozen CNNs — our closest precedent, and we replicate it
+## Slide 6 — Prior work I: adapters on frozen CNNs — our closest precedent, and we replicate it
 
 **Time:** 1.0 min · **Section: C. Research gap (literature)**
 
@@ -328,7 +349,7 @@ ours, so we cite them for it rather than claiming it. Placement is not what this
 
 ---
 
-## Slide 8 — Three papers report Bayesian calibration working. We locate where it stops working.
+## Slide 7 — Three papers report Bayesian calibration working. We locate where it stops working.
 
 **Time:** 1.0 min
 
@@ -344,7 +365,8 @@ Positioning line:
 
 > All three succeed with capacity we deliberately remove — a trainable backbone, a large adapter, or
 > more shots. We test the corner where all three are absent — frozen backbone, ≤31,744 trainable
-> parameters, true disjoint-class episodes — and calibration **degrades, in 20 of 20 matched pairs**.
+> parameters, true disjoint-class episodes — and calibration **degrades, in 20 of 20 matched pairs**
+> (1.4×–9.1× worse than plain softmax; 5.3×–51× worse than temperature-scaled softmax).
 > Locating that boundary is the contribution; it is not a failure to reproduce them.
 
 **The honest competitor** — say this before anyone else does:
@@ -362,7 +384,7 @@ against the strongest cheap alternative — which is the reason RQ2 exists at al
 
 ---
 
-## Slide 9 — What existing work covers, and the combination we did not find
+## Slide 8 — What existing work covers, and the combination we did not find
 
 **Time:** 0.75 min · **Scope the literature claim carefully — this slide is where over-claiming is
 easiest and costs the most.**
@@ -383,7 +405,7 @@ thinnest part of the map, and it is where RQ2 sits.
 Boxed, scoped exactly this way:
 
 > **We did not find prior work combining these factors under this experimental regime** — a frozen
-> MCU-class CNN, a ≤31,744-parameter adapter, disjoint-class episodic few-shot, with accuracy,
+> edge/mobile-class CNN, a ≤31,744-parameter adapter, disjoint-class episodic few-shot, with accuracy,
 > calibration **and** OOD detection measured on the same runs.
 
 **And the three gaps that are confounds, not missing experiments** — this is the actual argument:
@@ -406,7 +428,7 @@ there is nothing there."
 **Careful — required wording.** Say **"we did not find prior work combining these factors under this
 experimental regime."** Do **not** say "no precedent," "nobody has done this," or "the first."
 The claim is about what these papers foreground and about a non-exhaustive search (limitation 7,
-Slide 24). `RESULTS_MASTER.md` §4.6 states it that way; say it that way.
+Slide 22). `RESULTS_MASTER.md` §4.6 states it that way; say it that way.
 
 **Distinguishing detail, if pressed** — the novelty check is **five independent passes**, logged in
 `RQ_SUPERVISOR_REPORT.md` Appendix C (2026-08-21 initial review; 2026-08-23 independent re-verification,
@@ -425,36 +447,13 @@ supports.
   Adapters* (ECCV 2024) and the NeurIPS 2024 **"Bayesian-PEFT"** paper — both confirmed distinct. The
   name similarity of the latter still needs an explicit differentiation paragraph in the thesis text.
 
-**The full eight-literature coverage matrix is backup B17** — pull it up if someone wants the wider map.
+**A wider eight-literature coverage matrix exists in the underlying reports** (`RESULTS_MASTER.md`
+§4.6) if a deeper written map is wanted after the defence; the four-row comparison above is what to
+defend live.
 
 ---
 
-## Slide 10 — Research questions
-
-**Time:** 1.0 min · **Section: D. Research questions**
-
-**ON THE SLIDE** — the overarching question again at the top (same box as Slide 2), then:
-
-- **RQ1 — Attribution.** How is variance in accuracy, calibration and OOD detection distributed across
-  dataset, shot count, backbone, adapter type and head interpretation?
-  *Role: frames everything else — tells you which axis to look at for which outcome.*
-- **RQ2 — Objective vs score.** Is OOD performance attributable to the **training objective** the model
-  was adapted under, or to the **scoring rule** its outputs are read with — and can the two be separated?
-  *Role: resolves the OOD outcome.*
-- **RQ3 — Architecture vs budget.** Within the adapter axis, does accuracy follow adapter
-  **architecture** while calibration follows trainable-**parameter budget**?
-  *Role: resolves the adapter axis; the question this thesis pushes hardest.*
-- **RQ4 — Remediation.** Can the evidential head be recalibrated **post-hoc** by refitting only two
-  parameters — and does its OOD ranking survive that refit?
-  *Role: turns a diagnosis into a repair.*
-
-**SAY:** "RQ1 is diagnostic — it says which axes matter. RQ2 and RQ3 are adjudication questions: each
-takes two competing explanations that the existing literature cannot separate and builds a design that
-can. RQ4 is remedial. They are in that order on purpose."
-
----
-
-## Slide 11 — The experimental program stayed intact; the questions were refined to match what it can establish
+## Slide 9 — The experimental program stayed intact; the questions were refined to match what it can establish
 
 **Time:** 0.75 min · **Do not skip this. Deliver it before anyone asks.** A committee member holding
 the proposal *will* notice — and the chronology is what makes the answer safe.
@@ -493,7 +492,7 @@ to what — because a balanced factorial can answer that and a pairwise comparis
 dropped to make that work."
 
 **If pressed — "did you change the questions because the results were inconvenient?"** "No, and the
-two negative results are the evidence: they are still here, reported, on this slide and on Slide 24.
+two negative results are the evidence: they are still here, reported, on this slide and on Slide 22.
 If the goal had been convenience, the 0-of-20 calibration result is the first thing that would have
 disappeared."
 
@@ -507,7 +506,7 @@ correctly; fix the report before submission.
 
 ---
 
-## Slide 12 — The system
+## Slide 10 — The system
 
 **Time:** 1.0 min · **Section: E. Method** · **Draw this figure yourself — the repo has no version of it.**
 
@@ -542,7 +541,7 @@ nowhere near the head. Say that plainly and point at the adapter and the evaluat
 
 ---
 
-## Slide 13 — Two adapters — and a parameter-count reversal we did not design
+## Slide 11 — Two adapters — and a parameter-count reversal we did not design
 
 **Time:** 1.0 min · **Worth drawing the two architectures side by side.**
 
@@ -572,7 +571,7 @@ experiment to finish the job."
 
 ---
 
-## Slide 14 — The head is one thing; how you read it is another
+## Slide 12 — The head is one thing; how you read it is another
 
 **Time:** 1.0 min
 
@@ -612,7 +611,7 @@ now lives in exactly **one** function shared by training and evaluation
 
 ---
 
-## Slide 15 — A balanced factorial, not a sequence of comparisons
+## Slide 13 — A balanced factorial, not a sequence of comparisons
 
 **Time:** 1.5 min · **Section: F. Experimental design** · **THE CENTREPIECE OF THE DECK. Give it the
 most visual care; draw it yourself.**
@@ -652,11 +651,11 @@ them, not to argue about which explanation was more plausible."
 
 **If asked early whether one frozen recipe across 40 configurations is fair:** "Deliberate. It makes
 the grid a controlled comparison rather than 40 independently-tuned numbers, and it is stated as a
-limitation on Slide 24."
+limitation on Slide 22."
 
 ---
 
-## Slide 16 — Two in-distribution datasets, five OOD pools
+## Slide 14 — Two in-distribution datasets, five OOD pools
 
 **Time:** 0.75 min
 
@@ -696,7 +695,7 @@ Caveat — **on the slide, not just spoken**:
 
 ---
 
-## Slide 17 — Metrics, protocol and why these numbers can be trusted
+## Slide 15 — Metrics, protocol and why these numbers can be trusted
 
 **Time:** 1.0 min
 
@@ -717,72 +716,87 @@ Four uncertainty scores, **all computed on all runs**: **vacuity** (evidential) 
 Right column — **protocol rigour**:
 
 - **Frozen test episodes.** 600 episodes, seeds fixed in a version-controlled file, identical across
-  every run in the thesis. No test set was ever re-sampled.
+  every run in the thesis. **One disclosed exception:** one cell (`cifar_fs/5shot/mobilenetv3_small/
+  lora/evidential`, seed 42) was originally scored on a 20-episode smoke subset instead of the full
+  600 — caught and re-scored on the full protocol on 2026-09-15 (self-correction 5, Slide 22). No test
+  set was otherwise ever re-sampled.
 - **Selection on VAL only.** A separate 100-episode validation split (seeds 10000–10099). The 600 test
   seeds were never used for any selection decision. *One disclosed exception to "VAL-selected": the grid
   inherits `kl_weight_max` = 0.1, while the Step 4.5 VAL sweep ranked 0.05 first (VAL ECE 0.252 vs
   0.260). The surface is flat and no comparison is confounded, but do not call 0.1 VAL-selected.*
-- **Byte-identical reproducibility.** The 48-run matched-budget experiment re-ran 18 existing grid arms
-  from scratch and reproduced the committed numbers at **max absolute difference 0.0**.
+- **Byte-identical reproducibility, on two separate occasions.** The 48-run matched-budget experiment
+  (August) re-trained 18 existing grid arms from scratch and reproduced the committed numbers at **max
+  absolute difference 0.0**. An independent September session re-trained **21 more** grid cells, on a
+  different machine and session, and also reproduced them at **0.0** — including the early-stopping epoch
+  in 21/21 cases. **39 cells, two occasions, zero drift.**
 - **Pre-registration.** RQ3's decision rule, thresholds and an explicit "inconclusive" outcome were
   written down **before any of the deciding runs existed** (`docs/RQ3_MATCHED_BUDGET_PLAN.md`).
 - **Control guards.** Automated checks that only the intended axis differs between compared configs —
   **0 unaccounted config keys** across all 48 matched-budget runs.
 
 Environment footer: **Kaggle / Colab T4 GPU · episodic meta-training, 100 episodes/epoch, ≤30 epochs,
-early stop patience 5 · LR 5e-3 · seeds 42/43/44**
+early stop patience 5 · LR 5e-3, adapter rank 16 throughout (Full-FT exception: LR 1e-5, wd 1e-4) ·
+5 support + 15 query images/class/episode · no data augmentation · seeds 42/43/44**
 
-**SAY:** "The 18 re-runs reproducing to a maximum absolute difference of *zero* is the number I'd point
-at if you only trust one thing on this slide. It means the second experiment measures the same quantity
-the first one did — across three weeks, a different notebook and a different Kaggle session, which is
-not something you can assume."
+**SAY:** "Two independent re-runs reproducing to a maximum absolute difference of *zero* is the number
+I'd point at if you only trust one thing on this slide — eighteen cells in August, another twenty-one
+in September. Thirty-nine cells, two occasions, three months apart, different notebooks, different
+Kaggle sessions, and every one came back byte-identical. That's not something you can assume; it's
+something we checked twice."
 
-**Full metric and statistic definitions: B14. Full configuration listing: B15.**
+
 
 ---
 
-## Slide 18 — 6,928 trainable parameters match full fine-tuning at 5-shot
+## Slide 16 — A 31,744-parameter adapter matches full fine-tuning of the same backbone
 
-**Time:** 1.0 min · **Section: G. Results**
+**Time:** 1.25 min · **Section: G. Results**
 
 **ON THE SLIDE** — CIFAR-FS, 5-way 5-shot:
 
-| Configuration | Trainable params | Accuracy |
-|---|---:|---:|
-| Parallel bottleneck, ResNet-18 | 31,744 | **91.44%** |
-| Parallel bottleneck, MobileNetV3-Small | **6,928** | 90.74% |
-| Full fine-tuning, ResNet-18 | 11,176,512 | 90.47% |
-| Linear probe (no adaptation) | 0 | 87.41% |
+| Configuration | Trainable params | Accuracy | Episode 95% CI |
+|---|---:|---:|---:|
+| Parallel bottleneck, ResNet-18 | 31,744 | **91.44%** | ±0.51 |
+| Full fine-tuning, ResNet-18 | 11,176,512 | 90.47% | ±0.50 |
+| Parallel bottleneck, MobileNetV3-Small | **6,928** | 90.74% | ±0.52 |
+| Linear probe (no adaptation) | 0 | 87.41% | ±0.56 |
 
-Boxed: **6,928 trainable parameters match the accuracy of retraining 11.18 million — 0.06% of the budget.**
+Boxed: **31,744 trainable parameters (0.28% of the backbone) match full fine-tuning of the same
+ResNet-18.** Full-FT's accuracy is byte-identical across all three seed files — it has no adapter to
+randomly initialise, so it is effectively **one run, not three** (zero seed spread). Against that fixed
+value, all **three** bottleneck seeds independently clear it, even the worst one (91.25% vs 90.47%,
++0.78 pp). A formal paired test isn't possible here — per-episode accuracy arrays aren't retained in the
+result files, only aggregate mean/std/CI — so this across-seed comparison is the honest margin to quote,
+not a quadrature-combined CI (which would assume independence between two arms scored on the same 600
+frozen episodes).
 
-> **Read the comparison correctly — this is on the slide.** Full-FT and Linear-Probe baselines were run
-> **only for ResNet-18 on CIFAR-FS**. Full fine-tuning of MobileNetV3-Small was never run. So row 2 vs
-> row 3 is a **cross-backbone** comparison: a 6,928-parameter adapter on the small backbone against full
-> fine-tuning of the large one. The same-backbone claim is row 1 vs row 3.
+> **The second row is weaker — say so before it's checked.** MobileNetV3-Small's 6,928-parameter adapter
+> is +0.27 pp over the *same* ResNet-18 full-fine-tuning baseline — a **cross-backbone** comparison
+> (full fine-tuning of MobileNetV3-Small was never run), and +0.27 pp sits **inside** the ±0.72 pp
+> combined CI. Claim *matches*, never *beats*, for this row. `RESULTS_MASTER.md` §4.7 claim 5 is
+> explicit; a careful committee member checking the intervals will catch "beats."
 
-**The caveat that belongs on this slide, in small print — volunteer it, do not wait to be asked:**
+**Caveats to volunteer, in small print:**
 
-> **This is the 5-shot result. At 1-shot, full fine-tuning wins by 2.57 pp.** The parameter saving is
-> close to free once there are 25 support images; with 5 it is not. The same asymmetry appears against
-> published methods (backup B6): −1.06 pp at CIFAR-FS 5-shot, but up to −18.2 pp at MiniImageNet
-> 1-shot with the small backbone.
+> **1-shot reverses this.** Full fine-tuning wins by 2.57 pp at 1-shot — the parameter saving is close
+> to free at 25 support images, not at 5. **2. Against published few-shot methods**, the same pattern:
+> −1.06 pp behind a fully meta-trained DINO ViT-S at CIFAR-FS 5-shot (662× fewer parameters), but up to
+> −18.2 pp behind it at MiniImageNet 1-shot with the small backbone — volunteer that number, do not let
+> it be found. Backbone-family-matched, it reverses: +3.56 pp *ahead* of DINO>ProtoNet on a same-size
+> ResNet-50, so the remaining gap to the ViT is a ViT gap, not a parameter-efficiency gap.
 
-**SAY:** "Two readings, and I want to be precise about which is which. The ResNet-18 row exceeds full
-fine-tuning by 0.98 points on the same backbone, which comfortably clears seed noise. The MobileNet row
-is +0.27 points, it is **inside** its own seed spread, and it is measured against full fine-tuning of a
-*different, larger* backbone — we never ran full fine-tuning on MobileNetV3-Small. So the claim there is
-*matches*, not *beats*, and it is a cross-backbone match. Matching full fine-tuning at 0.06% of the
-parameters is the interesting result anyway."
-
-**NEVER SAY "beats"** for the MobileNet row. `RESULTS_MASTER.md` §4.7 claim 5 is explicit, and a
-careful committee member checking the intervals will catch it.
+**SAY:** "Two rows, two different strengths of claim. The ResNet-18 row — same backbone, adapter versus
+full fine-tuning — I can make cleanly: full fine-tuning has zero seed spread, so it's one number, and
+every one of our three seeds beats it, even the worst by three quarters of a point. That's a result. The
+MobileNet row is a cross-backbone comparison sitting inside its own combined confidence interval, so the
+honest word there is *matches*, not *beats* — and matching full fine-tuning at 0.28% of the parameters
+is the interesting result anyway."
 
 ---
 
-## Slide 19 — Shots drive accuracy; the head drives calibration
+## Slide 17 — Shots drive accuracy; the head drives calibration
 
-**Time:** 1.5 min
+**Time:** 1.75 min
 
 **ON THE SLIDE** — make these three findings visually dominant, one line each, largest type on the slide:
 
@@ -797,21 +811,63 @@ careful committee member checking the intervals will catch it.
 > three-quarters of it is explained by whether the episode had 1 or 5 shots.
 
 Then the evidence, kept on the slide in smaller type — η² decomposition, main effects over the
-balanced factorial, **96 per-seed observations** (**95** for near-OOD AUROC: one per-seed value is
-missing — `cifar_fs/5shot/mobilenetv3_small/lora/evidential`, seed 42, TinyImageNet):
+balanced factorial, **96 per-seed observations for every outcome** — the one smoke-run-scored cell
+(self-correction 5, Slide 22) was re-scored on the full 600-episode protocol before any number below was
+computed, so near-OOD AUROC is n=96 like the rest, not the n=95 an earlier pass of this deck reported:
 
 | Outcome | Dataset | Shots | Backbone | Adapter | Head | Residual |
 |---|---:|---:|---:|---:|---:|---:|
-| Accuracy | 1.75% | **76.05%** | 3.92% | 9.14% | 0.19% | 8.95% |
-| ECE | 2.02% | 2.13% | 4.63% | 0.63% | **82.89%** | 7.70% |
-| OOD AUROC (far) | 1.18% | 22.68% | 11.54% | 1.73% | **39.01%** | 23.87% |
-| OOD AUROC (near) | 1.64% | **42.60%** | 0.61% | 21.98% | 20.98% | 11.42% |
+| Accuracy | 1.69% | **76.31%** | 3.82% | 8.98% | 0.16% | 9.04% |
+| ECE | 1.98% | 2.16% | 4.56% | 0.65% | **82.97%** | 7.68% |
+| OOD AUROC (far) | 1.23% | 22.59% | 11.71% | 1.79% | **38.93%** | 23.75% |
+| OOD AUROC (near) | 1.54% | **43.30%** | 0.55% | 21.68% | 21.44% | 11.49% |
 
 One-line consequence, boxed:
 
 > **Accuracy and calibration are governed by near-disjoint axes** — the head explains 83% of calibration
-> variance and 0.19% of accuracy variance. You can choose the head for calibration without paying for
+> variance and 0.16% of accuracy variance. You can choose the head for calibration without paying for
 > it in accuracy.
+
+**Tooling note, disclosed alongside self-correction 5:** the missing near-OOD observation didn't trip an
+automatic balance check before a human found it. `eta_squared()`'s completeness test only inspects cells
+that have *at least one* seed present — a wholly-missing observation is invisible to it, unlike a
+merely under-seeded cell, which it does catch. That's a gap in the tooling, not only in the data.
+`scripts/rq_completion.py` now runs an explicit design-completeness check (`rq2_completeness()`) that
+enumerates the full intended grid instead of trusting that implicit signal.
+
+**Now extended to two-way interactions** (2026-09-15; 2000-resample seed bootstrap). The table above is
+main effects only. Adding the ten pairwise terms absorbs most of what was unexplained:
+
+| Outcome | Residual, main effects only | Residual, + 2-way | Largest interaction | **`backbone:adapter`** |
+|---|---:|---:|---|---:|
+| Accuracy | 9.04% | **1.28%** | `dataset:backbone` 5.37% | 0.77% [0.58, 0.98] |
+| **ECE** | 7.68% | **2.03%** | **`backbone:adapter` 3.23%** | **3.23% [2.49, 4.05]**, p<1e-6 |
+| OOD AUROC (far) | 23.75% | **9.53%** | `dataset:backbone` 9.11% | 0.20% [0.00, 0.75], n.s. |
+| OOD AUROC (near) | 11.49% | **6.21%** | `dataset:backbone` 3.90% | 0.00% [0.00, 0.05], n.s. |
+
+Boxed — **this is the finding, and it is an independent corroboration of RQ3:**
+
+> **On calibration specifically, the backbone × adapter interaction is real and significant** — 3.23%
+> of ECE variance (p < 1e-6), the single largest interaction term for that outcome, and **42% of what
+> main effects had left unexplained**. That is RQ3's result — the adapter's calibration effect depends
+> on which backbone it sits in — arriving independently, from a different method, on the full grid
+> rather than 16 matched pairs.
+>
+> **It is specific to calibration.** On accuracy and both OOD pools the same term is ≈0 and not
+> significant. The interaction that dominates *those* outcomes is **`dataset:backbone`** — which no
+> research question in this thesis asks about, and which we flag rather than interpret. One plausible
+> (untested) mechanism: MiniImageNet's classes are ImageNet-derived and CIFAR-FS's are not, so the two
+> backbones' shared ImageNet pretraining likely transfers unevenly depending which dataset they're
+> adapted to — a specific instance of limitation 1 (pretraining overlap, Slide 22), not a new claim.
+
+**SAY this if you show the interaction table:** "The main-effects table leaves eight to twenty-four
+percent unexplained depending on the outcome. Adding two-way terms absorbs most of it — and on
+calibration, the single biggest term is backbone-by-adapter, three point two percent, p below ten to
+the minus six. That is RQ3's finding falling out of a completely different analysis. I want to be
+equally clear about the negative half: that same term is statistically indistinguishable from zero on
+accuracy and on both OOD pools. The interaction doing the work there is dataset-by-backbone, which none
+of my research questions are about, and I am not going to interpret it beyond reporting it — though my
+best guess is that it's the pretraining-overlap limitation showing up as a number."
 
 **VISUAL:** the two reliability diagrams from Slide 3 — now explained.
 
@@ -823,45 +879,48 @@ dominates there, which is exactly what motivates RQ2 on the next slide."
 back to Guo et al. 2017. We do not claim to have discovered it; what is ours is the formal
 decomposition, in this regime."
 
-**Moved to backup B16 — the ECE/OOD orthogonality analysis:** across all 40 cells the rank correlation
-between ECE and OOD AUROC is *positive* (ρ = +0.433 far, +0.477 near), which naively reads as
-"worse-calibrated configurations detect OOD better." Stratifying by head collapses it to ρ =
-+0.15/+0.20 (evidential) and +0.26/+0.24 (softmax) — i.e. **once the head is fixed, calibration carries
-little information about OOD detection.** *We did not find prior work reporting this under this
-experimental regime.* Pull B16 up if asked whether calibration and OOD trade off against each other.
+**A second finding, worth its own thirty seconds — ECE and OOD AUROC are close to orthogonal once the
+head is fixed.** Across all 40 cells the rank correlation between ECE and OOD AUROC is *positive*
+(ρ = +0.433 far, +0.477 near), which naively reads as "worse-calibrated configurations detect OOD
+better." Stratifying by head collapses it: ρ = +0.15/+0.20 within evidential, +0.26/+0.24 within
+softmax. **Once the head is fixed, calibration carries little information about OOD detection** — they
+are close to orthogonal outcomes, not a trade-off. *We did not find prior work reporting this under
+this experimental regime.* This is only visible because accuracy, calibration and OOD are measured on
+the same runs — Objective 2 from Slide 4.
 
 ---
 
-## Slide 20 — For OOD detection, the score you read matters far more than the loss you trained with
+## Slide 18 — For OOD detection, the score you read matters far more than the loss you trained with
 
-**Time:** 1.5 min
+**Time:** 1.75 min
 
 **ON THE SLIDE** — first the confound, in one line:
 
 > Every published comparison we found scores evidential models with **vacuity** and softmax models with
 > **MSP**. The objective and the score always move together. We compute **all four scores on all runs**:
-> a clean 2 objectives × 4 scores factorial, **n = 792 comparisons per pool**.
+> a clean 2 objectives × 4 scores factorial, **n = 960 comparisons per pool**, on **all 120 models**.
 
 Then the headline, in large type, as two lines — **the two shares, not their ratio**:
 
-> ### Far-OOD variance explained by the **scoring rule**: **43.7%**
-> ### Far-OOD variance explained by the **training objective**: **0.27%**
+> ### Far-OOD variance explained by the **scoring rule**: **42.7%**
+> ### Far-OOD variance explained by the **training objective**: **0.17%**
 
 The full result, smaller:
 
 | Pool | Scoring rule (η²) | Training objective (η²) |
 |---|---:|---:|
-| Far-OOD | **43.7%** | 0.27% |
-| Near-OOD | **13.0%** | 0.60% |
+| Far-OOD | **42.7%** | 0.17% |
+| Near-OOD | **14.7%** | 0.63% |
 
-> Two to three orders of magnitude, on both pools.
+> Two to three orders of magnitude, on both pools. Design **fully crossed**: 20/20 complete, zero
+> empty objective × score cells.
 
 The concrete version — the same score gives near-identical AUROC whichever objective produced the logits:
 
-| Score | On evidential-trained logits | On softmax-trained logits |
+| Score (far-OOD) | On evidential-trained logits | On softmax-trained logits |
 |---|---:|---:|
-| **Energy** | 0.911 | 0.929 |
-| MSP | ~0.79 | ~0.79 |
+| **Energy** | 0.9185 | 0.9342 |
+| MSP | 0.7993 | 0.8014 |
 
 What this does and does not say, boxed — **put this on the slide**:
 
@@ -869,21 +928,37 @@ What this does and does not say, boxed — **put this on the slide**:
 > performance than the training objective does.
 > **Does not say:** that evidential training is useless. The evidential head is what supplies an
 > explicit uncertainty representation at all, it remains the better *native probabilistic* score
-> (37–38 of 40 cells vs MSP, backup B4), and its inference cost is below our noise floor (Slide 23).
+> (37–38 of 40 cells vs MSP, +0.111 far-OOD / +0.053 near-OOD mean advantage), and its inference cost is
+> below our noise floor (Slide 21). On near-OOD at full coverage the evidential arm is in fact ahead of
+> the softmax arm on every score (e.g. vacuity 0.8347 vs 0.8233) — a small effect, but in its favour.
 
 Small print on the slide — **volunteer both of these:**
 
-> **We quote the two shares, not their ratio.** Earlier drafts reported the ratio as "163×". Because the
-> objective's share is so close to zero, that quotient is unstable: recomputing it without the one cell
-> that is missing an arm (`cifar_fs/5shot/mobilenetv3_small/lora`) moves it to 394× far-OOD and 19×
-> near-OOD. The shares are stable and the conclusion is unchanged, so the shares are what we report.
+> **We quote the two shares, not their ratio — and here is the proof that matters.** Earlier drafts
+> reported the ratio as "163×", computed on 99 of 120 models. Completing the missing 21 moved it to
+> **250×** — the shares barely moved (43.7→42.7, 0.27→0.17), but the quotient jumped 53%, because
+> dividing by a near-zero denominator is unstable by construction. The conclusion never changed. **This
+> is why the deck quotes shares.**
 >
-> **Coverage.** Computed on 99 of 120 recoverable checkpoints; a regression guard confirms 99/99 cells
-> unchanged against the committed metrics. **The 21 missing checkpoints are not a random sample** — all
-> 21 are CIFAR-FS 5-shot adapter models, leaving that slice with 15 of 36. It is also the slice this
-> thesis quotes most often elsewhere. Stated as limitation 8 on Slide 24.
+> **Coverage: now complete.** 120/120 models, **fully crossed**, zero empty cells. The earlier 99/120
+> gap — all 21 in the CIFAR-FS 5-shot slice — was closed on 2026-09-15; all 21 re-trained cells
+> reproduce the committed grid at max absolute difference **0.0**. The unchanged aggregator also still
+> reproduces the committed summary on the original 99 records exactly, so the two analyses are
+> measuring the same quantity.
+>
+> **The 37–38/40 (vs MSP/TS-MSP) and 10/40 far-OOD / 14/40 near-OOD (vs energy) win counts** quoted
+> above and on Slides 9 and 22 come from `results/mvt_results.json`, a separately-tracked dataset that
+> already had all 120 cells present before the 2026-09-15 session — it was **never affected by the
+> 21-cell coverage gap** that hit the RQ1/RQ4 analysis. It **was** touched by the same smoke-run cell,
+> though: that cell's Gaussian-far and TinyImageNet-near vacuity AUROC are still averaged over 2 of its
+> 3 seeds in the committed file (seed 42's smoke-run output never wrote those two metrics), and — unlike
+> the RQ1/RQ4 analysis — this file has **not yet been regenerated** with the corrected cell (see
+> "Before the defence" below). We checked the impact directly rather than leaving it asserted: patching
+> in the corrected 3-seed values changes **no** win/loss and moves every mean Δ by ≤0.0001. **The
+> 40-cell counts are unchanged, verified rather than assumed** — but the underlying file is still on the
+> to-fix list.
 
-**SAY:** "Forty-three point seven percent against zero point two seven — two to three orders of
+**SAY:** "Forty-two point seven percent against zero point one seven — two to three orders of
 magnitude, and the same gap holds on near-OOD. The same score gives near-identical AUROC regardless of
 which objective produced the logits. So in this regime the Bayesian *training* was not what bought the
 OOD performance; the *score* was. And there is a 2026 theory result showing softmax is a mathematical
@@ -896,9 +971,9 @@ Dirichlet-parameterised logits** and finding near-equivalence. That is the survi
 
 ---
 
-## Slide 21A — Architecture and parameter budget were initially confounded
+## Slide 19A — Architecture and parameter budget were initially confounded
 
-**Time:** 1.0 min · **Slide 21 is the most important in the deck and is delivered as two slides. This
+**Time:** 1.0 min · **Slide 19 is the most important in the deck and is delivered as two slides. This
 is beat one: the pattern, and why it cannot be read at face value.**
 
 **ON THE SLIDE** — the pattern first, from the 16 matched comparisons in the main grid:
@@ -909,7 +984,14 @@ is beat one: the pattern, and why it cannot be read at face value.**
 | Near-OOD AUROC | **16/16** | 8/16 |
 | ECE | 8/16 | **16/16** |
 
-Sign consistency 16/16, two-sided p ≈ 3.05×10⁻⁵ under a null of random direction.
+Sign consistency 16/16, two-sided p ≈ 3.05×10⁻⁵ under a null of random direction *(reported with its
+caveat, not hidden: pairs sharing a backbone are not fully independent draws, so treat this as
+descriptive strength, not a clean p-value — the 16/16 sign consistency itself is the number to lean on)*.
+
+Of those 16 pairs, only **10 clear 2 standard deviations** on ECE specifically — **8/8 on
+MiniImageNet, but only 2/8 on CIFAR-FS**. The *direction* is consistent 16/16; the *magnitude* is
+dataset-dependent. That asymmetry is exactly what the matched-budget experiment on the next slide was
+built to adjudicate.
 
 Two observed facts, stated so they cannot be overread:
 
@@ -917,7 +999,7 @@ Two observed facts, stated so they cannot be overread:
    backbones — holding 2.58× *more* parameters on one and 1.55× *fewer* on the other.
 2. **The ECE winner does change, exactly in step with the budget ordering.**
 
-Then the reversal that causes the problem — repeat the Slide 13 numbers here:
+Then the reversal that causes the problem — repeat the Slide 11 numbers here:
 
 | Backbone | Bottleneck | LoRA | Larger arm |
 |---|---:|---:|---|
@@ -943,12 +1025,16 @@ means the bottleneck arm is better calibrated; negative means LoRA is.
 
 ---
 
-## Slide 21B — Matched budgets reject parameter count as the primary explanation for calibration
+## Slide 19B — Two things survive matched budgets: architecture wins outright, and budget is ruled out as the calibration cause
 
-**Time:** 1.5 min · **Beat two: the pre-registered experiment that adjudicates it. This is your best
+**Time:** 1.75 min · **Beat two: the pre-registered experiment that adjudicates it. This is your best
 45 seconds in the defence — rehearse it.**
 
-**ON THE SLIDE**
+**ON THE SLIDE — lead with the clean positive result, then the adjudication:**
+
+> **At matched budget, the bottleneck architecture wins accuracy 8/8 and near-OOD 8/8, all beyond 2σ.**
+> The architecture effect does not shrink when its budget advantage is removed — this is the cleanest,
+> most positive result in RQ3, and it is budget-controlled by design.
 
 **Design.** Both architectures rebuilt at the **same budget within each backbone**. MiniImageNet
 5-shot, 2 backbones × 2 budget levels × 2 arms × 2 heads × 3 seeds = **48 runs**. Residual budget
@@ -968,13 +1054,22 @@ budget-caused gap should collapse toward 0.)*
 **Verdict: `backbone_intrinsic`** — fired in **3 of 4** pre-registered cells.
 **The parameter-budget hypothesis fired in 0 of 4.**
 
-And the secondary outcome that was genuinely at risk: at matched budget, **bottleneck still wins
-accuracy 8/8 and near-OOD 8/8, all beyond 2σ** — the architecture effect does not collapse when the
-budget advantage is removed.
+> **State the asymmetry plainly — it is not "3 of 4, done."** The effect is concentrated on ResNet-18:
+> ΔECE ≈ 0.10–0.11, collapse ratio ≈ 1.0 (the gap does not move at all when the budget is equalised).
+> MobileNetV3-Small's gap is roughly **10× smaller** (ΔECE ≈ 0.006–0.012) and it *does* roughly halve.
+> With two backbones, this result is substantially a ResNet-18 finding that MobileNetV3-Small does not
+> contradict — read it as "budget is ruled out on ResNet-18; MobileNetV3-Small is directionally
+> consistent but the effect there is small," not as a symmetric result across both backbones.
 
 > **The non-finding, reported rather than omitted:** on **far**-OOD there is no clear adapter effect —
 > bottleneck wins only **11/16** unmatched and **5/8** matched. The architecture claim is scoped to
 > accuracy and **near**-OOD. RQ1 attributes far-OOD predominantly to the head, not the adapter.
+
+> **Independent corroboration, added 2026-09-15.** RQ1's variance decomposition, extended to two-way
+> interactions on the full 120-cell grid, finds the **`backbone:adapter` interaction explains 3.23% of
+> ECE variance (p < 1e-6)** — the largest interaction term for calibration, and 42% of what main
+> effects left unexplained. Different method, different data slice, same conclusion: the adapter's
+> calibration effect depends on the backbone. On accuracy and both OOD pools that same term is ≈0.
 
 Boxed — the claim, scoped exactly:
 
@@ -983,11 +1078,16 @@ Boxed — the claim, scoped exactly:
 > and only halves MobileNetV3-Small's. The results are consistent with a backbone-dependent mechanism —
 > **but which intrinsic backbone property is responsible remains unidentified.**
 
-**SAY (rehearse this):** "Equalising the budget leaves ResNet-18's calibration gap intact — collapse
-ratios of 1.01 and 0.92, meaning the matched gap is as large as the unmatched one. A gap caused by the
-budget difference should have shrunk toward zero with it. It did not. So the hypothesis this project
-had been working under for two months is not supported; we pre-registered the rule that would tell us
-so before we ran it; and the answer we are left with is narrower than what we had been ready to claim."
+**SAY (rehearse this):** "Start with the positive: at matched budget, bottleneck still wins accuracy
+and near-OOD eight-for-eight, all beyond two standard deviations — the architecture result is
+budget-controlled and it holds. Now the adjudication: equalising the budget leaves ResNet-18's
+calibration gap intact — collapse ratios of 1.01 and 0.92, meaning the matched gap is as large as the
+unmatched one. A gap caused by the budget difference should have shrunk toward zero with it. It did
+not. So the hypothesis this project had been working under for two months is not supported; we
+pre-registered the rule that would tell us so before we ran it. I'll be precise about scope, too: that
+result is carried almost entirely by ResNet-18 — MobileNetV3-Small's gap is an order of magnitude
+smaller and does partially shrink, which is consistent with the verdict but not an equally strong
+instance of it."
 
 **State the limit before you are asked:** "'Backbone-intrinsic' is where the evidence points, not an
 explanation. Which property of ResNet-18 versus MobileNetV3-Small — depth, width, normalisation, the
@@ -1000,7 +1100,7 @@ backbone causes calibration" (the design does not identify the mechanism).
 
 ---
 
-## Slide 22 — Post-hoc recalibration repairs calibration without retraining
+## Slide 20 — Two parameters cut evidential ECE nearly in half — but it stays worse than softmax
 
 **Time:** 1.5 min
 
@@ -1011,29 +1111,35 @@ backbone causes calibration" (the design does not identify the mechanism).
 
 Three headline numbers, equal weight — **the third is not optional**:
 
-> ### Calibration: ECE improved in **48 / 48 cells (100%)** — mean **−0.137** absolute (0.327 → 0.190)
-> ### OOD ranking: preserved in **150 / 192 comparisons (78%)** — **22% were not**
-> ### Still short of softmax: **48 / 48** cells remain worse-calibrated than plain softmax
+> ### Calibration: ECE improved in **60 / 60 cells (100%)** — mean **−0.139** absolute (0.323 → 0.185)
+> ### OOD ranking: preserved in **192 / 240 comparisons (80%)** — **20% were not**
+> ### Still short of softmax: **60 / 60** cells remain worse-calibrated than plain softmax
 
-Supporting detail:
+Supporting detail *(all 60 evidential cells, full 120/120 coverage as of 2026-09-15)*:
 
 | Outcome | Result |
 |---|---|
-| Where training had left the affine | `(scale, bias)` is **learnable**, initialised at (2, −6); training moved it to scale **1.51–4.52** (median 2.93) |
-| Where the refit puts it | scale **3.6–14.5** (median 8.3) — the jointly-trained operating point was far from the calibration-optimal one |
-| Residual gap after refit | worse than plain softmax in **48/48** (mean **2.18×**, best case 1.07×); worse than TS-softmax in **48/48** (mean **11.9×**, best 2.27×) |
-| Preservation criterion | ΔAUROC ≥ −0.005; mean ΔAUROC across comparisons **+0.004** |
-| Worst-case rank correlation | Spearman ρ = **0.921** |
+| Where training had left the affine | `(scale, bias)` is **learnable**, initialised at (2, −6); training moved it to scale **1.51–4.52** (median 2.90) |
+| Where the refit puts it | scale **3.61–14.54** (median 8.99) — the jointly-trained operating point was far from the calibration-optimal one |
+| Residual gap after refit | worse than plain softmax in **60/60** (mean **2.18×**, best case 1.07×, worst 5.8×); worse than TS-softmax in **60/60** (mean **13.6×**, best 2.27×) |
+| Absolute ECE, same 60 cells | evidential post-refit **0.185** vs softmax **0.112** (means) — the 2.18× headline above is a *mean of per-cell ratios*, not this *ratio of means* (0.185/0.112 ≈ 1.65×); both are correct, they answer different questions, and the mean-of-ratios is the one "worse in every cell" needs |
+| Preservation criterion | ΔAUROC ≥ −0.005; mean ΔAUROC across comparisons **+0.003** |
+| Worst-case rank correlation | Spearman ρ = **0.866** |
+
+> **What adding the 12 new evidential cells changed.** ECE improvement held at 100% (12/12). Ranking
+> preservation on the new cells alone was **42/48 (87.5%)**, but their mean ΔAUROC was slightly
+> *negative* (−0.0016) and they contain the new worst-case ρ of 0.866 — so fuller coverage made this
+> result marginally **weaker**, not stronger. Reported in that direction deliberately.
 
 Caveat — **on the slide, not just spoken**:
 
 > **Reordering does occur.** Vacuity is K/Σα, a function of *all* logits jointly, so a per-logit
-> monotone transform does not guarantee the sample ordering survives. In **22%** of comparisons AUROC
-> dropped by more than half a point; worst single-pool drop ≈ **−0.03**. The claim is **"OOD ranking is
-> preserved in 78% of comparisons"** — never "always."
+> monotone transform does not guarantee the sample ordering survives. In **20%** of comparisons AUROC
+> dropped by more than half a point; worst single-pool drop **−0.032** (Gaussian far-OOD). The claim is
+> **"OOD ranking is preserved in 80% of comparisons"** — never "always."
 >
 > **And the repair is partial.** Post-refit evidential ECE is still worse than plain softmax in **all
-> 48** cells. The correct claim is **"refitting improves calibration in 48/48 cells but does not close
+> 60** cells. The correct claim is **"refitting improves calibration in 60/60 cells but does not close
 > the gap to softmax"** — never "refitting fixes evidential calibration."
 
 **SAY:** "Two parameters, refitted on validation episodes, no retraining — and ECE falls in every
@@ -1041,13 +1147,13 @@ single cell. Note what that says: these two scalars are *trained* jointly with t
 evidential loss was leaving them far from the calibration-optimal point on its own. That is a sharper
 finding than a badly-chosen default would have been. Two things I want to be exact about, though. The
 refit **narrows** the gap to softmax, it does not close it — evidential is still the worse-calibrated
-arm in all forty-eight cells. And we *measured* whether the OOD ranking survived rather than assuming
-it, because in twenty-two percent of comparisons it did not."
+arm in all sixty cells. And we *measured* whether the OOD ranking survived rather than assuming it,
+because in twenty percent of comparisons it did not."
 
 **Volunteer:** "Post-hoc calibration is a mature field, and Guo et al. and BEL report comparable or
 larger drops. We are not claiming to have discovered that refitting helps. What is ours is the
 mechanism — this specific two-parameter evidence affine, which turns out to be the knob that actually
-controls calibration here — and the systematic quantification across 48 cells and 192 ranking
+controls calibration here — and the systematic quantification across 60 cells and 240 ranking
 comparisons, including the failures."
 
 **The self-correction that belongs with this slide:** Step 4.5 swept the *loss* (KL weight × variance
@@ -1056,7 +1162,7 @@ was tuning the wrong knob — the evidence affine was never swept. RQ4 is what f
 
 ---
 
-## Slide 23 — The frozen trunk dominates inference cost; the adapter and head barely move it
+## Slide 21 — The frozen trunk dominates inference cost; the adapter and head barely move it
 
 **Time:** 0.75 min · **Section: H. Practical implications**
 
@@ -1071,53 +1177,82 @@ was tuning the wrong knob — the evidence affine was never swept. RQ4 is what f
 Boxed, the deployment rule:
 
 > **Choose the backbone for latency and the adapter for accuracy** — they barely trade against each
-> other. **Recommended point:** MobileNetV3-Small + parallel bottleneck + evidential —
+> other. **Recommended point (CIFAR-FS):** MobileNetV3-Small + parallel bottleneck + evidential —
 > **11.86 ms/image**, **6,930 trainable parameters**, TinyImageNet near-OOD AUROC **0.870** (1-shot) /
-> **0.919** (5-shot).
+> **0.919** (5-shot). **On MiniImageNet**, where MobileNetV3-Small falls outside the accuracy
+> tolerance, the point moves to ResNet-18 + parallel + evidential at **62.38 ms**.
+>
+> **This recommendation knowingly accepts a calibration cost.** Evidential's post-refit ECE (0.185
+> mean, Slide 20) is still worse than softmax's in the same cells (0.112 mean) — the choice trades some
+> calibration for vacuity's OOD-ranking edge and its native uncertainty signal, not a free win on
+> every axis.
+
+> **Say this unprompted — the recommendation is conditional on the scoring rule.** It holds when each
+> head uses its *native* score (evidential → vacuity, softmax → MSP). If softmax is instead allowed its
+> best score — energy — evidential's presence on the CIFAR-FS 5-shot latency/AUROC frontier goes to
+> **zero**. This is not a contradiction of Slide 18; it is the same finding applied to deployment.
+
+**VISUAL:** `results/pareto_latency_vs_auroc__cifar_fs.png`, `__mini_imagenet.png`.
 
 **SAY:** "The practical rule is the boxed line: backbone for latency, adapter for accuracy, because
 they barely trade against each other. And 'evidential uncertainty is free at inference' is now a
 *measurement below our own noise floor* rather than a claim — Sensoy's 2018 paper asserts it as EDL's
-selling point; we did not find it measured in this regime."
+selling point; we did not find it measured in this regime. One condition I want to state before it's
+asked: this recommendation holds for each head's native score. Give softmax its best score, energy, and
+evidential drops off the CIFAR-FS frontier entirely — which is the same RQ2 finding, now applied to a
+deployment decision rather than an OOD-ranking one."
 
-**Volunteer if pressed:** "The Pareto claim is native-score-conditional. If softmax is allowed its best
-score — energy — rather than max-softmax-probability, evidential's presence on the CIFAR-FS 5-shot
-frontier goes to zero. That is in the write-up, and on backup B13."
-
-**Moved to backup B13** — the MiniImageNet deployment point (ResNet-18 + parallel + evidential at
-62.38 ms, where MobileNetV3-Small falls outside the accuracy tolerance), the full efficiency table,
-the MCU attention-block comparison from Slide 4, and both Pareto figures
-(`results/pareto_latency_vs_auroc__cifar_fs.png`, `__mini_imagenet.png`).
+**Provenance note if asked:** latency is the one family of numbers here that is not byte-reproducible
+by design — hardware- and session-dependent. All values come from one canonical Kaggle T4 session (GPU
+and single-thread CPU); see self-correction 4 on Slide 22 for the selection bug found and fixed here.
 
 ---
 
-## Slide 24 — What the experiments changed our mind about, and what they leave unresolved
+## Slide 22 — What the experiments changed our mind about, and what they leave unresolved
 
 **Time:** 1.5 min · **Section: I. Limitations and self-corrections** · **This slide is worth more than
 any positive result on it. Committees remember it. Deliver it as boundary-setting, not as apology.**
 
 **ON THE SLIDE** — two clearly separated sections, the left one given more visual weight:
 
-### Section 1 — What the experiments changed our mind about
+### Section 1 — What the experiments changed our mind about *(five items; the fifth was found while completing coverage on 2026-09-15)*
 
 1. **Energy vs vacuity: a single-configuration finding did not generalise.** An early result said
    evidential vacuity was roughly on par with the energy score. At grid scale, **energy wins ~70% of
-   comparisons** (vacuity wins only 10/40 far-OOD, 14/40 near-OOD). *Narrowed claim: vacuity is a
-   substantially better OOD ranker than softmax-probability scores — 37–38 of 40 cells — but a
-   well-chosen logit-space score was the stronger ranker in this study.*
+   comparisons** (vacuity wins only 10/40 far-OOD, 14/40 near-OOD); on the finer matched
+   (design, seed, pool) comparison used for RQ2's η² analysis, energy's win rate is higher still —
+   **81.7% far-OOD (196/240), 93.8% near-OOD (225/240)**. *Narrowed claim: vacuity is a substantially
+   better OOD ranker than softmax-probability scores — 37–38 of 40 cells — but a well-chosen logit-space
+   score was the stronger ranker in this study, more decisively at the finer grain than the coarse one.*
 2. **The parameter-budget hypothesis: a pre-registered experiment did not support our own preferred
    reading.** RQ3's "calibration follows the parameter budget" account fired in **0 of 4** cells once
-   budget was equalised (Slide 21B).
+   budget was equalised (Slide 19B).
 3. **The interior-optimum hypothesis was tested and demoted.** We predicted calibration error would
    reach an optimum at an intermediate parameter budget. A controlled **21-run rank sweep** with
    everything else fixed found **no interior optimum in the tested range** — evidential ECE is lowest
-   at rank 1 and drifts up; softmax moves the opposite way. Reported as a negative result.
+   at rank 1 and drifts up; softmax moves the opposite way. Reported as a negative result — though
+   **3 seeds × 7 ranks is underpowered to rule out a subtle U-shape** between the tested points; the
+   honest claim is that no *large* interior optimum was found, not that the surface is proven monotonic.
 4. **A silent latency-selection bug, caught by manual cross-check rather than by the test suite.**
    Three independent latency-selection functions were silently preferring this repo's noisy dev-laptop
    measurements over the canonical Kaggle CPU numbers — by dict-insertion-order accident, with
    **errors up to 47% on individual cells**, no crash and no failing test. Every downstream artefact
    (efficiency table, Pareto JSON, all six Pareto figures) was regenerated from corrected code. *A
    regression test for this bug class is the top open follow-up.*
+5. **A smoke run had been sitting in the published grid — found 2026-09-15, while closing the coverage
+   gap.** The committed metrics file for **one cell** — `cifar_fs/5shot/mobilenetv3_small/lora/
+   evidential`, seed 42 — had been written by a **20-episode smoke run**, not the 600-episode protocol.
+   It carried 8 metric keys instead of 12, which is why RQ1's near-OOD row was missing one observation
+   (95 instead of 96), and why that configuration's seed spread in `RESULTS_MASTER.md` (±1.82) is an
+   outlier against every other 5-shot cell (±0.50–0.63). **Fixed, not just measured:** the cell was
+   re-scored over the full 600 episodes, and every η² shown on Slides 17, 19B and 23 in this deck
+   already reflects that fix — every term in every outcome's table (main effects and interactions)
+   moved by **≤ 0.44 pp** (largest: near-OOD `k_shot` 42.86% → 43.30%), and the `backbone:adapter` calibration
+   finding moved from 3.28% to **3.23%**, still the largest interaction term for ECE. No conclusion in
+   this deck changed. *It is disclosed because the thesis claims byte-identical reproducibility on a
+   fixed 600-episode protocol, and for this one cell that claim was briefly not true — it is true now.*
+   A related tooling gap is disclosed on Slide 17: the missing observation didn't trip `eta_squared()`'s
+   balance check, because that check only inspects cells with at least one seed present.
 
 ### Section 2 — What remains unresolved
 
@@ -1130,16 +1265,17 @@ any positive result on it. Committees remember it. Deliver it as boundary-settin
    each), and exist only for ResNet-18 + CIFAR-FS. Sub-1-point margins should be read accordingly.
 4. **Two backbones** — they establish that backbone identity matters; they cannot establish *which
    property* is responsible.
-5. **Main effects only** — the η² decomposition does not model interactions.
+5. ~~**Main effects only**~~ — **closed 2026-09-15.** The η² decomposition now includes all ten two-way
+   interaction terms with bootstrap intervals (Slide 17). Three-way and higher terms remain unmodelled.
 6. **Temperature-scaling asymmetry** — evidential is not temperature-scalable in this codebase, so the
    TS-softmax comparison is structurally favourable to softmax. Still the right comparison; the
    asymmetry is stated rather than hidden.
 7. **Literature-search limitations** — novelty claims rest on a non-exhaustive search: **five**
    independent passes, ~100 searches, full PDF reads of the closest competitors
    (`RQ_SUPERVISOR_REPORT.md` Appendix C). Absence of found prior art is not evidence of absence.
-8. **RQ2 and RQ4 cover 99 of 120 models, non-randomly** — all 21 missing checkpoints are CIFAR-FS 5-shot
-   adapter models, leaving that slice with 15 of 36. Retraining them is a costed, unrun follow-up (~7
-   GPU-hours).
+8. ~~**RQ2 and RQ4 cover 99 of 120 models**~~ — **closed 2026-09-15.** All 21 were re-trained and scored;
+   coverage is 120/120, fully crossed. They reproduced the committed grid exactly. Adding them made RQ4's
+   ranking-preservation result slightly *weaker* (worst ρ 0.921 → 0.866), which is reported as found.
 9. **Protocol choices that apply to every cell equally** — no data augmentation; a cosine×10 prototype
    metric rather than ProtoNet's squared-Euclidean; and `kl_weight_max` fixed at 0.1 although the Step 4.5
    VAL sweep ranked 0.05 first (VAL ECE 0.252 vs 0.260), with no logged reason for the override. None
@@ -1155,8 +1291,13 @@ Closing line, boxed, at the bottom of the slide — **the single most important 
 column is on the slide because we found those things ourselves, at the point where the evidence got
 strong enough to find them. Number four is the one I would most want you to notice: it produced no
 error and broke no test, and it was caught because the numbers were cross-checked by hand against the
-machine they were supposed to come from. On the right, the boxed question at the bottom is the one I
-would spend the next six months on."
+machine they were supposed to come from. Number five is newer and I found it two days ago: one cell in
+the published grid turned out to have been scored by a twenty-episode smoke run instead of the six
+hundred. I re-scored it and recomputed every affected number — under a percentage point of movement on
+any effect, nothing on the conclusions — and every table in this deck already reflects the correction.
+It's on the slide anyway, because the thesis claims a fixed protocol and for that one cell the claim was
+briefly not true — it is true now. On the right, the boxed question at the bottom is the one I would
+spend the next six months on."
 
 **Prepare for "doesn't the energy result undermine your premise?"** — "It narrows it. The premise was
 never that Bayesian uncertainty is the best possible OOD score. RQ2 is exactly the experiment that
@@ -1167,7 +1308,7 @@ need an OOD ranker, the honest recommendation is softmax plus energy."
 
 ---
 
-## Slide 25 — Four findings: different design choices govern different aspects of reliability
+## Slide 23 — Four findings: different design choices govern different aspects of reliability
 
 **Time:** 1.5 min · **Section: J. Final contribution**
 
@@ -1176,8 +1317,8 @@ need an OOD ranker, the honest recommendation is softmax plus energy."
 > ### Accuracy → **shots + adapter architecture**
 > ### Calibration → **head + backbone**
 > ### OOD detection → **scoring rule**
-> ### Repair → **post-hoc recalibration improves ECE in 48/48 cells; OOD ranking survives in 78%**
-> ### …and the gap to softmax **narrows without closing** — evidential is still worse in 48/48
+> ### Repair → **post-hoc recalibration improves ECE in 60/60 cells; OOD ranking survives in 80%**
+> ### …and the gap to softmax **narrows without closing** — evidential is still worse in 60/60
 
 Then, smaller — **contributions, ordered by strength, labelled honestly:**
 
@@ -1187,16 +1328,20 @@ Then, smaller — **contributions, ordered by strength, labelled honestly:**
    dependence. Established by a pre-registered experiment that did not support the project's own
    working hypothesis.
 2. **[PARTLY NOVEL] Separating the OOD training objective from the OOD scoring rule** — the score
-   explains **43.7%** of far-OOD variance against the objective's **0.27%**. Specifically new:
-   cross-applying the **energy score onto Dirichlet-parameterised logits** and finding near-equivalence.
+   explains **42.7%** of far-OOD variance against the objective's **0.17%**, on a fully-crossed 120-model
+   design. Specifically new: cross-applying the **energy score onto Dirichlet-parameterised logits** and
+   finding near-equivalence.
 3. **[PARTLY NOVEL] A formal variance decomposition** of accuracy, calibration and OOD detection over a
-   balanced five-axis PEFT factorial — including that **ECE and OOD AUROC become close to orthogonal
-   once head interpretation is controlled.**
+   balanced five-axis PEFT factorial, **main effects and all ten two-way interactions with bootstrap
+   intervals** — including that **ECE and OOD AUROC become close to orthogonal once head interpretation
+   is controlled**, and that the **`backbone:adapter` interaction carries 3.23% of ECE variance
+   (p < 1e-6)**, independently corroborating RQ3.
 4. **[PARTLY NOVEL] A two-parameter post-hoc recalibration of an evidential prototype head**, with
-   OOD-ranking preservation **measured rather than assumed** (48/48 improved, 78% preserved, and the
+   OOD-ranking preservation **measured rather than assumed** (60/60 improved, 80% preserved, and the
    residual gap to softmax reported rather than dropped).
 5. **[CONFIRMATORY, and useful] A reproducible harness and evidence base** — 189 runs, frozen episode
-   seeds, byte-identical reruns, VAL-only selection, and a working demonstrator.
+   seeds, VAL-only selection, and byte-identical reruns demonstrated **twice independently** (18 cells in
+   August, 21 more in September, both at max absolute difference 0.0).
 
 **Future work** (each one closes a numbered limitation):
 
@@ -1207,6 +1352,8 @@ Then, smaller — **contributions, ordered by strength, labelled honestly:**
    into a measurement.
 4. **Per-cell VAL tuning** — answers whether any axis effect is a recipe artefact *(closes 2)*.
 5. **An evidential analogue of temperature scaling**, so both heads get a post-hoc correction *(closes 6)*.
+6. **Three-way and higher interactions**, and an explanation for the large `dataset:backbone` term the
+   two-way decomposition surfaced — which no current research question addresses.
 
 **The last line on the slide, and the last thing you say:**
 
@@ -1243,299 +1390,21 @@ arXiv:2605.22746 (softmax as a special case of evidential); arXiv:2608.10372 (ac
 post-hoc calibration).
 
 **Backbones / edge.** He et al. (ResNet); Howard et al. (MobileNetV3); TinyDL survey
-(arXiv:2506.18927); CNN-vs-ViT low-data study (arXiv:2510.04794); DINOv3 (arXiv:2508.10104); PEFT-for-ViTs
-survey (arXiv:2402.02242 — the documented calibration/OOD absence cited on B17).
+(arXiv:2506.18927); few-shot geometric-estimation CNN/ViT comparison (arXiv:2510.04794, cited for
+direction, not as classification-specific evidence — see Slide 3); DINOv3 (arXiv:2508.10104); PEFT-for-ViTs
+survey (arXiv:2402.02242 — documents the calibration/OOD absence discussed on Slide 8).
 
 > **Every citation above resolves to an entry in `docs/refs.bib`.** Two arXiv IDs that appeared in earlier
 > drafts of this deck (GP-Adapter, Dual-Adapter) had no entry in `refs.bib`, `CITATION_AUDIT.md` or any
-> report, and have been removed rather than cited unverified. One flagged entry —
-> *LoRA vs Full Fine-tuning: An Illusion of Equivalence* (arXiv:2410.21228) — still needs re-checking
-> before it is used anywhere.
+> report, and have been removed rather than cited unverified. Of the citations this deck actually uses,
+> **two carry an open flag** in `CITATION_AUDIT.md`: *LoRA vs Full Fine-tuning: An Illusion of
+> Equivalence* (arXiv:2410.21228 — still needs re-checking before use anywhere) and arXiv:2510.04794
+> (flagged as used outside its own domain — already hedged on Slide 3 as "cited for direction, not
+> classification-specific evidence"). **arXiv:2605.22746** — the softmax-as-a-special-case-of-evidential
+> result spoken aloud on Slide 18 — carries a complete, unflagged `refs.bib` entry; it is not one of the
+> open items.
 
 > Full BibTeX: `docs/refs.bib`. Citation provenance: `docs/CITATION_AUDIT.md`.
-
----
-
-# Backup slides (B1–B17) — after references, shown only when asked
-
-Pulling up a prepared slide instead of talking from memory is the single most effective thing you can
-do in a defence Q&A. **B13–B15 are new in this revision**, holding detail moved off Slides 4, 9, 19
-and 23 — the main deck is lighter, the evidence base is not.
-
-| # | Slide | Triggered by |
-|---|---|---|
-| **B1** | Accuracy, all 40 configurations — `results/mvt_table_accuracy.png` | "What were the actual numbers?" |
-| **B2** | Calibration, all 40 — `results/mvt_table_calibration.png` | "How bad is the calibration really?" |
-| **B3** | OOD AUROC + FPR@95 — `results/mvt_table_ood_auroc.png` | "Which OOD set, which score?" |
-| **B4** | Vacuity vs every softmax-side score | "How does evidential compare to energy?" |
-| **B5** | Positioning vs published few-shot methods | "How do you compare to state of the art?" |
-| **B6** | What the parameter saving costs | "What does the saving cost you?" |
-| **B7** | PEFT budgets on VTAB-1k (with protocol warning) | "How does this compare to VPT/SSF?" |
-| **B8** | The 16 RQ3 pairs in full | "Show me all sixteen comparisons" |
-| **B9** | Matched-budget design: ranks, budgets, mismatches | "How exactly did you match budgets?" |
-| **B10** | The rank sweep — `results/rq5_rank_sweep.png` | "Did you try varying the rank?" |
-| **B11** | Reliability diagrams + OOD histograms — `results/grid_plots/*` | "Show me the calibration visually" |
-| **B12** | The demonstrator (`app/` — *Sentinel*) | "Does any of this run on anything real?" |
-| **B13** | **Deployment detail: full efficiency table, both Pareto figures, MCU arithmetic** | "Where do the latency numbers come from?" / "What about MiniImageNet?" |
-| **B14** | **Metrics and statistical interpretation** | "What exactly does your 43.7% η² mean?" / "Why no ratio?" |
-| **B15** | **Experimental configuration at a glance** | "Remind me what you actually ran." |
-| **B16** | **ECE / OOD orthogonality analysis** | "Do calibration and OOD detection trade off?" |
-| **B17** | Eight-literature coverage matrix | "What does the wider literature cover?" |
-
----
-
-## B13 — Deployment detail (moved off Slides 4 and 23)
-
-**The MCU arithmetic behind Slide 4.** A memory-optimised transformer attention block costs **~180 ms**
-on an STM32F746, against **~8–12 ms** for CNN inference *(TinyDL survey, arXiv:2506.18927, 2025)*.
-MCU-class targets: **32–512 kB SRAM**, under ~1 MB flash, 20–200 MHz, often no FPU.
-
-**The second deployment point.** On MiniImageNet, where MobileNetV3-Small falls outside the accuracy
-tolerance, the recommended point moves to **ResNet-18 + parallel + evidential at 62.38 ms**.
-
-**Native-score conditionality — volunteer this if the Pareto figure is on screen.** The Pareto claim is
-conditional on each head using its native score. If softmax is allowed its best score — **energy** —
-rather than max-softmax-probability, evidential's presence on the CIFAR-FS 5-shot frontier goes to
-**zero**.
-
-**Provenance warning to state if asked.** Latency is the only family of numbers in this thesis that is
-not byte-reproducible by design, because it is hardware- and session-dependent. All reported values
-come from **one canonical Kaggle T4 session** (GPU and single-thread CPU). See self-correction 4 on
-Slide 24 for the selection bug that was found and fixed here.
-
-**VISUAL:** `results/pareto_latency_vs_auroc__cifar_fs.png`, `results/pareto_latency_vs_auroc__mini_imagenet.png`,
-plus the full efficiency table (latency, MACs, peak memory, trainable params per configuration).
-
----
-
-## B14 — Metrics and statistical interpretation
-
-**Purpose:** a defence-ready reference, not a statistics lecture. Every definition below is the one
-used to produce the numbers in this deck.
-
-**Outcome metrics**
-
-| Term | Definition as used here | Direction |
-|---|---|:-:|
-| **ECE** — Expected Calibration Error | Predictions are binned by confidence (**15 bins, pooled over episodes**); ECE is the weighted mean absolute gap between each bin's mean confidence and its accuracy. A perfectly calibrated model that says 90% is right 90% of the time. | ↓ |
-| **Brier** | A proper scoring rule combining accuracy and calibration in one number. | ↓ |
-| **AUROC** (OOD) | Score every input by uncertainty; AUROC is the probability that a randomly drawn OOD input is scored more uncertain than a randomly drawn in-distribution input. 0.5 = chance, 1.0 = perfect. | ↑ |
-| **FPR@95%TPR** | At the threshold that retains 95% of in-distribution inputs, the fraction of OOD inputs wrongly accepted — the usable-operating-point view of the same ranking. | ↓ |
-| Accuracy / macro-F1 | Episode-mean query accuracy; macro-F1 exposes per-class recall collapse that accuracy can hide. | ↑ |
-
-**The four uncertainty scores — all computed on all runs**
-
-| Score | Definition | Needs |
-|---|---|---|
-| **MSP** | Maximum softmax probability, max softmax(z). The standard baseline confidence score. | nothing |
-| **TS-MSP** | MSP after temperature scaling — one scalar T fitted on validation, logits divided by T. | 1 fitted scalar |
-| **Energy** | A logit-space score, −logΣexp(z) (Liu et al. 2020). No Bayesian machinery, no training change, no extra parameters. | nothing |
-| **Vacuity** | The evidential "I don't know" mass, **K/S** with K = 5 and S = Σα, α = softplus(z·s + b) + 1. | the evidential head's 2 parameters |
-
-**η² — the statistic Slides 19 and 20 rest on**
-
-> **η² (eta-squared) is the share of the total variation in an outcome that is attributable to one
-> design axis.** It is computed as a **main-effects** decomposition over the **balanced factorial**, on
-> **96 per-seed observations** (not seed-averaged — averaging seeds first can manufacture apparent
-> cleanliness), with the **residual reported** so the unexplained share is visible.
-
-- "Shots explain 76.05% of accuracy variance" means: of everything that made accuracy differ across the
-  grid, roughly three-quarters is attributable to whether the episode had 1 or 5 shots.
-- Slide 20's "43.7% vs 0.27%" are two such shares in a **2 objectives × 4 scores** factorial,
-  **n = 792 comparisons per pool**. **Report the shares, never their quotient:** the objective's share is
-  near zero, so the ratio is unstable (163× on the full set, 394× with the one half-missing cell removed).
-  Say "two to three orders of magnitude" if a single phrase is needed.
-- **Stated limitation (Slide 24, item 5):** this is a main-effects decomposition — it does not model
-  interactions between axes.
-- **Known tooling defect, disclose if asked:** `eta_squared()` in `scripts/rq_aggregate.py` reports a
-  design as "balanced" by comparing counts of the cells that exist, so it does not notice a wholly
-  missing cell. That is why near-OOD η² rests on 95 of 96 observations, and it is the same gap that makes
-  the RQ2 ratio unstable. The shares themselves are unaffected in size.
-
-**The comparison used for RQ3**
-
-- **Sign test over matched pairs.** On the main grid: 16 matched comparisons, sign consistency
-  **16/16**, two-sided **p ≈ 3.05×10⁻⁵** under a null of random direction. *Known objection, and a fair
-  one: pairs sharing a backbone are not fully independent — see the Q&A crib.*
-- **ΔECE = LoRA − bottleneck.** Positive ⇒ the bottleneck arm is better calibrated.
-- **Collapse ratio = matched ΔECE ÷ unmatched ΔECE.** A gap caused by the budget difference should
-  collapse toward 0 once budgets are equalised. Observed: **1.01, 0.92** (ResNet-18) and **0.50, 0.61**
-  (MobileNetV3-Small).
-- **2σ screen.** Effects are reported as robust when the margin exceeds twice the pooled across-seed
-  standard deviation. All 8/8 matched-budget accuracy and 8/8 near-OOD results clear it.
-- **Pre-registration.** Hypotheses, decision thresholds and an explicit "inconclusive" outcome were
-  fixed in `docs/RQ3_MATCHED_BUDGET_PLAN.md` before any deciding run existed. Verdict
-  `backbone_intrinsic` fired in 3 of 4 cells against a pre-registered threshold of 3; the budget
-  hypothesis fired in 0 of 4.
-
-**Calibration-improvement convention (RQ4)**
-
-- **ΔECE improvement** = ECE(frozen default) − ECE(refit). Positive = better. Mean **−0.137 absolute**
-  change in ECE across 48/48 cells.
-- **OOD-ranking preservation criterion:** ΔAUROC ≥ **−0.005** counts as preserved. **150/192 (78%)**
-  met it; mean ΔAUROC **+0.004**; worst-case Spearman ρ **0.921**; worst single-pool drop ≈ **−0.03**.
-
-**Sample sizes**
-
-**3 seeds** (42 / 43 / 44) · **600 frozen test episodes** per run · **100 validation episodes**
-(seeds 10000–10099) for every selection decision · **189 runs** total (120 grid + 48 matched-budget +
-21 rank sweep).
-
----
-
-## B15 — Experimental configuration at a glance
-
-| Axis | Levels |
-|---|---|
-| **Datasets** | CIFAR-FS (Bertinetto split) · MiniImageNet (Ravi & Larochelle split) |
-| **Episode** | **5-way**, **1-shot / 5-shot**, test classes disjoint from training classes |
-| **Backbones** | ResNet-18 (11.7 M, frozen) · MobileNetV3-Small (2.5 M, frozen) |
-| **Adapters** | Parallel bottleneck · LoRA (+ Full-FT and Linear-Probe baselines, **ResNet-18 + CIFAR-FS only**) |
-| **Heads** | Prototype head, read as **softmax** or **evidential** (Dirichlet) |
-| **Seeds** | **42 / 43 / 44** — the seed changes only the adapter's initialisation, **not** the episode order; Full-FT and Linear-Probe therefore have zero seed spread |
-| **Test protocol** | **600 fixed test episodes**, seeds version-controlled, identical across every run |
-| **Validation** | 100 episodes, seeds 10000–10099 — **all selection decisions, never the test seeds** |
-| **Training** | Episodic meta-training · 100 episodes/epoch · **≤30 epochs** · **early stopping patience 5** · **learning rate 5e-3**, no weight decay (**Full-FT exception: LR 1e-5, wd 1e-4**) · Adam · adapter **rank 16** throughout the grid |
-| **Episode shape** | 5 classes × (1 or 5) support images + **15 query images per class** (75/episode) → 45,000 pooled query predictions per run |
-| **Evidential loss** | Sensoy et al. 2018 squared-error + KL; KL weight ramps 0 → **0.1** over the first 1,000 episodes; Sensoy's variance term dropped (`use_variance: false`, an R-EDL relaxation) |
-| **Prototype metric** | **cosine similarity × 10** (`metric: cosine`, `cosine_scale: 10`) — *not* the `l2` default still sitting in `configs/base.yaml` |
-| **Augmentation** | **None**, in any cell |
-| **Backbone mode** | Kept in eval mode; BatchNorm statistics never update |
-| **Trainable budget** | 6,928 – 31,746 parameters (backbone never updated) |
-| **Input** | All images resized to **224×224**, ImageNet-normalised (backbones are ImageNet-pretrained) |
-| **OOD pools** | Far: SVHN, Gaussian noise · Near: CIFAR-100-heldout, MiniImageNet-heldout (**both = the 16 VAL classes**), TinyImageNet (**no selection overlap**) |
-| **Hardware** | Kaggle / Colab **T4 GPU**; latency also measured single-thread CPU |
-| **Scale** | 40 configurations × 3 seeds = **120 grid runs**; + **48** matched-budget; + **21** rank sweep = **189** |
-
----
-
-## B16 — ECE and OOD AUROC are close to orthogonal once the head is controlled
-
-Across all 40 cells the rank correlation between ECE and OOD AUROC is **positive** — ρ = **+0.433**
-(far), **+0.477** (near) — which naively reads as "worse-calibrated configurations detect OOD better."
-
-**That is a head effect.** Stratifying by head interpretation collapses it:
-
-| Stratum | ρ (far-OOD) | ρ (near-OOD) |
-|---|---:|---:|
-| All 40 cells pooled | +0.433 | +0.477 |
-| Evidential only | +0.15 | +0.20 |
-| Softmax only | +0.26 | +0.24 |
-
-> **Once the head is fixed, calibration carries little information about OOD detection** — they are
-> close to orthogonal outcomes rather than a trade-off. **We did not find prior work reporting this
-> under this experimental regime.**
-
-This is only visible because accuracy, calibration and OOD are measured **on the same runs** — which is
-Objective 2 from Slide 5.
-
----
-
-## B17 — The wider literature-coverage map
-
-The eight-literature matrix, kept for the question "what does the broader field cover?" The scoped
-claim on Slide 9 is the one to defend; this table is context, and the crosses describe what these
-literatures **foreground**, not an audit of every table of every paper.
-
-| Literature | Acc | F1 | ECE | OOD | Params | Episodic | Edge |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Classical few-shot (ProtoNet, MAML, MetaOptNet) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Foundation-model few-shot (P>M>F, CoOp, Tip-Adapter) | ✅ | ❌ | ❌ | ❌ | ~ | ~ | ❌ |
-| PEFT for ViTs (VPT, SSF, AdaptFormer) | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| PEFT for CNNs on edge (Conv-Adapter, LoRA-Edge) | ✅ | ❌ | ❌ | ❌ | ✅ | ~ | ✅ |
-| Frozen-CNN episodic adapters (TSA, FiT) | ✅ | ❌ | ❌ | ❌ | ✅ | ~ | ~ |
-| Bayesian PEFT (Laplace-LoRA, BLoB, BayesAdapter) | ✅ | ❌ | ✅ | ~ | ✅ | ❌ | ❌ |
-| Evidential few-shot (BEL) | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ~ |
-| TinyML / TinyDL (TinyDL survey) | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| **B-PEFT (this thesis)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-
-**SAY, if this is on screen:** "Two of those crosses are documented absences rather than our inference.
-The survey covering the entire ViT PEFT field — arXiv 2402.02242 — does not discuss calibration,
-uncertainty or OOD anywhere. The 2025 TinyML survey, 2506.18927, covers quantisation in depth and does
-not mention uncertainty. Two communities, two surveys, the same blind spot."
-
-**Required scoping — do not drop it:** this is about what these papers foreground, under a
-non-exhaustive search (limitation 7). `RESULTS_MASTER.md` §4.6 states it that way.
-
----
-
-## Numbers to have on the remaining backup slides
-
-**B2** — evidential ECE is worse than plain softmax in **20/20** matched pairs (1.4×–9.1×) and worse
-than temperature-scaled softmax by **5.3×–51×**. Pair it immediately with Slide 22 — but pair it
-*accurately*: the post-hoc refit **narrows** that gap in 48/48 cells and **does not close it** (still
-worse than plain softmax in 48/48, mean 2.18×; worse than TS-softmax in 48/48, mean 11.9×). **Note the
-stated asymmetry (limitation 6):** evidential is not temperature-scalable in this codebase, so the
-TS-softmax comparison is structurally favourable to softmax.
-
-**B4** —
-
-| Comparison | Far-OOD | Near-OOD |
-|---|---:|---:|
-| vacuity vs MSP | 38/40 (+0.111) | 37/40 (+0.053) |
-| vacuity vs TS-MSP | 38/40 (+0.127) | 38/40 (+0.067) |
-| vacuity vs **energy** | 10/40 (−0.022) | 14/40 (−0.007) |
-
-Plus: the near-OOD advantage over MSP is **+0.064 at 1-shot vs +0.043 at 5-shot** — larger where there
-is less data, the direction the original hypothesis predicted. Say "held between the two shot levels
-tested," not "a trend."
-
-**Label the population when you quote energy-vs-vacuity — there are two, and they differ.**
-
-| Population | Scope | Energy beats vacuity |
-|---|---|---:|
-| 40 grid cells (native scores) | the table above | far 30/40, near 26/40 → **~70%** |
-| 198 matched comparisons (RQ2, 99 models, all 4 scores) | Slide 20's factorial | far **162/198** (82%), near **183/198** (92%) |
-
-Both are correct; they count different things. Slide 24's "~70%" is the grid figure. If an examiner
-quotes the higher number back at you, this is why.
-
-**B5** — same 5-way episodic protocol, so accuracy *is* comparable (subject to the pretraining caveat,
-which applies to both sides):
-
-| Method | Backbone | Trainable | CIFAR-FS 5-shot | MiniIN 5-shot |
-|---|---|---:|---:|---:|
-| Sup-21k > ProtoNet | ViT-B/16 | ~85.8 M | **96.7** | **99.2** |
-| DINO > ProtoNet | ViT-S/16 | ~21 M | 92.5 | 98.0 |
-| DINO > ProtoNet | ResNet-50 | ~25 M | — | 92.0 |
-| BEL (evidential few-shot) | ResNet-12 | n/r | 86.92 | 79.60 |
-| **Ours**, parallel bottleneck | ResNet-18 (frozen) | **31,744** | 91.44 | 95.56 |
-| **Ours**, parallel bottleneck | MobileNetV3-S (frozen) | **6,928** | 90.74 | 90.10 |
-
-**B6 — show this before you are asked.** Three separate conclusions; do not blur them:
-
-| Ours vs | Param saving | CIFAR-FS 5-shot | MiniIN 5-shot | MiniIN 1-shot |
-|---|---:|---:|---:|---:|
-| ResNet-18 adapter vs DINO>PN ViT-S | **662× fewer** | **−1.06 pp** | −2.44 pp | −8.07 pp |
-| ResNet-18 adapter vs DINO>PN ViT-B | 2,703× fewer | −0.76 pp | −2.84 pp | −10.27 pp |
-| ResNet-18 adapter vs DINO>PN **ResNet-50** | 788× fewer | — | **+3.56 pp** | **+5.83 pp** |
-| MobileNetV3-S adapter vs DINO>PN ViT-S | 3,031× fewer | −1.76 pp | −7.90 pp | **−18.18 pp** |
-
-1. At 5-shot on CIFAR-FS the saving is close to free — 1.06 points at 662× fewer parameters.
-2. Backbone-family-matched, we are ahead: **+3.56 points** over DINO>ProtoNet on ResNet-50. **The
-   remaining gap is a ViT gap, not a parameter-efficiency gap.**
-3. The trade is genuinely bad at 1-shot with the small backbone — up to **−18.2 points**. Volunteer
-   this; do not let it be found.
-
-**B8** — |ΔECE| exceeds 2× the pooled across-seed SD in **10/16** pairs (all 8 MiniImageNet, only 2 of
-8 CIFAR-FS). Direction robust; per-pair effect sizes on CIFAR-FS are not.
-
-**B10** — only `adapter.rank` varies over {1,2,4,8,16,32,64} × 3 seeds; 21/21 completed.
-`ece_optimum_is_interior: false`. Evidential ECE lowest at rank 1 (0.291) drifting to 0.309 at rank 64;
-softmax moves the *opposite* way, 0.093 → 0.081. **Required wording: "no interior optimum observed *in
-the tested range*."** 3 seeds × 7 ranks is plausibly underpowered to exclude a subtle U-shape — saying
-so costs nothing.
-
-**B12** — *Sentinel*: an industrial product inspector built on this thesis's **pattern** — frozen
-ResNet-18, prototype store, evidential vacuity, explicit **UNKNOWN** routing to manual inspection, with
-the softmax baseline shown side by side so the overconfidence is visible. Register a product from 1–10
-photos; no runtime training — enrolment is averaging embeddings, detection is one frozen forward pass
-(~16 ms/image on CPU).
-
-> **Say this unprompted if you show it.** Sentinel is a **demonstrator, not evidence**. It runs its own
-> simple model: it is **not** wired to the trained thesis adapters, and it has **no accuracy
-> evaluation**. It shows that the architecture deploys and that an UNKNOWN route is usable. It is not a
-> result, and no number in this deck comes from it.
 
 ---
 
@@ -1545,27 +1414,33 @@ One or two sentences each, plus a slide number. **Long answers lose defences.**
 
 | Question | Answer | Slide |
 |---|---|---|
-| "If energy beats vacuity, why is this a Bayesian thesis?" | The evidential formulation is what supplies an explicit uncertainty representation to measure at all; we never claimed it universally produces the best OOD detector. RQ2 is the experiment that separates objective from score, and RQ4 shows the calibration deficit it creates is repairable post-hoc. | 20, 22, 24 |
-| "Isn't a CNN backbone outdated?" | The deployment regime selects the family: an 86 M-parameter ViT does not fit in 1 MB of flash. In the low-data regime the 2025 literature reports CNNs matching ViTs. We make no general CNN-superiority claim. | 4, B13 |
-| "Your accuracy isn't state of the art." | Correct, and it isn't trying to be. 1.06 points behind a fully meta-trained DINO ViT-S at 662× fewer trainable parameters, and 3.56 *ahead* of the backbone-matched ResNet-50. Every RQ is about relative differences. | B5, B6 |
-| "Your backbones saw the test classes during ImageNet pretraining." | Yes — stated as limitation 1. It makes absolute accuracies non-comparable to from-scratch work. It does not touch any RQ, because every RQ compares configurations that all share the same pretraining. | 16, 24 |
-| "Why did the research questions change from the proposal?" | They were refined from comparison to attribution after a literature review that came *after* the grid completed. No experiment was discarded, no data removed, and every original question is answered — including the two whose answer was "no." | 11 |
-| "Did you change the questions because the results were inconvenient?" | The two negative results are still here, on Slides 11 and 24. If the goal had been convenience, the 0-of-20 calibration result is the first thing that would have disappeared. | 11, 24 |
-| "Three seeds is not many." | Agreed for sub-1-point differences, and we flag those. Seed spread exceeds 1 point in only 2 of 40 configurations, and every RQ3 claim at matched budget clears 2σ. | 24, B14 |
-| "One hyperparameter recipe across 40 configurations isn't fair." | Deliberate — it makes the grid a controlled comparison rather than 40 independently-tuned numbers. We answer "how do these axes compare under one recipe," not "what is each cell's best number." | 24 |
-| "Energy outperforms your Bayesian score — doesn't that sink the thesis?" | It narrows it, and RQ2 is the experiment that made it visible. Vacuity is the better *native probabilistic* score — 37–38 of 40 cells against MSP — and free at inference within our noise floor. If you only need an OOD ranker, softmax plus energy is the honest recommendation. | 24, B4 |
-| "Isn't 'backbone-intrinsic' just a name for 'we don't know'?" | Largely yes, and we say so. What the experiment establishes is that it is **not** the budget — the gap survives budget equalisation intact on ResNet-18. Which property is responsible needs more backbones. | 21B, 24 |
-| "Two backbones can't support a claim about backbones." | Agreed, and the claim is scoped accordingly: backbone identity matters; the responsible property is unidentified. That's the stated limit and the first item of future work. | 21B, 25 |
-| "What exactly does your 43.7% η² mean?" | The share of total variation in far-OOD AUROC attributable to the scoring-rule axis, in a main-effects decomposition over a balanced 2 objectives × 4 scores factorial, n = 792 per pool. The objective axis gets 0.27%. | 20, B14 |
-| "Why not just give the ratio?" | Because it isn't stable. The objective's share is near zero, so the quotient swings — 163× on the full set, 394× once the one cell missing an arm is removed. The shares are stable, so we quote the shares. | 20, B14 |
-| "Is η² appropriate — pairs sharing a backbone aren't independent?" | A fair objection to the sign test over 16 pairs. The decomposition itself is main-effects η² over a balanced factorial on 96 **per-seed** observations with a retained residual — we recomputed per-seed precisely because averaging seeds first can manufacture cleanliness. | 19, B14 |
-| "You ran 32×32 CIFAR images through an ImageNet ResNet?" | Resized to 224×224 and ImageNet-normalised first. The backbone is frozen and ImageNet-pretrained, so matching its input statistics is a requirement, not a choice. | 16, B15 |
-| "Why a prototype head instead of a linear classifier?" | A linear head trained on the 64 base classes cannot transfer to 20 disjoint test classes. Protocol requirement, not a design shortcut. | 12 |
-| "Does post-hoc recalibration break the OOD detection?" | In 78% of comparisons it does not; in 22% AUROC dropped by more than half a point, worst single-pool drop about −0.03. We measured it rather than assuming it, and the exception is on the slide. | 22 |
-| "What was the hardest bug?" | An evidential collapse: raw L2 logits are large-negative for ResNet-18 features, so softplus of the logit is ≈0 everywhere — uniform Dirichlet, dead gradients. Fixed with cosine similarity plus a learnable evidence affine; the mapping now lives in exactly one function shared by training and evaluation. | 14 |
-| "How do you know the latency numbers are right?" | They come from one canonical Kaggle T4 session, GPU and single-thread CPU. During closeout we found three functions silently preferring a dev-laptop measurement instead — up to 47% error, no crash, no failing test — fixed it, and regenerated every downstream artefact. It's reported as the fourth self-correction. | 23, 24, B13 |
-| "How do you know the results are reproducible?" | Frozen episode seeds, sorted-key JSON, byte-identical reruns — and the matched-budget experiment (Aug 26–27) re-trained 18 arms from the Aug 2–6 grid from scratch, reproducing them at max absolute difference **0.0**. | 17 |
-| "What would you do with six more months?" | More backbones, to identify the mechanism behind RQ3. Everything else on the future-work list is worth less. | 25 |
+| "If energy beats vacuity, why is this a Bayesian thesis?" | The evidential formulation is what supplies an explicit uncertainty representation to measure at all; we never claimed it universally produces the best OOD detector. RQ2 is the experiment that separates objective from score, and RQ4 shows the calibration deficit it creates is repairable post-hoc. | 18, 20, 22 |
+| "Isn't a CNN backbone outdated?" | The deployment regime selects the family: transformer attention costs an order of magnitude more compute than CNN inference on comparable edge hardware (~15–20×, TinyDL survey). In the low-data regime other vision tasks report CNNs matching ViTs. We make no general CNN-superiority claim, and we did not measure on MCU hardware ourselves. | 3, 21 |
+| "Your accuracy isn't state of the art." | Correct, and it isn't trying to be. 1.06 points behind a fully meta-trained DINO ViT-S at 662× fewer trainable parameters, and 3.56 *ahead* of the backbone-matched ResNet-50. Every RQ is about relative differences. | 16 |
+| "Your backbones saw the test classes during ImageNet pretraining." | Yes — stated as limitation 1. It makes absolute accuracies non-comparable to from-scratch work. It does not touch any RQ, because every RQ compares configurations that all share the same pretraining. | 14, 22 |
+| "Why did the research questions change from the proposal?" | They were refined from comparison to attribution after a literature review that came *after* the grid completed. No experiment was discarded, no data removed, and every original question is answered — including the two whose answer was "no." | 9 |
+| "Did you change the questions because the results were inconvenient?" | The two negative results are still here, on Slides 9 and 22. If the goal had been convenience, the 0-of-20 calibration result is the first thing that would have disappeared. | 9, 22 |
+| "Three seeds is not many." | Agreed for sub-1-point differences, and we flag those. Seed spread exceeds 1 point in only 2 of 40 configurations, and every RQ3 claim at matched budget clears 2σ. | 22 |
+| "One hyperparameter recipe across 40 configurations isn't fair." | Deliberate — it makes the grid a controlled comparison rather than 40 independently-tuned numbers. We answer "how do these axes compare under one recipe," not "what is each cell's best number." | 22 |
+| "Energy outperforms your Bayesian score — doesn't that sink the thesis?" | It narrows it, and RQ2 is the experiment that made it visible. Vacuity is the better *native probabilistic* score — 37–38 of 40 cells against MSP — and free at inference within our noise floor. If you only need an OOD ranker, softmax plus energy is the honest recommendation. | 18, 22 |
+| "Isn't 'backbone-intrinsic' just a name for 'we don't know'?" | Largely yes, and we say so. What the experiment establishes is that it is **not** the budget — the gap survives budget equalisation intact on ResNet-18. Which property is responsible needs more backbones. | 19B, 22 |
+| "Two backbones can't support a claim about backbones." | Agreed, and the claim is scoped accordingly: backbone identity matters; the responsible property is unidentified. That's the stated limit and the first item of future work. | 19B, 23 |
+| "What exactly does your 42.7% η² mean?" | The share of total variation in far-OOD AUROC attributable to the scoring-rule axis, in a main-effects decomposition over a fully-crossed 2 objectives × 4 scores factorial, n = 960 per pool, all 120 models. The objective axis gets 0.17%. | 18 |
+| "Why not just give the ratio?" | Because it isn't stable, and we can prove it. The objective's share is near zero, so the quotient swings: 163× at 99/120 coverage, 250× at full 120/120 — while the two shares barely moved. Same conclusion either way, so we quote the shares. | 18 |
+| "Is η² appropriate — pairs sharing a backbone aren't independent?" | A fair objection to the sign test over 16 pairs. The decomposition itself is main-effects η² over a balanced factorial on 96 **per-seed** observations with a retained residual — we recomputed per-seed precisely because averaging seeds first can manufacture cleanliness. | 17 |
+| "You ran 32×32 CIFAR images through an ImageNet ResNet?" | Resized to 224×224 and ImageNet-normalised first. The backbone is frozen and ImageNet-pretrained, so matching its input statistics is a requirement, not a choice. | 14 |
+| "Why a prototype head instead of a linear classifier?" | A linear head trained on the 64 base classes cannot transfer to 20 disjoint test classes. Protocol requirement, not a design shortcut. | 10 |
+| "Does post-hoc recalibration break the OOD detection?" | In 80% of comparisons it does not; in 20% AUROC dropped by more than half a point, worst single-pool drop −0.032. We measured it rather than assuming it, and the exception is on the slide. Note completing coverage made this slightly worse, not better — we report it in that direction. | 20 |
+| "What was the hardest bug?" | An evidential collapse: raw L2 logits are large-negative for ResNet-18 features, so softplus of the logit is ≈0 everywhere — uniform Dirichlet, dead gradients. Fixed with cosine similarity plus a learnable evidence affine; the mapping now lives in exactly one function shared by training and evaluation. | 12 |
+| "How do you know the latency numbers are right?" | They come from one canonical Kaggle T4 session, GPU and single-thread CPU. During closeout we found three functions silently preferring a dev-laptop measurement instead — up to 47% error, no crash, no failing test — fixed it, and regenerated every downstream artefact. It's reported as the fourth self-correction. | 21, 22 |
+| "How do you know the results are reproducible?" | Frozen episode seeds, sorted-key JSON, byte-identical reruns — checked twice: the matched-budget experiment (Aug 26–27) re-trained 18 arms from the Aug 2–6 grid, and an independent September session re-trained 21 more; both reproduced the committed numbers at max absolute difference **0.0**. 39 cells, two occasions. | 15 |
+| "Why is your main grid's adapter rank 16, when your rank sweep shows evidential ECE is lowest at rank 1?" | Rank 16 was fixed as part of the one shared hyperparameter recipe (Slide 15), chosen before the rank sweep existed. The sweep was a later, narrower diagnostic testing one hypothesis (an interior optimum) with everything else held fixed — it isn't a per-cell retuning experiment, and it doesn't imply the grid's rank choice was wrong, only that lower rank tends to help evidential calibration in the tested range. Retuning the frozen grid's rank is future work (per-cell VAL tuning), not a retrofit. | 22, 23 |
+| "What's driving the dataset:backbone interaction you won't interpret?" | We have a candidate, not a claim: MiniImageNet is ImageNet-derived and CIFAR-FS is not, so the two backbones' shared ImageNet pretraining likely transfers differently depending which dataset they're adapted to — that's limitation 1 (pretraining overlap) surfacing as a measured interaction rather than an assumption. It's plausible, not tested, which is why we report the number and don't build a claim on it. | 17 |
+| "In what sense is this actually Bayesian? There's no posterior over weights." | Fair distinction. Evidential deep learning is second-order — a Dirichlet over the simplex from one deterministic forward pass, not a posterior over parameters. We use the field's own term for it and state plainly that it is not weight-space Bayesian inference; the thesis's "Bayesian" claim is about the uncertainty representation, not about posterior weight sampling. | 5, 12 |
+| "You ran the 120-run grid (Aug 2-6) before your literature review found the four questions already had precedent (Aug 21-23). Why?" | A fair critique of the process, not just the framing. The proposal's own review covered four papers; the deeper pass came after the grid. What we can say is the experimental design — the balanced factorial — was built for attribution from the outset, which is why the same runs support the refined questions without rerunning anything. We are not claiming the timing was ideal. | 9 |
+| "Doesn't the interaction analysis just restate RQ3?" | It corroborates it from a different direction — full 120-cell grid, variance decomposition rather than matched pairs — and it is scoped narrower: the backbone×adapter term is significant on calibration (3.23%, p<1e-6) and ≈0 on accuracy and both OOD pools. RQ3's pre-registered matched-budget experiment is still the stronger, causally cleaner evidence. | 17, 19B |
+| "One of your grid cells was scored on 20 episodes instead of 600?" | Yes — one cell, one seed, found on 2026-09-15 and disclosed as self-correction 5. We re-scored it properly and measured the impact: under a percentage point on any η² term, no conclusion affected. It is on the slide because the protocol claim matters even when the number doesn't. | 22 |
+| "What would you do with six more months?" | More backbones, to identify the mechanism behind RQ3. Everything else on the future-work list is worth less. | 23 |
 
 ---
 
@@ -1587,10 +1462,10 @@ One or two sentences each, plus a slide number. **Long answers lose defences.**
 | "Calibration follows the parameter budget." | "Calibration was not explained by parameter budget; the matched-budget experiment supports backbone dependence — and the responsible backbone property is unidentified." |
 | "We proved the backbone causes calibration." | "The controlled matched-budget experiment provides evidence against parameter budget as the primary explanation." |
 | "Evidential uncertainty is on par with energy." | "Vacuity provides a useful uncertainty score, but energy was the stronger OOD ranker in this study." |
-| "Our 6,928-parameter adapter **beats** full fine-tuning." | "It **matches** full fine-tuning — the margin is inside its own seed spread. The ResNet-18 configuration's +0.98 points is the margin that clears noise." |
-| "Refitting always preserves the OOD ranking." | "OOD ranking is preserved in 78% of comparisons, with a measured minority exception." |
-| "Refitting fixes evidential calibration." | "Refitting improves it in 48/48 cells, but it stays worse than plain softmax in all 48." |
-| "The score matters 163× more than the objective." | "The score explains 43.7% of far-OOD variance (13.0% near); the objective under 1%. Two to three orders of magnitude — the ratio itself is unstable." |
+| "Our 6,928-parameter adapter **beats** full fine-tuning." | "It **matches** full fine-tuning — the margin is inside its own seed spread. The ResNet-18 configuration's +0.97 points is the margin that clears noise." |
+| "Refitting always preserves the OOD ranking." | "OOD ranking is preserved in 80% of comparisons (192/240), with a measured minority exception." |
+| "Refitting fixes evidential calibration." | "Refitting improves it in 60/60 cells, but it stays worse than plain softmax in all 60." |
+| "The score matters 163× more than the objective." | "The score explains 42.7% of far-OOD variance (14.7% near); the objective under 1%. Two to three orders of magnitude — the ratio itself is unstable: it moved 163×→250× purely by completing coverage." |
 | "The evidence affine was frozen at (2, −6)." | "It is learnable, initialised at (2, −6); training moved it to scale ~1.5–4.5, and the refit to ~3.6–14.5." |
 | "Our serial-vs-parallel result replicates TSA." | "We tested placement once and they tied on accuracy; TSA's placement evidence is stronger than ours, so we cite them for it." |
 | "Our 6,928-parameter adapter matches full fine-tuning." *(unqualified)* | "…matches full fine-tuning **of ResNet-18** — we never ran full fine-tuning on MobileNetV3-Small, so that row is a cross-backbone comparison." |
@@ -1606,29 +1481,29 @@ One or two sentences each, plus a slide number. **Long answers lose defences.**
 
 # Asset checklist — figures to export before building slides
 
-| Slide | Asset | Path |
+| Used on | Asset | Path |
 |---|---|---|
-| 3, 19, B11 | Reliability diagrams | `results/grid_plots/*_reliability.png` |
-| 20, B11 | OOD separation histograms | `results/grid_plots/*_ood_histogram.png` |
-| B13 | Pareto, latency vs AUROC | `results/pareto_latency_vs_auroc__cifar_fs.png`, `__mini_imagenet.png` |
-| B1 | Accuracy table, rendered | `results/mvt_table_accuracy.png` |
-| B2 | Calibration table, rendered | `results/mvt_table_calibration.png` |
-| B3 | OOD AUROC table, rendered | `results/mvt_table_ood_auroc.png` |
-| B10 | Rank sweep | `results/rq5_rank_sweep.png` |
+| Slide 3, 17 | Reliability diagrams | `results/grid_plots/*_reliability.png` |
+| Slide 18 | OOD separation histograms | `results/grid_plots/*_ood_histogram.png` |
+| Slide 21 | Pareto, latency vs AUROC | `results/pareto_latency_vs_auroc__cifar_fs.png`, `__mini_imagenet.png` |
+| Have ready if asked | Full accuracy table, rendered | `results/mvt_table_accuracy.png` |
+| Have ready if asked | Full calibration table, rendered | `results/mvt_table_calibration.png` |
+| Have ready if asked | Full OOD AUROC table, rendered | `results/mvt_table_ood_auroc.png` |
+| Have ready if asked | Rank sweep | `results/rq5_rank_sweep.png` |
 
 **Four figures you must draw yourself** — the repo has no version of any of them, and they are the
 most important visuals in the deck:
 
-1. **Slide 12 — the system pipeline.** Frozen backbone → adapter → prototype head → two
+1. **Slide 10 — the system pipeline.** Frozen backbone → adapter → prototype head → two
    interpretations, with the frozen / trainable / parameter-free annotations.
-2. **Slide 15 — the factorial.** Five axes with two levels each, the 32 + 8 cell count, and the three
+2. **Slide 13 — the factorial.** Five axes with two levels each, the 32 + 8 cell count, and the three
    experiments kept visually distinct. This slide carries the thesis's method; a plain bulleted list
    wastes it.
-3. **Slide 13 — the two adapter architectures side by side.** Bottleneck-parallel (down / ReLU / up,
+3. **Slide 11 — the two adapter architectures side by side.** Bottleneck-parallel (down / ReLU / up,
    summed at the block output) against LoRA (a low-rank update *inside* the frozen 1×1 convolution).
    The difference between "after the block" and "inside the weights" is the whole of RQ3's
    architecture axis, and it is hard to convey in words.
-4. **Slide 11 — the chronology.** Three labelled columns, left to right: original proposal → completed
+4. **Slide 9 — the chronology.** Three labelled columns, left to right: original proposal → completed
    experiments → refined attribution questions. The left-to-right arrow is doing the defensive work;
    a table alone does not show that the experiments came before the refinement.
 
@@ -1636,8 +1511,8 @@ most important visuals in the deck:
 
 # Before the defence — re-check against the repo, not against this file
 
-1. **Run counts** on Slides 2 and 15 (`progress.txt`).
-2. **The recommended deployment point** on Slide 23 and B13 — the only numbers in the thesis that are
+1. **Run counts** on Slides 2 and 13 (`progress.txt`).
+2. **The recommended deployment point** on Slide 21 — the only numbers in the thesis that are
    not byte-reproducible by design, because latency is hardware- and session-dependent.
 3. **Your own title-slide details** on Slide 1 — the repo has no record of student IDs or supervisor
    names, so they are placeholders here.
@@ -1650,13 +1525,17 @@ most important visuals in the deck:
 
 | Item | What | Where it still needs fixing |
 |---|---|---|
-| A1 | Drop the unstable "163×"; quote the η² shares | `RQ_SUPERVISOR_REPORT.md` §1/§4.2 + the `.pdf`; `RQ_RESULTS_SUMMARY.md`; `DEFENCE_SLIDE_PLAN.md` |
-| A2 | State that the refit leaves evidential worse than softmax in 48/48 | added to `RQ_SUPERVISOR_REPORT.md` §6.1 — the `.pdf` is stale, regenerate |
+| A1 | Drop the unstable "163×"; quote the η² shares (now 42.7% / 0.17% at full coverage) | `RQ_SUPERVISOR_REPORT.md` §1/§4.2 + the `.pdf`; `RQ_RESULTS_SUMMARY.md`; `DEFENCE_SLIDE_PLAN.md` |
+| A2 | State that the refit leaves evidential worse than softmax — now **60/60**, not 48/48 | added to `RQ_SUPERVISOR_REPORT.md` §6.1 — the `.pdf` is stale, regenerate |
 | A3 | Orig-RQ1 is mislabelled "serial vs parallel" | `RQ_SUPERVISOR_REPORT.md` Appendix A; `RQ_RESULTS_SUMMARY.md` |
 | A6 | The evidence affine is learnable, not frozen at (2, −6) | fixed in the `.md` files; `RQ_SUPERVISOR_REPORT.pdf` still stale |
 | A7 | Do not describe `kl_weight_max` 0.1 as VAL-selected | `09_methodology.md` §9.5 discloses it; add a `progress.txt` entry if the reason is known |
 | A8 | State the cosine×10 prototype metric | the reports say only "similarity" |
 | — | Two unverifiable citations removed from this deck | confirm they are absent from the thesis draft too |
+| **NEW** | **Coverage is now 120/120** — every "99 of 120" statement is superseded | `RQ_SUPERVISOR_REPORT.md`; `RQ_RESULTS_SUMMARY.md`; `results/rq_summary.json` and `results/rq_checkpoint_audit.json` still hold the 99-record snapshot **by design** (kept as the "before" baseline) |
+| **NEW** | **RQ4 is now 60 cells / 240 comparisons** (60/60 improved, 192/240 preserved, worst ρ 0.866) | `RQ_SUPERVISOR_REPORT.md` §6; `RQ_RESULTS_SUMMARY.md` |
+| **NEW** | **RQ1 two-way interactions exist now** — "main effects only" is no longer a limitation | `RQ_SUPERVISOR_REPORT.md` §3; `docs/guide/03_results.md` §3.3; `09_methodology.md` |
+| **NEW** | **One grid cell's committed metrics were a 20-episode smoke run** (`cifar_fs/5shot/mobilenetv3_small/lora/evidential` seed 42) | Fixed in this deck — Slides 17, 19B and 23 already show the corrected 43.30%/3.23% figures. Still open: `results/mvt_results.json`, `results/grid/`, and `docs/RESULTS_MASTER.md` (its ±1.82 seed spread is the visible symptom) have not been regenerated from the corrected cell; do that before the thesis text is finalised |
 
 **Provenance for everything else:** `docs/RQ_SUPERVISOR_REPORT.md` (four-RQ framing, answers, novelty
 labels) · `docs/RQ_RESULTS_SUMMARY.md` (RQ tables, 16-pair evidence, §5.1 matched-budget) ·

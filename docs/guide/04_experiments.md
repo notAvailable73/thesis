@@ -26,6 +26,7 @@ Use this page to find the evidence behind a number, or to rerun something.
 | 13 | **Phase A — factorial + refit** (RQ2, RQ4) | Aug 25–26 | 99 recovered models, 5.51 GPU-h | Kaggle | **Yes** |
 | 14 | **Phase B — rank sweep** (former RQ5) | Aug 26 | 21 runs | Kaggle | **Yes** (negative result) |
 | 15 | **RQ3 matched-budget** | Aug 26–27 | **48 runs, 6.2 h** | Kaggle T4 | **Yes — strongest result** |
+| 16 | **RQ2/RQ4 completion + RQ1 interactions** | Sep 14–15 | **21 re-trained cells** | Kaggle T4 | **Yes — closes the coverage gap** |
 
 "Superseded by grid" means the same kind of setting was re-run inside the Step 10 grid with 3 seeds. The
 single-seed numbers from those steps are history, not thesis results.
@@ -226,7 +227,7 @@ No new training.
 | Independent audit | `docs/NEW_RQS_PROGRESS_REPORT.md` (Aug 25, **not in git**) |
 | Old task plan | `docs/NEW_RQS_TASK_PLAN.md` — deleted Sep 14; recover with `git show 8d706ea:docs/NEW_RQS_TASK_PLAN.md` |
 
-**Coverage.** 99 of 120 models were recovered. All 21 missing ones are CIFAR-FS 5-shot adapter models
+**Coverage (as of this session — closed later, see §4.8).** 99 of 120 models were recovered. All 21 missing ones are CIFAR-FS 5-shot adapter models
 (parallel and LoRA, both backbones); that slice has 15 of 36.
 
 **Result.** 99 models OK, 0 errors, 21 skipped (no model file). 5.51 GPU-hours.
@@ -320,7 +321,65 @@ at next.
 
 ---
 
-## 4.8 Rules every experiment followed
+## 4.8 RQ2/RQ4 completion + RQ1 interactions (Sep 14–15) — closes the coverage gap
+
+**Why.** Phase A had recovered only 99 of 120 Step 10 checkpoints; the 21 missing ones were all CIFAR-FS
+5-shot adapter models — the project's most-quoted slice. That made RQ2's objective × score design not
+fully crossed (one setting had a softmax arm but no evidential arm), which is what made the "163×" ratio
+unstable. RQ1's decomposition was also main-effects only.
+
+**Design.** Re-train the 21 missing cells from their unchanged committed configs, score them through the
+same Phase A path, re-aggregate RQ2/RQ4 on all 120, and compute RQ1's two-way interactions with a seed
+bootstrap. No frozen file was touched.
+
+| Item | Location |
+|---|---|
+| Code | `scripts/rq_completion.py` |
+| Session report (read this first) | `results/rq_completion/REPORT.md` |
+| Per-cell Phase A outputs (21 new) | `results/rq_factorial/cifar_fs_5shot_*.json` |
+| RQ2/RQ4 re-aggregation | `results/rq_completion/rq2_rq4_summary.json` |
+| RQ1 interactions + bootstrap | `results/rq_completion/rq1_interactions.json` |
+| Sensitivity (smoke obs. replaced) | `results/rq_completion/rq1_interactions_smoke_obs_replaced.json` |
+| Regression guard, per cell | `results/rq_completion/guard_table.json`, `provenance/` |
+| Session log | `results/rq_completion/logs/session_20260914-145434.log` |
+
+**Checks passed.**
+
+- 21/21 trained and scored; coverage **120/120**.
+- Regression guard: **21/21 `exact`**, max abs diff **0.0**, `best_val_epoch` matches 21/21, all
+  `n_params` match.
+- The unchanged aggregator still reproduces the committed `results/rq_summary.json` on the original 99
+  records (RQ2 and RQ4 both at max abs diff 0.0) — so the new analysis measures the same quantity.
+- Design completeness: 20/20 designs complete, 0 absent, 0 with one objective arm missing, 0 empty
+  objective × score cells. **Fully crossed.**
+- Frozen paths untouched (`configs/`, `results/grid/`, `results/mvt_results.json`,
+  `results/rq_summary.json`, `results/rq_checkpoint_audit.json`): **True**.
+
+**Results.**
+
+- **RQ2:** far 42.69% score / 0.170% objective (250.5×); near 14.72% / 0.634% (23.2×). The shares barely
+  moved from the 99-record values; the *ratio* moved 163×→250×, which is the evidence for quoting shares.
+- **RQ4:** now 60 evidential cells — ECE improved 60/60, AUROC preserved 192/240 (80%), mean ΔECE −0.1387,
+  worst ρ 0.866. The 12 new cells preserved only 42/48 and had mean ΔAUROC −0.0016, so fuller coverage
+  made this result slightly **weaker**.
+- **RQ1 interactions:** ten two-way terms per outcome. `backbone:adapter` is significant **only on
+  calibration** (3.28% of ECE variance, p<1e-6 — independent corroboration of RQ3) and ≈0 on accuracy and
+  both OOD pools. The biggest interaction elsewhere is `dataset:backbone`, which no RQ addresses.
+
+**Found along the way — a data-quality issue in the committed grid.** The metrics file for
+`cifar_fs/5shot/mobilenetv3_small/lora/evidential` seed 42 was written by a **20-episode smoke run**, not
+the 600-episode protocol (8 metric keys instead of 12). That is why RQ1's near-OOD row had 95/96
+observations and why that cell's seed spread in `RESULTS_MASTER.md` (±1.82) is an outlier. Impact was
+measured, not assumed: re-scoring over the full 600 episodes moves main effects by ≤0.70 pp and leaves
+every conclusion intact. See `05_problems_and_open_work.md` B5.
+
+**Not done.** `results/rq_summary.json` and `results/rq_checkpoint_audit.json` were deliberately left at
+the 99-record snapshot as the "before" baseline; they are now stale as a description of current coverage.
+`RQ_SUPERVISOR_REPORT.md` and its `.pdf` still carry the 99-record / 48-cell numbers.
+
+---
+
+## 4.9 Rules every experiment followed
 
 - **Never tune on test episodes.** Tuning and fitting use VAL seeds 10000–10099 only. Final numbers use
   test seeds 0–599 only.

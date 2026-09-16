@@ -1,0 +1,22 @@
+{
+  "frozen": {
+    "changed": [],
+    "ok": true,
+    "paths": [
+      "configs",
+      "results/grid",
+      "results/mvt_results.json",
+      "results/rq_summary.json",
+      "results/rq_checkpoint_audit.json"
+    ]
+  },
+  "notes": [],
+  "ok": true,
+  "problems": [],
+  "smoke_baselines": [
+    {
+      "committed_num_episodes": 20,
+      "config": "configs/grid/cifar_5shot_mbnet_lora_evidential_seed42.yaml"
+    }
+  ]
+}

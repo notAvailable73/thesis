@@ -21,9 +21,10 @@ We take an image model that was already trained on ImageNet (ResNet-18 or Mobile
    decides calibration. The two barely affect each other. *(RQ1)*
 2. OOD detection depends on **how you score the output**, not on **how the model was trained**. *(RQ2)*
 3. Adapter **design** decides accuracy. But calibration depends on the **backbone**, not on how many
-   parameters the adapter has. This is our strongest result. *(RQ3)*
+   parameters the adapter has. This is our strongest result. *(RQ3)* — independently corroborated on
+   2026-09-15 by the `backbone:adapter` interaction term (3.28% of ECE variance, p<1e-6).
 4. The evidential head's poor calibration can be **improved after training** by refitting two numbers.
-   It got better in 48 of 48 cases, though it is still worse than plain softmax. *(RQ4)*
+   It got better in 60 of 60 cases, though it is still worse than plain softmax in all 60. *(RQ4)*
 5. Several things we expected at the start turned out **wrong**. We report those openly.
 
 ## Read in this order
@@ -54,6 +55,13 @@ Chapter 5 (Results) is `03_results.md`; §3.11 has the full 40-cell grid tables.
 
 If you only have five minutes, read this page, then the table at the top of `03_results.md`, then
 `05_problems_and_open_work.md`.
+
+**Update 2026-09-15 — coverage completed.** The 21 missing Phase A checkpoints were trained and scored:
+coverage is now **120/120, fully crossed**, all 21 reproducing the committed grid exactly. RQ1's two-way
+interactions were computed at the same time. Read `results/rq_completion/REPORT.md`, then
+`04_experiments.md` §4.8. Consequences: RQ2 is now 42.7%/0.17% (far), RQ4 is 60 cells not 48, "main
+effects only" is no longer a limitation, and a new data-quality issue was found (a 20-episode smoke run
+in the committed grid — `05_problems_and_open_work.md` B5).
 
 **Corrections made on 2026-09-14** (details in `05_problems_and_open_work.md` A6–A8):
 

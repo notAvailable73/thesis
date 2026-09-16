@@ -1,0 +1,10 @@
+{
+  "cell": "cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed44",
+  "checkpoint_source": "trained_this_session",
+  "cuda": "12.8",
+  "cudnn": 91002,
+  "gpu": "Tesla T4",
+  "repo_head": "8d706ea",
+  "session_start": "2026-09-14T14:54:34",
+  "torch": "2.10.0+cu128"
+}

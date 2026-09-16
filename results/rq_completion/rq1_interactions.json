@@ -1,0 +1,886 @@
+{
+  "baseline_adapters_excluded": [
+    "full_ft",
+    "linear_probe"
+  ],
+  "boot_seed": 20260914,
+  "factors": [
+    "dataset",
+    "k_shot",
+    "backbone",
+    "adapter",
+    "head"
+  ],
+  "focus_term": "backbone:adapter",
+  "n_boot": 2000,
+  "outcome_keys": {
+    "accuracy": "accuracy_mean",
+    "ece": "ece_pooled",
+    "far_ood_svhn": "ood_auroc__svhn_far__{native}",
+    "near_ood_tin": "ood_auroc__tin_near__{native}"
+  },
+  "outcomes": {
+    "accuracy": {
+      "balanced": true,
+      "df_resid_with_interactions": 80,
+      "eta_squared_with_two_way_raw": {
+        "adapter": 0.09141220598102084,
+        "adapter:head": 0.003332166045028187,
+        "backbone": 0.03923038135103811,
+        "backbone:adapter": 0.007287573862464652,
+        "backbone:head": 0.0008186786399255601,
+        "dataset": 0.01753161363905338,
+        "dataset:adapter": 0.0002818133404847704,
+        "dataset:backbone": 0.052693456975692755,
+        "dataset:head": 0.00027375572137084504,
+        "dataset:k_shot": 0.0014765241886055484,
+        "head": 0.001855088691302484,
+        "k_shot": 0.7605014866544394,
+        "k_shot:adapter": 0.00017563636112770964,
+        "k_shot:backbone": 0.009748483169655157,
+        "k_shot:head": 0.0002675220287624769,
+        "residual": 0.013113613350028107
+      },
+      "focus_share": 0.007287573862464652,
+      "focus_share_of_main_effects_residual": 0.08145341562673562,
+      "focus_term": "backbone:adapter",
+      "main_effects_only": {
+        "adapter": 0.09141220598102084,
+        "backbone": 0.03923038135103811,
+        "dataset": 0.01753161363905338,
+        "head": 0.001855088691302484,
+        "k_shot": 0.7605014866544394,
+        "residual": 0.08946922368314579
+      },
+      "method": "eta_squared (exact: balanced design)",
+      "n": 96,
+      "ols_vs_eta_squared_max_abs_diff": 1.27675647831893e-14,
+      "published_main_effects_check": {
+        "diffs_pp": {
+          "adapter": 0.0012205981020834145,
+          "backbone": 0.0030381351038109017,
+          "dataset": 0.003161363905338055,
+          "head": 0.004491130869751614,
+          "k_shot": 0.0001486654439446511,
+          "residual": 0.003077631685419746
+        },
+        "max_abs_diff_pp": 0.004491130869751614,
+        "ok": true
+      },
+      "residual_main_effects_only": 0.08946922368314579,
+      "residual_with_two_way": 0.013113613350028107,
+      "sum_of_shares_incl_residual": 1.0,
+      "table": [
+        {
+          "boot_hi": 0.020547909538935306,
+          "boot_lo": 0.014646256285942528,
+          "boot_sd": 0.0015183177425864747,
+          "f_test_p": 2.0932076440562336e-16,
+          "kind": "main",
+          "share": 0.01753161363905338,
+          "term": "dataset"
+        },
+        {
+          "boot_hi": 0.7738715807647776,
+          "boot_lo": 0.749049016717107,
+          "boot_sd": 0.006263719772200413,
+          "f_test_p": 1.3199471659711573e-72,
+          "kind": "main",
+          "share": 0.7605014866544394,
+          "term": "k_shot"
+        },
+        {
+          "boot_hi": 0.04482075899334298,
+          "boot_lo": 0.034554021909365705,
+          "boot_sd": 0.002616233690963419,
+          "f_test_p": 9.207195249227667e-26,
+          "kind": "main",
+          "share": 0.03923038135103811,
+          "term": "backbone"
+        },
+        {
+          "boot_hi": 0.0979541250817158,
+          "boot_lo": 0.0848866926411204,
+          "boot_sd": 0.0033893718794014245,
+          "f_test_p": 8.266902401973754e-38,
+          "kind": "main",
+          "share": 0.09141220598102084,
+          "term": "adapter"
+        },
+        {
+          "boot_hi": 0.002948716652584156,
+          "boot_lo": 0.0009773736423958992,
+          "boot_sd": 0.0005035630963846348,
+          "f_test_p": 0.0011811307006082828,
+          "kind": "main",
+          "share": 0.001855088691302484,
+          "term": "head"
+        },
+        {
+          "boot_hi": 0.0024538012036317727,
+          "boot_lo": 0.0007145004208874587,
+          "boot_sd": 0.0004634526481732512,
+          "f_test_p": 0.0035850263901093696,
+          "kind": "interaction",
+          "share": 0.0014765241886055484,
+          "term": "dataset:k_shot"
+        },
+        {
+          "boot_hi": 0.05733112549734508,
+          "boot_lo": 0.04782009210810219,
+          "boot_sd": 0.0024907444252503202,
+          "f_test_p": 9.41846417620842e-30,
+          "kind": "interaction",
+          "share": 0.052693456975692755,
+          "term": "dataset:backbone"
+        },
+        {
+          "boot_hi": 0.000794889728766744,
+          "boot_lo": 2.1053506509702517e-05,
+          "boot_sd": 0.0002042192535827791,
+          "f_test_p": 0.19354569641120015,
+          "kind": "interaction",
+          "share": 0.0002818133404847704,
+          "term": "dataset:adapter"
+        },
+        {
+          "boot_hi": 0.0007760961881800923,
+          "boot_lo": 2.3824076870101367e-05,
+          "boot_sd": 0.00020422301940588197,
+          "f_test_p": 0.19997155734037114,
+          "kind": "interaction",
+          "share": 0.00027375572137084504,
+          "term": "dataset:head"
+        },
+        {
+          "boot_hi": 0.012296375181121439,
+          "boot_lo": 0.0074957569248108435,
+          "boot_sd": 0.0012305833372728352,
+          "f_test_p": 2.9615555230701445e-11,
+          "kind": "interaction",
+          "share": 0.009748483169655157,
+          "term": "k_shot:backbone"
+        },
+        {
+          "boot_hi": 0.0006149425531451429,
+          "boot_lo": 6.436780137699431e-06,
+          "boot_sd": 0.0001635461198955913,
+          "f_test_p": 0.3037314130620764,
+          "kind": "interaction",
+          "share": 0.00017563636112770964,
+          "term": "k_shot:adapter"
+        },
+        {
+          "boot_hi": 0.0007881961049525541,
+          "boot_lo": 2.7396487351261143e-05,
+          "boot_sd": 0.00020422727583706968,
+          "f_test_p": 0.20511795464483426,
+          "kind": "interaction",
+          "share": 0.0002675220287624769,
+          "term": "k_shot:head"
+        },
+        {
+          "boot_hi": 0.00954423677281174,
+          "boot_lo": 0.0053137517661492936,
+          "boot_sd": 0.0010373599529596232,
+          "f_test_p": 3.063256199306473e-09,
+          "kind": "interaction",
+          "share": 0.007287573862464652,
+          "term": "backbone:adapter"
+        },
+        {
+          "boot_hi": 0.001635797542477716,
+          "boot_lo": 0.00027558009765771486,
+          "boot_sd": 0.00035160618221929203,
+          "f_test_p": 0.028218909802064287,
+          "kind": "interaction",
+          "share": 0.0008186786399255601,
+          "term": "backbone:head"
+        },
+        {
+          "boot_hi": 0.004702927155984949,
+          "boot_lo": 0.002113664473282055,
+          "boot_sd": 0.0006949519419778289,
+          "f_test_p": 2.2058941718621162e-05,
+          "kind": "interaction",
+          "share": 0.003332166045028187,
+          "term": "adapter:head"
+        },
+        {
+          "boot_hi": 0.014586015918820822,
+          "boot_lo": 0.010558596213572148,
+          "boot_sd": 0.0010257791376636354,
+          "kind": "residual",
+          "share": 0.013113613350028107,
+          "term": "residual"
+        }
+      ],
+      "two_way_total": 0.07635561033311766,
+      "with_two_way": {
+        "adapter": 0.09141220598102084,
+        "adapter:head": 0.003332166045028187,
+        "backbone": 0.03923038135103811,
+        "backbone:adapter": 0.007287573862464652,
+        "backbone:head": 0.0008186786399255601,
+        "dataset": 0.01753161363905338,
+        "dataset:adapter": 0.0002818133404847704,
+        "dataset:backbone": 0.052693456975692755,
+        "dataset:head": 0.00027375572137084504,
+        "dataset:k_shot": 0.0014765241886055484,
+        "head": 0.001855088691302484,
+        "k_shot": 0.7605014866544394,
+        "k_shot:adapter": 0.00017563636112770964,
+        "k_shot:backbone": 0.009748483169655157,
+        "k_shot:head": 0.0002675220287624769,
+        "residual": 0.013113613350028107
+      }
+    },
+    "ece": {
+      "balanced": true,
+      "df_resid_with_interactions": 80,
+      "eta_squared_with_two_way_raw": {
+        "adapter": 0.0063289182127823865,
+        "adapter:head": 0.00017625318218805858,
+        "backbone": 0.04625428842568978,
+        "backbone:adapter": 0.03280345296325382,
+        "backbone:head": 0.00021308521230724322,
+        "dataset": 0.020193834713210332,
+        "dataset:adapter": 0.0033720634409518425,
+        "dataset:backbone": 0.006041013721310447,
+        "dataset:head": 0.0008950954844627374,
+        "dataset:k_shot": 0.00012734526458024964,
+        "head": 0.8289192486236217,
+        "k_shot": 0.021303180912020558,
+        "k_shot:adapter": 0.0020150700057612763,
+        "k_shot:backbone": 0.008908340046596281,
+        "k_shot:head": 0.001943874962719339,
+        "residual": 0.020504934828544066
+      },
+      "focus_share": 0.03280345296325382,
+      "focus_share_of_main_effects_residual": 0.426015942244401,
+      "focus_term": "backbone:adapter",
+      "main_effects_only": {
+        "adapter": 0.0063289182127823865,
+        "backbone": 0.04625428842568978,
+        "dataset": 0.020193834713210332,
+        "head": 0.8289192486236217,
+        "k_shot": 0.021303180912020558,
+        "residual": 0.07700052911267535
+      },
+      "method": "eta_squared (exact: balanced design)",
+      "n": 96,
+      "ols_vs_eta_squared_max_abs_diff": 7.563394355258879e-16,
+      "published_main_effects_check": {
+        "diffs_pp": {
+          "adapter": 0.0028918212782386155,
+          "backbone": 0.004571157431022321,
+          "dataset": 0.0006165286789667768,
+          "head": 0.0019248623621592742,
+          "k_shot": 0.00031809120205572583,
+          "residual": 5.2911267535371564e-05
+        },
+        "max_abs_diff_pp": 0.004571157431022321,
+        "ok": true
+      },
+      "residual_main_effects_only": 0.07700052911267535,
+      "residual_with_two_way": 0.020504934828544066,
+      "sum_of_shares_incl_residual": 1.0,
+      "table": [
+        {
+          "boot_hi": 0.027036652490548263,
+          "boot_lo": 0.014207696786800075,
+          "boot_sd": 0.0032394557967856626,
+          "f_test_p": 1.53843418959405e-13,
+          "kind": "main",
+          "share": 0.020193834713210332,
+          "term": "dataset"
+        },
+        {
+          "boot_hi": 0.027999038942723473,
+          "boot_lo": 0.015845618818764513,
+          "boot_sd": 0.0031326007239364296,
+          "f_test_p": 5.1808144154891326e-14,
+          "kind": "main",
+          "share": 0.021303180912020558,
+          "term": "k_shot"
+        },
+        {
+          "boot_hi": 0.05553037464986769,
+          "boot_lo": 0.037624568151272554,
+          "boot_sd": 0.00462987884444633,
+          "f_test_p": 3.31348102502508e-22,
+          "kind": "main",
+          "share": 0.04625428842568978,
+          "term": "backbone"
+        },
+        {
+          "boot_hi": 0.010384931969793409,
+          "boot_lo": 0.003239372739379817,
+          "boot_sd": 0.0018091388489061579,
+          "f_test_p": 3.7494915553007833e-06,
+          "kind": "main",
+          "share": 0.0063289182127823865,
+          "term": "adapter"
+        },
+        {
+          "boot_hi": 0.8387461408900235,
+          "boot_lo": 0.8196955178648576,
+          "boot_sd": 0.004955878092986744,
+          "f_test_p": 1.8346959003412012e-66,
+          "kind": "main",
+          "share": 0.8289192486236217,
+          "term": "head"
+        },
+        {
+          "boot_hi": 0.0011288494178422648,
+          "boot_lo": 3.249223397678723e-07,
+          "boot_sd": 0.0003088556213541746,
+          "f_test_p": 0.4829401083234599,
+          "kind": "interaction",
+          "share": 0.00012734526458024964,
+          "term": "dataset:k_shot"
+        },
+        {
+          "boot_hi": 0.009918505752137891,
+          "boot_lo": 0.0030925627614318916,
+          "boot_sd": 0.0017941835307456872,
+          "f_test_p": 5.86732627665466e-06,
+          "kind": "interaction",
+          "share": 0.006041013721310447,
+          "term": "dataset:backbone"
+        },
+        {
+          "boot_hi": 0.006447689165376725,
+          "boot_lo": 0.001219790883367018,
+          "boot_sd": 0.0013645478534271916,
+          "f_test_p": 0.0005028464463638844,
+          "kind": "interaction",
+          "share": 0.0033720634409518425,
+          "term": "dataset:adapter"
+        },
+        {
+          "boot_hi": 0.0027571786392455323,
+          "boot_lo": 7.513185349096732e-05,
+          "boot_sd": 0.0007080185554616724,
+          "f_test_p": 0.06531825743480282,
+          "kind": "interaction",
+          "share": 0.0008950954844627374,
+          "term": "dataset:head"
+        },
+        {
+          "boot_hi": 0.013793276123302937,
+          "boot_lo": 0.004933644004454571,
+          "boot_sd": 0.0022463670031286423,
+          "f_test_p": 8.502749012011078e-08,
+          "kind": "interaction",
+          "share": 0.008908340046596281,
+          "term": "k_shot:backbone"
+        },
+        {
+          "boot_hi": 0.004512948169611797,
+          "boot_lo": 0.0005055525049108259,
+          "boot_sd": 0.0010736358907785424,
+          "f_test_p": 0.00633406877761001,
+          "kind": "interaction",
+          "share": 0.0020150700057612763,
+          "term": "k_shot:adapter"
+        },
+        {
+          "boot_hi": 0.00441619042128429,
+          "boot_lo": 0.0004576812250948203,
+          "boot_sd": 0.00102651102654433,
+          "f_test_p": 0.007286461579566086,
+          "kind": "interaction",
+          "share": 0.001943874962719339,
+          "term": "k_shot:head"
+        },
+        {
+          "boot_hi": 0.04147702093807561,
+          "boot_lo": 0.02515463082810821,
+          "boot_sd": 0.0041782391325512515,
+          "f_test_p": 2.84274767048915e-18,
+          "kind": "interaction",
+          "share": 0.03280345296325382,
+          "term": "backbone:adapter"
+        },
+        {
+          "boot_hi": 0.0013779485934007868,
+          "boot_lo": 8.341910686420239e-07,
+          "boot_sd": 0.00038250239868615777,
+          "f_test_p": 0.36462128979314723,
+          "kind": "interaction",
+          "share": 0.00021308521230724322,
+          "term": "backbone:head"
+        },
+        {
+          "boot_hi": 0.0012999986723491294,
+          "boot_lo": 4.016919803239844e-07,
+          "boot_sd": 0.00035584453622171033,
+          "f_test_p": 0.4094317305136925,
+          "kind": "interaction",
+          "share": 0.00017625318218805858,
+          "term": "adapter:head"
+        },
+        {
+          "boot_hi": 0.023903790504969796,
+          "boot_lo": 0.012860732248288879,
+          "boot_sd": 0.0028459784471711945,
+          "kind": "residual",
+          "share": 0.020504934828544066,
+          "term": "residual"
+        }
+      ],
+      "two_way_total": 0.0564955942841313,
+      "with_two_way": {
+        "adapter": 0.0063289182127823865,
+        "adapter:head": 0.00017625318218805858,
+        "backbone": 0.04625428842568978,
+        "backbone:adapter": 0.03280345296325382,
+        "backbone:head": 0.00021308521230724322,
+        "dataset": 0.020193834713210332,
+        "dataset:adapter": 0.0033720634409518425,
+        "dataset:backbone": 0.006041013721310447,
+        "dataset:head": 0.0008950954844627374,
+        "dataset:k_shot": 0.00012734526458024964,
+        "head": 0.8289192486236217,
+        "k_shot": 0.021303180912020558,
+        "k_shot:adapter": 0.0020150700057612763,
+        "k_shot:backbone": 0.008908340046596281,
+        "k_shot:head": 0.001943874962719339,
+        "residual": 0.020504934828544066
+      }
+    },
+    "far_ood_svhn": {
+      "balanced": true,
+      "df_resid_with_interactions": 80,
+      "eta_squared_with_two_way_raw": {
+        "adapter": 0.01728084146013493,
+        "adapter:head": 0.003879101480839568,
+        "backbone": 0.11537776828481525,
+        "backbone:adapter": 0.001796938362514127,
+        "backbone:head": 0.013520636918713252,
+        "dataset": 0.011787847426023994,
+        "dataset:adapter": 0.0010134644079987352,
+        "dataset:backbone": 0.09184589483049707,
+        "dataset:head": 0.020704166237317443,
+        "dataset:k_shot": 0.0012723830398716958,
+        "head": 0.3900916170698071,
+        "k_shot": 0.2268041109324717,
+        "k_shot:adapter": 0.0003114171533381602,
+        "k_shot:backbone": 0.0020756392613314354,
+        "k_shot:head": 0.00624402996900345,
+        "residual": 0.09599414316532211
+      },
+      "focus_share": 0.001796938362514127,
+      "focus_share_of_main_effects_residual": 0.007529350605253005,
+      "focus_term": "backbone:adapter",
+      "main_effects_only": {
+        "adapter": 0.01728084146013493,
+        "backbone": 0.11537776828481525,
+        "dataset": 0.011787847426023994,
+        "head": 0.3900916170698071,
+        "k_shot": 0.2268041109324717,
+        "residual": 0.238657814826747
+      },
+      "method": "eta_squared (exact: balanced design)",
+      "n": 96,
+      "ols_vs_eta_squared_max_abs_diff": 1.3822276656583199e-14,
+      "published_main_effects_check": {
+        "diffs_pp": {
+          "adapter": 0.0019158539865071766,
+          "backbone": 0.0022231715184748424,
+          "dataset": 0.0012152573976005332,
+          "head": 0.0008382930192851745,
+          "k_shot": 0.00041109324716970264,
+          "residual": 0.004218517325302429
+        },
+        "max_abs_diff_pp": 0.004218517325302429,
+        "ok": true
+      },
+      "residual_main_effects_only": 0.238657814826747,
+      "residual_with_two_way": 0.09599414316532211,
+      "sum_of_shares_incl_residual": 1.0,
+      "table": [
+        {
+          "boot_hi": 0.022516200221518474,
+          "boot_lo": 0.004304504376093347,
+          "boot_sd": 0.0047490624644054204,
+          "f_test_p": 0.002408675129696951,
+          "kind": "main",
+          "share": 0.011787847426023994,
+          "term": "dataset"
+        },
+        {
+          "boot_hi": 0.2640328573479582,
+          "boot_lo": 0.1924042680591631,
+          "boot_sd": 0.018465419237054578,
+          "f_test_p": 9.036624718064659e-23,
+          "kind": "main",
+          "share": 0.2268041109324717,
+          "term": "k_shot"
+        },
+        {
+          "boot_hi": 0.14748885512011722,
+          "boot_lo": 0.0892534915394756,
+          "boot_sd": 0.014975078671331117,
+          "f_test_p": 2.312577118123997e-15,
+          "kind": "main",
+          "share": 0.11537776828481525,
+          "term": "backbone"
+        },
+        {
+          "boot_hi": 0.02850154847421462,
+          "boot_lo": 0.007690896914293958,
+          "boot_sd": 0.005422007415960391,
+          "f_test_p": 0.00028581650431039313,
+          "kind": "main",
+          "share": 0.01728084146013493,
+          "term": "adapter"
+        },
+        {
+          "boot_hi": 0.4381441795811184,
+          "boot_lo": 0.345854264368233,
+          "boot_sd": 0.023334744032530545,
+          "f_test_p": 6.558290355004718e-30,
+          "kind": "main",
+          "share": 0.3900916170698071,
+          "term": "head"
+        },
+        {
+          "boot_hi": 0.006210950729340045,
+          "boot_lo": 9.619145594058338e-06,
+          "boot_sd": 0.001685534965548798,
+          "f_test_p": 0.3062309376238337,
+          "kind": "interaction",
+          "share": 0.0012723830398716958,
+          "term": "dataset:k_shot"
+        },
+        {
+          "boot_hi": 0.11787643728946744,
+          "boot_lo": 0.06679408770855881,
+          "boot_sd": 0.012972920287002875,
+          "f_test_p": 2.7371042029329425e-13,
+          "kind": "interaction",
+          "share": 0.09184589483049707,
+          "term": "dataset:backbone"
+        },
+        {
+          "boot_hi": 0.005175428296138677,
+          "boot_lo": 4.493399212522995e-06,
+          "boot_sd": 0.001484371479855451,
+          "f_test_p": 0.36084569921561493,
+          "kind": "interaction",
+          "share": 0.0010134644079987352,
+          "term": "dataset:adapter"
+        },
+        {
+          "boot_hi": 0.03497346574178703,
+          "boot_lo": 0.010016939349852495,
+          "boot_sd": 0.006399452601421863,
+          "f_test_p": 8.126496927637684e-05,
+          "kind": "interaction",
+          "share": 0.020704166237317443,
+          "term": "dataset:head"
+        },
+        {
+          "boot_hi": 0.008003468138179079,
+          "boot_lo": 3.537030973659154e-05,
+          "boot_sd": 0.002143425682340086,
+          "f_test_p": 0.1921931329180606,
+          "kind": "interaction",
+          "share": 0.0020756392613314354,
+          "term": "k_shot:backbone"
+        },
+        {
+          "boot_hi": 0.0035239082887886827,
+          "boot_lo": 7.243932985994432e-07,
+          "boot_sd": 0.0009697582653181139,
+          "f_test_p": 0.6118455727914353,
+          "kind": "interaction",
+          "share": 0.0003114171533381602,
+          "term": "k_shot:adapter"
+        },
+        {
+          "boot_hi": 0.01411059425067847,
+          "boot_lo": 0.0015230625327146438,
+          "boot_sd": 0.0033387811462318373,
+          "f_test_p": 0.02519852926864412,
+          "kind": "interaction",
+          "share": 0.00624402996900345,
+          "term": "k_shot:head"
+        },
+        {
+          "boot_hi": 0.007273971785374125,
+          "boot_lo": 2.9819667187344736e-05,
+          "boot_sd": 0.0019681685074182985,
+          "f_test_p": 0.22464230510636254,
+          "kind": "interaction",
+          "share": 0.001796938362514127,
+          "term": "backbone:adapter"
+        },
+        {
+          "boot_hi": 0.024936147107155294,
+          "boot_lo": 0.005467811508068207,
+          "boot_sd": 0.005056709235462309,
+          "f_test_p": 0.0012088090936689122,
+          "kind": "interaction",
+          "share": 0.013520636918713252,
+          "term": "backbone:head"
+        },
+        {
+          "boot_hi": 0.010466310370935481,
+          "boot_lo": 0.00038614223845750013,
+          "boot_sd": 0.0026758164572493475,
+          "f_test_p": 0.07595059809692002,
+          "kind": "interaction",
+          "share": 0.003879101480839568,
+          "term": "adapter:head"
+        },
+        {
+          "boot_hi": 0.10563652466185111,
+          "boot_lo": 0.07089992885768201,
+          "boot_sd": 0.008823802091539042,
+          "kind": "residual",
+          "share": 0.09599414316532211,
+          "term": "residual"
+        }
+      ],
+      "two_way_total": 0.14266367166142493,
+      "with_two_way": {
+        "adapter": 0.01728084146013493,
+        "adapter:head": 0.003879101480839568,
+        "backbone": 0.11537776828481525,
+        "backbone:adapter": 0.001796938362514127,
+        "backbone:head": 0.013520636918713252,
+        "dataset": 0.011787847426023994,
+        "dataset:adapter": 0.0010134644079987352,
+        "dataset:backbone": 0.09184589483049707,
+        "dataset:head": 0.020704166237317443,
+        "dataset:k_shot": 0.0012723830398716958,
+        "head": 0.3900916170698071,
+        "k_shot": 0.2268041109324717,
+        "k_shot:adapter": 0.0003114171533381602,
+        "k_shot:backbone": 0.0020756392613314354,
+        "k_shot:head": 0.00624402996900345,
+        "residual": 0.09599414316532211
+      }
+    },
+    "near_ood_tin": {
+      "balanced": false,
+      "df_resid_with_interactions": 79,
+      "eta_squared_with_two_way_raw": {
+        "adapter": 0.22902133135006833,
+        "adapter:head": 0.0031113107642419826,
+        "backbone": 0.006960955512774612,
+        "backbone:adapter": 0.00026278141368885326,
+        "backbone:head": 0.006833600415779574,
+        "dataset": 0.017941951947956284,
+        "dataset:adapter": 0.0027359133347410465,
+        "dataset:backbone": 0.03537994132068445,
+        "dataset:head": 7.39005932538191e-05,
+        "dataset:k_shot": 0.00020124783268186556,
+        "head": 0.21015666970893027,
+        "k_shot": 0.42922196947070407,
+        "k_shot:adapter": 0.0005993855999891619,
+        "k_shot:backbone": 0.00020787604620975273,
+        "k_shot:head": 0.0013030278654921582,
+        "residual": 0.05598813682280373
+      },
+      "focus_share": 4.845571600178083e-06,
+      "focus_share_of_main_effects_residual": 4.243700267365813e-05,
+      "focus_term": "backbone:adapter",
+      "main_effects_only": {
+        "adapter": 0.21979502419391037,
+        "backbone": 0.006075315259515256,
+        "dataset": 0.016362531760698632,
+        "head": 0.20984401066463454,
+        "k_shot": 0.42600806019986504,
+        "residual": 0.11418270129586387
+      },
+      "method": "OLS Type II (eta_squared is not exact on unbalanced rows)",
+      "n": 95,
+      "ols_vs_eta_squared_max_abs_diff": 0.012326696906603901,
+      "published_main_effects_check": {
+        "diffs_pp": {
+          "adapter": 0.000497580608964654,
+          "backbone": 0.0024684740484743894,
+          "dataset": 0.003746823930136589,
+          "head": 0.004401066463454839,
+          "k_shot": 0.0008060199865056461,
+          "residual": 0.0017298704136123888
+        },
+        "max_abs_diff_pp": 0.004401066463454839,
+        "ok": true
+      },
+      "residual_main_effects_only": 0.11418270129586387,
+      "residual_with_two_way": 0.06229664541208493,
+      "sum_of_shares_incl_residual": 0.9936990222400716,
+      "table": [
+        {
+          "boot_hi": 0.021641781156839113,
+          "boot_lo": 0.01144990534904691,
+          "boot_sd": 0.0025823857605797754,
+          "f_test_p": 1.957406080892889e-05,
+          "kind": "main",
+          "share": 0.016282576601404565,
+          "term": "dataset"
+        },
+        {
+          "boot_hi": 0.4500225552859987,
+          "boot_lo": 0.40406579314967833,
+          "boot_sd": 0.011842121112357596,
+          "f_test_p": 3.695002848868115e-37,
+          "kind": "main",
+          "share": 0.42860219957074025,
+          "term": "k_shot"
+        },
+        {
+          "boot_hi": 0.009879488311032606,
+          "boot_lo": 0.0034463776057667497,
+          "boot_sd": 0.0016338807684908106,
+          "f_test_p": 0.00621274842413138,
+          "kind": "main",
+          "share": 0.00623416631422546,
+          "term": "backbone"
+        },
+        {
+          "boot_hi": 0.23109375863383172,
+          "boot_lo": 0.20195515306144876,
+          "boot_sd": 0.007334479774839296,
+          "f_test_p": 1.930275794904185e-27,
+          "kind": "main",
+          "share": 0.21669463444346443,
+          "term": "adapter"
+        },
+        {
+          "boot_hi": 0.2313694104166949,
+          "boot_lo": 0.19501054112447008,
+          "boot_sd": 0.009410708450177626,
+          "f_test_p": 3.8847182311342544e-27,
+          "kind": "main",
+          "share": 0.21181552890838493,
+          "term": "head"
+        },
+        {
+          "boot_hi": 0.0011008369975198874,
+          "boot_lo": 5.009358753630084e-07,
+          "boot_sd": 0.0003032031357519884,
+          "f_test_p": 0.629286297799153,
+          "kind": "interaction",
+          "share": 0.0001852003432802809,
+          "term": "dataset:k_shot"
+        },
+        {
+          "boot_hi": 0.0455183484155552,
+          "boot_lo": 0.03097064128425222,
+          "boot_sd": 0.003708395126255769,
+          "f_test_p": 9.210637903814885e-10,
+          "kind": "interaction",
+          "share": 0.03811683446372702,
+          "term": "dataset:backbone"
+        },
+        {
+          "boot_hi": 0.003303546008485197,
+          "boot_lo": 0.00034794428949107005,
+          "boot_sd": 0.0007706103021648212,
+          "f_test_p": 0.18080394522152562,
+          "kind": "interaction",
+          "share": 0.0014376094349318428,
+          "term": "dataset:adapter"
+        },
+        {
+          "boot_hi": 0.0009289488406277627,
+          "boot_lo": 3.541186206874157e-07,
+          "boot_sd": 0.0002769852834962822,
+          "f_test_p": 0.7114651475653717,
+          "kind": "interaction",
+          "share": 0.00010866940729598843,
+          "term": "dataset:head"
+        },
+        {
+          "boot_hi": 0.0010668031078242986,
+          "boot_lo": 5.822945724339231e-07,
+          "boot_sd": 0.0003090382204795717,
+          "f_test_p": 0.6350168265396718,
+          "kind": "interaction",
+          "share": 0.0001790631912709653,
+          "term": "k_shot:backbone"
+        },
+        {
+          "boot_hi": 0.0022661423264286936,
+          "boot_lo": 7.364451904283387e-05,
+          "boot_sd": 0.0005821978620986731,
+          "f_test_p": 0.3253131951789551,
+          "kind": "interaction",
+          "share": 0.0007724983116421123,
+          "term": "k_shot:adapter"
+        },
+        {
+          "boot_hi": 0.003500226256201311,
+          "boot_lo": 0.00039127459439104614,
+          "boot_sd": 0.000816340123023915,
+          "f_test_p": 0.16352930384864994,
+          "kind": "interaction",
+          "share": 0.001559732806816969,
+          "term": "k_shot:head"
+        },
+        {
+          "boot_hi": 0.0005509944101212721,
+          "boot_lo": 1.414341393928669e-07,
+          "boot_sd": 0.00015244765321426493,
+          "f_test_p": 0.9377170372582107,
+          "kind": "interaction",
+          "share": 4.845571600178083e-06,
+          "term": "backbone:adapter"
+        },
+        {
+          "boot_hi": 0.010796593703445706,
+          "boot_lo": 0.004196186621672331,
+          "boot_sd": 0.0017069267353083271,
+          "f_test_p": 0.0034829889539928897,
+          "kind": "interaction",
+          "share": 0.007154995930150753,
+          "term": "backbone:head"
+        },
+        {
+          "boot_hi": 0.00457793073766215,
+          "boot_lo": 0.0006882832928048599,
+          "boot_sd": 0.0009558098452452343,
+          "f_test_p": 0.09485533171535925,
+          "kind": "interaction",
+          "share": 0.002253821529050887,
+          "term": "adapter:head"
+        },
+        {
+          "boot_hi": 0.07191385943932055,
+          "boot_lo": 0.05055999426128112,
+          "boot_sd": 0.005529374089879703,
+          "kind": "residual",
+          "share": 0.06229664541208493,
+          "term": "residual"
+        }
+      ],
+      "two_way_total": 0.051773270989766994,
+      "with_two_way": {
+        "adapter": 0.21669463444346443,
+        "adapter:head": 0.002253821529050887,
+        "backbone": 0.00623416631422546,
+        "backbone:adapter": 4.845571600178083e-06,
+        "backbone:head": 0.007154995930150753,
+        "dataset": 0.016282576601404565,
+        "dataset:adapter": 0.0014376094349318428,
+        "dataset:backbone": 0.03811683446372702,
+        "dataset:head": 0.00010866940729598843,
+        "dataset:k_shot": 0.0001852003432802809,
+        "head": 0.21181552890838493,
+        "k_shot": 0.42860219957074025,
+        "k_shot:adapter": 0.0007724983116421123,
+        "k_shot:backbone": 0.0001790631912709653,
+        "k_shot:head": 0.001559732806816969,
+        "residual": 0.06229664541208493
+      }
+    }
+  },
+  "overrides": null,
+  "source": "/kaggle/working/thesis/results/mvt_results.json"
+}

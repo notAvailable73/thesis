@@ -1,0 +1,23 @@
+[
+  {
+    "best_val_epoch": {
+      "checkpoint": 3,
+      "committed": 3
+    },
+    "cell": "cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed42",
+    "committed_num_episodes": 20,
+    "guard": {
+      "max_abs_diff": 0.0,
+      "max_abs_diff_key": "fpr_at_95_tpr__cifar100_near__vacuity",
+      "n_exact": 8,
+      "n_keys": 8,
+      "path": "/kaggle/working/thesis/results/grid/grid_cifar_5shot_mbnet_lora_seed42_lora_prototype-evidential_metrics.json",
+      "status": "exact",
+      "tol": 1e-06
+    },
+    "n_params": {
+      "checkpoint": 10754,
+      "committed": 10754
+    }
+  }
+]

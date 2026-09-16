@@ -1,0 +1,496 @@
+=== rq-completion session start 2026-09-14T14:54:34 ===
+{"session_start": "2026-09-14T14:54:34", "gpu": "Tesla T4", "torch": "2.10.0+cu128", "cuda": "12.8", "cudnn": 91002, "repo_head": "8d706ea"}
+21 target cells; 21 selected this session
+
+[B] 6.7s | row counts {'accuracy': 96, 'ece': 96, 'far_ood_svhn': 96, 'near_ood_tin': 95} (expected {'accuracy': 96, 'ece': 96, 'far_ood_svhn': 96, 'near_ood_tin': 95})
+[B] published main effects reproduced: {'accuracy': True, 'ece': True, 'far_ood_svhn': True, 'near_ood_tin': True}
+[B] OLS vs eta_squared on balanced outcomes: accuracy=1.3e-14, ece=7.6e-16, far_ood_svhn=1.4e-14
+| outcome | n | residual (main only) | residual (+2-way) | all 2-way | `backbone:adapter` [95% CI] | largest 2-way term |
+|---|---:|---:|---:|---:|---:|---|
+| accuracy (as committed) | 96 | 8.95% | 1.31% | 7.64% | 0.73% [0.53%, 0.95%] | dataset:backbone 5.27% |
+| ece (as committed) | 96 | 7.70% | 2.05% | 5.65% | 3.28% [2.52%, 4.15%] | backbone:adapter 3.28% |
+| far_ood_svhn (as committed) | 96 | 23.87% | 9.60% | 14.27% | 0.18% [0.00%, 0.73%] | dataset:backbone 9.18% |
+| near_ood_tin (as committed) | 95 | 11.42% | 6.23% | 5.18% | 0.00% [0.00%, 0.06%] | dataset:backbone 3.81% |
+## RQ1: two-way interactions (committed grid, as published)
+
+Factors dataset, k_shot, backbone, adapter, head; baselines excluded (full_ft, linear_probe). Seed bootstrap: 2000 resamples, rng seed 20260914.
+
+### accuracy: `accuracy_mean`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Published main effects reproduced: **True** (max abs diff 0.004 pp). Residual df with two-way terms: 80.
+
+Residual **8.95%** with main effects only → **1.31%** after adding the ten two-way terms (which together take 7.64%).
+
+`backbone:adapter` = **0.73%**, which is 8.15% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| k_shot | 76.05% | [74.90%, 77.39%] | 0.63% | <1e-6 |
+| adapter | 9.14% | [8.49%, 9.80%] | 0.34% | <1e-6 |
+| dataset:backbone | 5.27% | [4.78%, 5.73%] | 0.25% | <1e-6 |
+| backbone | 3.92% | [3.46%, 4.48%] | 0.26% | <1e-6 |
+| dataset | 1.75% | [1.46%, 2.05%] | 0.15% | <1e-6 |
+| k_shot:backbone | 0.97% | [0.75%, 1.23%] | 0.12% | <1e-6 |
+| **backbone:adapter** | 0.73% | [0.53%, 0.95%] | 0.10% | <1e-6 |
+| adapter:head | 0.33% | [0.21%, 0.47%] | 0.07% | 2.2e-05 |
+| head | 0.19% | [0.10%, 0.29%] | 0.05% | 0.0012 |
+| dataset:k_shot | 0.15% | [0.07%, 0.25%] | 0.05% | 0.0036 |
+| backbone:head | 0.08% | [0.03%, 0.16%] | 0.04% | 0.028 |
+| dataset:adapter | 0.03% | [0.00%, 0.08%] | 0.02% | 0.19 |
+| dataset:head | 0.03% | [0.00%, 0.08%] | 0.02% | 0.2 |
+| k_shot:head | 0.03% | [0.00%, 0.08%] | 0.02% | 0.21 |
+| k_shot:adapter | 0.02% | [0.00%, 0.06%] | 0.02% | 0.3 |
+| residual | 1.31% | [1.06%, 1.46%] | 0.10% |  |
+
+### ece: `ece_pooled`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Published main effects reproduced: **True** (max abs diff 0.005 pp). Residual df with two-way terms: 80.
+
+Residual **7.70%** with main effects only → **2.05%** after adding the ten two-way terms (which together take 5.65%).
+
+`backbone:adapter` = **3.28%**, which is 42.60% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| head | 82.89% | [81.97%, 83.87%] | 0.50% | <1e-6 |
+| backbone | 4.63% | [3.76%, 5.55%] | 0.46% | <1e-6 |
+| **backbone:adapter** | 3.28% | [2.52%, 4.15%] | 0.42% | <1e-6 |
+| k_shot | 2.13% | [1.58%, 2.80%] | 0.31% | <1e-6 |
+| dataset | 2.02% | [1.42%, 2.70%] | 0.32% | <1e-6 |
+| k_shot:backbone | 0.89% | [0.49%, 1.38%] | 0.22% | <1e-6 |
+| adapter | 0.63% | [0.32%, 1.04%] | 0.18% | 3.7e-06 |
+| dataset:backbone | 0.60% | [0.31%, 0.99%] | 0.18% | 5.9e-06 |
+| dataset:adapter | 0.34% | [0.12%, 0.64%] | 0.14% | 0.0005 |
+| k_shot:adapter | 0.20% | [0.05%, 0.45%] | 0.11% | 0.0063 |
+| k_shot:head | 0.19% | [0.05%, 0.44%] | 0.10% | 0.0073 |
+| dataset:head | 0.09% | [0.01%, 0.28%] | 0.07% | 0.065 |
+| backbone:head | 0.02% | [0.00%, 0.14%] | 0.04% | 0.36 |
+| adapter:head | 0.02% | [0.00%, 0.13%] | 0.04% | 0.41 |
+| dataset:k_shot | 0.01% | [0.00%, 0.11%] | 0.03% | 0.48 |
+| residual | 2.05% | [1.29%, 2.39%] | 0.28% |  |
+
+### far_ood_svhn: `ood_auroc__svhn_far__{native}`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Published main effects reproduced: **True** (max abs diff 0.004 pp). Residual df with two-way terms: 80.
+
+Residual **23.87%** with main effects only → **9.60%** after adding the ten two-way terms (which together take 14.27%).
+
+`backbone:adapter` = **0.18%**, which is 0.75% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| head | 39.01% | [34.59%, 43.81%] | 2.33% | <1e-6 |
+| k_shot | 22.68% | [19.24%, 26.40%] | 1.85% | <1e-6 |
+| backbone | 11.54% | [8.93%, 14.75%] | 1.50% | <1e-6 |
+| dataset:backbone | 9.18% | [6.68%, 11.79%] | 1.30% | <1e-6 |
+| dataset:head | 2.07% | [1.00%, 3.50%] | 0.64% | 8.1e-05 |
+| adapter | 1.73% | [0.77%, 2.85%] | 0.54% | 0.00029 |
+| backbone:head | 1.35% | [0.55%, 2.49%] | 0.51% | 0.0012 |
+| dataset | 1.18% | [0.43%, 2.25%] | 0.47% | 0.0024 |
+| k_shot:head | 0.62% | [0.15%, 1.41%] | 0.33% | 0.025 |
+| adapter:head | 0.39% | [0.04%, 1.05%] | 0.27% | 0.076 |
+| k_shot:backbone | 0.21% | [0.00%, 0.80%] | 0.21% | 0.19 |
+| **backbone:adapter** | 0.18% | [0.00%, 0.73%] | 0.20% | 0.22 |
+| dataset:k_shot | 0.13% | [0.00%, 0.62%] | 0.17% | 0.31 |
+| dataset:adapter | 0.10% | [0.00%, 0.52%] | 0.15% | 0.36 |
+| k_shot:adapter | 0.03% | [0.00%, 0.35%] | 0.10% | 0.61 |
+| residual | 9.60% | [7.09%, 10.56%] | 0.88% |  |
+
+### near_ood_tin: `ood_auroc__tin_near__{native}`, n=95, balanced=False
+
+Method: OLS Type II (eta_squared is not exact on unbalanced rows). Published main effects reproduced: **True** (max abs diff 0.004 pp). Residual df with two-way terms: 79.
+
+Residual **11.42%** with main effects only → **6.23%** after adding the ten two-way terms (which together take 5.18%).
+
+`backbone:adapter` = **0.00%**, which is 0.00% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| k_shot | 42.86% | [40.41%, 45.00%] | 1.18% | <1e-6 |
+| adapter | 21.67% | [20.20%, 23.11%] | 0.73% | <1e-6 |
+| head | 21.18% | [19.50%, 23.14%] | 0.94% | <1e-6 |
+| dataset:backbone | 3.81% | [3.10%, 4.55%] | 0.37% | <1e-6 |
+| dataset | 1.63% | [1.14%, 2.16%] | 0.26% | 2e-05 |
+| backbone:head | 0.72% | [0.42%, 1.08%] | 0.17% | 0.0035 |
+| backbone | 0.62% | [0.34%, 0.99%] | 0.16% | 0.0062 |
+| adapter:head | 0.23% | [0.07%, 0.46%] | 0.10% | 0.095 |
+| k_shot:head | 0.16% | [0.04%, 0.35%] | 0.08% | 0.16 |
+| dataset:adapter | 0.14% | [0.03%, 0.33%] | 0.08% | 0.18 |
+| k_shot:adapter | 0.08% | [0.01%, 0.23%] | 0.06% | 0.33 |
+| dataset:k_shot | 0.02% | [0.00%, 0.11%] | 0.03% | 0.63 |
+| k_shot:backbone | 0.02% | [0.00%, 0.11%] | 0.03% | 0.64 |
+| dataset:head | 0.01% | [0.00%, 0.09%] | 0.03% | 0.71 |
+| **backbone:adapter** | 0.00% | [0.00%, 0.06%] | 0.02% | 0.94 |
+| residual | 6.23% | [5.06%, 7.19%] | 0.55% |  |
+
+Type-II shares on unbalanced rows do not sum to 100% (here 99.37%).
+
+=== pre-flight ===
+  VAL seeds 10000..10099 (n=100), TEST seeds 0..599 (n=600), disjoint=True
+  21 cell(s): configs + committed baselines present = True
+  NOTE baseline is a smoke run: configs/grid/cifar_5shot_mbnet_lora_evidential_seed42.yaml (num_episodes=20) -> first-20-episode guard applies (Section 8)
+  frozen paths clean: True
+
+=== recovery / resume ===
+  scanned ['/kaggle/input']: 0 zip(s)
+  restored: 0 checkpoint(s), 0 factorial record(s), 0 provenance file(s), 0 log(s)
+
+  this session (21 selected cell(s)):
+    already evaluated   : 0
+    checkpoint on disk  : 0  (score only, ~4 min each)
+    needs training      : 21  (measured Step 10 wall time each)
+  estimate: ~607 min (10.1 h) against MAX_MINUTES=540
+  -> more than this session holds. It stops cleanly at the budget; pack (Section 12), attach the two datasets next session, and re-run top to bottom.
+  (no checkpoints recovered -- expected: the 21 are not in any known Step 10 artifact)
+[smoke] pools built: ['cifar100_near', 'gaussian_far', 'svhn_far', 'tin_near']
+[smoke] missing (pool, score) keys: none  [2894s]
+[smoke] PASSED -- safe to train.
+
+=== train + score: 21 cell(s), budget 540 min ===
+[A] (1/21) cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed42
+    no checkpoint -> training this cell first
+    T=0.7295  affine native=(2.8154, -5.9894)  refit=(10.3223, -20.5228)
+    ep 200/600  acc=0.8708
+    ep 400/600  acc=0.8743
+    ep 600/600  acc=0.8757
+    guard: MISMATCH (0/8 exact, max|diff|=2.24e-02)  [170.2s]
+[A] (2/21) cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed43
+    no checkpoint -> training this cell first
+    T=0.7749  affine native=(2.5848, -5.9243)  refit=(9.1324, -21.3917)
+    ep 200/600  acc=0.8738
+    ep 400/600  acc=0.8744
+    ep 600/600  acc=0.8757
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [168.8s]
+[A] (3/21) cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed44
+    no checkpoint -> training this cell first
+    T=0.7240  affine native=(2.8245, -5.9544)  refit=(10.3312, -20.6861)
+    ep 200/600  acc=0.8705
+    ep 400/600  acc=0.8728
+    ep 600/600  acc=0.8741
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [162.3s]
+[A] (4/21) cifar_fs_5shot_resnet18_lora_evidential_seed42
+    no checkpoint -> training this cell first
+    T=0.7641  affine native=(2.0518, -7.5291)  refit=(6.2363, -23.3149)
+    ep 200/600  acc=0.8258
+    ep 400/600  acc=0.8266
+    ep 600/600  acc=0.8278
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [205.7s]
+[A] (5/21) cifar_fs_5shot_resnet18_lora_softmax_seed42
+    no checkpoint -> training this cell first
+    T=0.7014  affine native=(1.0000, 0.0000)  refit=(3.6957, -15.7447)
+    ep 200/600  acc=0.8593
+    ep 400/600  acc=0.8586
+    ep 600/600  acc=0.8601
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [205.8s]
+[A] (6/21) cifar_fs_5shot_resnet18_lora_evidential_seed43
+    no checkpoint -> training this cell first
+    T=0.7405  affine native=(1.9578, -7.1858)  refit=(5.9213, -22.6455)
+    ep 200/600  acc=0.8475
+    ep 400/600  acc=0.8475
+    ep 600/600  acc=0.8482
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [205.9s]
+[A] (7/21) cifar_fs_5shot_resnet18_lora_softmax_seed43
+    no checkpoint -> training this cell first
+    T=0.6255  affine native=(1.0000, 0.0000)  refit=(3.6542, -16.3537)
+    ep 200/600  acc=0.8623
+    ep 400/600  acc=0.8619
+    ep 600/600  acc=0.8638
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [207.2s]
+[A] (8/21) cifar_fs_5shot_resnet18_lora_evidential_seed44
+    no checkpoint -> training this cell first
+    T=0.7629  affine native=(2.3377, -8.3132)  refit=(6.8641, -23.3914)
+    ep 200/600  acc=0.8211
+    ep 400/600  acc=0.8231
+    ep 600/600  acc=0.8237
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [205.4s]
+[A] (9/21) cifar_fs_5shot_resnet18_lora_softmax_seed44
+    no checkpoint -> training this cell first
+    T=0.6280  affine native=(1.0000, 0.0000)  refit=(3.6141, -16.3696)
+    ep 200/600  acc=0.8620
+    ep 400/600  acc=0.8621
+    ep 600/600  acc=0.8637
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [205.3s]
+[A] (10/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed42
+    no checkpoint -> training this cell first
+    T=0.6454  affine native=(2.9287, -5.9054)  refit=(10.8405, -21.4310)
+    ep 200/600  acc=0.9030
+    ep 400/600  acc=0.9028
+    ep 600/600  acc=0.9048
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [167.2s]
+[A] (11/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed42
+    no checkpoint -> training this cell first
+    T=0.6721  affine native=(1.0000, 0.0000)  refit=(6.6592, -13.0757)
+    ep 200/600  acc=0.9063
+    ep 400/600  acc=0.9075
+    ep 600/600  acc=0.9090
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [168.2s]
+[A] (12/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed43
+    no checkpoint -> training this cell first
+    T=0.6479  affine native=(2.9341, -5.9165)  refit=(11.0248, -20.8245)
+    ep 200/600  acc=0.8993
+    ep 400/600  acc=0.8990
+    ep 600/600  acc=0.9017
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [169.4s]
+[A] (13/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed43
+    no checkpoint -> training this cell first
+    T=0.6757  affine native=(1.0000, 0.0000)  refit=(6.9070, -12.7598)
+    ep 200/600  acc=0.9054
+    ep 400/600  acc=0.9069
+    ep 600/600  acc=0.9081
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [169.2s]
+[A] (14/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed44
+    no checkpoint -> training this cell first
+    T=0.6475  affine native=(2.9354, -5.8997)  refit=(11.0445, -20.2419)
+    ep 200/600  acc=0.8987
+    ep 400/600  acc=0.8986
+    ep 600/600  acc=0.9006
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [167.9s]
+[A] (15/21) cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed44
+    no checkpoint -> training this cell first
+    T=0.6799  affine native=(1.0000, 0.0000)  refit=(6.8478, -12.8902)
+    ep 200/600  acc=0.9021
+    ep 400/600  acc=0.9031
+    ep 600/600  acc=0.9051
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [182.3s]
+[A] (16/21) cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed42
+    no checkpoint -> training this cell first
+    T=0.6302  affine native=(4.1793, -9.0369)  refit=(11.8658, -16.4273)
+    ep 200/600  acc=0.9120
+    ep 400/600  acc=0.9124
+    ep 600/600  acc=0.9146
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [212.2s]
+[A] (17/21) cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed42
+    no checkpoint -> training this cell first
+    T=0.7445  affine native=(1.0000, 0.0000)  refit=(8.0668, -12.2061)
+    ep 200/600  acc=0.9101
+    ep 400/600  acc=0.9115
+    ep 600/600  acc=0.9125
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [209.8s]
+[A] (18/21) cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed43
+    no checkpoint -> training this cell first
+    T=0.6252  affine native=(2.6175, -5.7443)  refit=(10.0009, -21.2674)
+    ep 200/600  acc=0.9140
+    ep 400/600  acc=0.9145
+    ep 600/600  acc=0.9146
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [211.4s]
+[A] (19/21) cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed43
+    no checkpoint -> training this cell first
+    T=0.6706  affine native=(1.0000, 0.0000)  refit=(7.8962, -12.2509)
+    ep 200/600  acc=0.9134
+    ep 400/600  acc=0.9145
+    ep 600/600  acc=0.9152
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [209.9s]
+[A] (20/21) cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed44
+    no checkpoint -> training this cell first
+    T=0.6269  affine native=(3.7554, -7.8224)  refit=(11.9873, -19.0598)
+    ep 200/600  acc=0.9146
+    ep 400/600  acc=0.9166
+    ep 600/600  acc=0.9182
+    guard: exact (12/12 exact, max|diff|=0.00e+00)  [209.1s]
+[A] (21/21) cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed44
+    no checkpoint -> training this cell first
+    T=0.7455  affine native=(1.0000, 0.0000)  refit=(8.1209, -12.1686)
+    ep 200/600  acc=0.9136
+    ep 400/600  acc=0.9148
+    ep 600/600  acc=0.9156
+    guard: exact (13/13 exact, max|diff|=0.00e+00)  [207.3s]
+[A] done: {'ok': 21, 'skipped_done': 0, 'no_checkpoint': 0, 'error': 0, 'trained': 21}
+  provenance written for 21 cell(s)
+
+  counts: {'ok': 21, 'skipped_done': 0, 'no_checkpoint': 0, 'error': 0, 'trained': 21}
+  cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed42: re-scoring the checkpoint on test seeds 0..19 against the committed 20-episode baseline
+    T=0.7295  affine native=(2.8154, -5.9894)  refit=(10.3223, -20.5228)
+    guard: exact (8/8 exact, max|diff|=0.00e+00)
+### Regression guard against the committed Step 10 grid
+
+Evaluated 21/21. Guard status counts: `exact` 21. Reproduced (exact or within 1e-6): **21/21**. `best_val_epoch` matches: **21/21**. `n_params` all match: True.
+
+| cell | checkpoint | baseline | guard | exact/keys | max abs diff | best_val_epoch committed → new |
+|---|---|---|---|---:|---:|---:|
+| `cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed42` | trained_this_session | first-20-episode (committed JSON is a smoke run) | `exact` | 8/8 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed43` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 2 → 2 |
+| `cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed44` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_resnet18_lora_evidential_seed42` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 4 → 4 |
+| `cifar_fs_5shot_resnet18_lora_softmax_seed42` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 6 → 6 |
+| `cifar_fs_5shot_resnet18_lora_evidential_seed43` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_resnet18_lora_softmax_seed43` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 4 → 4 |
+| `cifar_fs_5shot_resnet18_lora_evidential_seed44` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 7 → 7 |
+| `cifar_fs_5shot_resnet18_lora_softmax_seed44` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 4 → 4 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed42` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed42` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 10 → 10 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed43` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed43` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 10 → 10 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_evidential_seed44` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 3 → 3 |
+| `cifar_fs_5shot_mobilenetv3_small_bottleneck_parallel_softmax_seed44` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 14 → 14 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed42` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 19 → 19 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed42` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 10 → 10 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed43` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 2 → 2 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed43` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 2 → 2 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_evidential_seed44` | trained_this_session | 600-episode | `exact` | 12/12 | 0.00e+00 | 12 → 12 |
+| `cifar_fs_5shot_resnet18_bottleneck_parallel_softmax_seed44` | trained_this_session | 600-episode | `exact` | 13/13 | 0.00e+00 | 10 → 10 |
+## RQ2 / RQ4 re-aggregation
+
+Phase A factorial records: **120/120** (99 committed + 21 new). Evidential records: 60.
+
+Unchanged aggregator reproduces the committed `results/rq_summary.json` on the committed records: **True** (RQ2 max abs diff 0.0e+00, RQ4 0.0e+00).
+
+Design completeness: 20/20 complete, 0 absent, 0 with one objective arm missing, 0 with seeds missing. Zero-observation objective×score cells: far 0, near 0. **Fully crossed: True.**
+
+### RQ2: objective vs scoring rule (η² share of OOD-AUROC variance)
+
+| variant | pool | score η² | objective η² | score/objective | balanced | n |
+|---|---|---:|---:|---:|---|---:|
+| before: committed, 99 records | far | 43.68% | 0.267% | 163.4× | True | 792 |
+| before: committed, 99 records | near | 12.96% | 0.601% | 21.6× | True | 792 |
+| after: all records | far | 42.69% | 0.170% | 250.5× | True | 960 |
+| after: all records | near | 14.72% | 0.634% | 23.2× | True | 960 |
+
+Quotable variant: **all records**
+
+Mean AUROC, far-OOD, after (rows = training objective):
+
+| trained as | msp | energy | ts_msp | vacuity_valfit |
+|---|---:|---:|---:|---:|
+| evidential | 0.7993 (n=120) | 0.9185 (n=120) | 0.7868 (n=120) | 0.9134 (n=120) |
+| softmax | 0.8014 (n=120) | 0.9342 (n=120) | 0.7850 (n=120) | 0.9307 (n=120) |
+
+Mean AUROC, near-OOD, after (rows = training objective):
+
+| trained as | msp | energy | ts_msp | vacuity_valfit |
+|---|---:|---:|---:|---:|
+| evidential | 0.7916 (n=120) | 0.8414 (n=120) | 0.7805 (n=120) | 0.8347 (n=120) |
+| softmax | 0.7770 (n=120) | 0.8371 (n=120) | 0.7634 (n=120) | 0.8233 (n=120) |
+
+### RQ4: post-hoc evidence-affine refit (VAL only)
+
+| variant | evidential cells | ECE improved | AUROC preserved (Δ ≥ −0.005) | mean ΔECE | mean ΔAUROC | min Spearman ρ | reordering observed |
+|---|---:|---:|---:|---:|---:|---:|---|
+| before: committed | 48 | 48/48 | 150/192 | -0.1373 | +0.0040 | 0.9212 | True |
+| after: all records | 60 | 60/60 | 192/240 | -0.1387 | +0.0029 | 0.8658 | True |
+| new cells only | 12 | 12/12 | 42/48 | -0.1441 | -0.0016 | 0.8658 | True |
+[B-sens] replacing [('cifar_fs', 5, 'mobilenetv3_small', 'lora', 'evidential', 42)] with {('cifar_fs', 5, 'mobilenetv3_small', 'lora', 'evidential', 42): {'accuracy': 0.8757111333807309, 'ece': 0.28426833180586497, 'far_ood_svhn': 0.92873, 'near_ood_tin': 0.8821202222222223}}
+| outcome | n | residual (main only) | residual (+2-way) | all 2-way | `backbone:adapter` [95% CI] | largest 2-way term |
+|---|---:|---:|---:|---:|---:|---|
+| accuracy (as committed) | 96 | 8.95% | 1.31% | 7.64% | 0.73% [0.53%, 0.95%] | dataset:backbone 5.27% |
+| ece (as committed) | 96 | 7.70% | 2.05% | 5.65% | 3.28% [2.52%, 4.15%] | backbone:adapter 3.28% |
+| far_ood_svhn (as committed) | 96 | 23.87% | 9.60% | 14.27% | 0.18% [0.00%, 0.73%] | dataset:backbone 9.18% |
+| near_ood_tin (as committed) | 95 | 11.42% | 6.23% | 5.18% | 0.00% [0.00%, 0.06%] | dataset:backbone 3.81% |
+| accuracy (smoke obs. replaced) | 96 | 9.04% | 1.28% | 7.76% | 0.77% [0.58%, 0.98%] | dataset:backbone 5.37% |
+| ece (smoke obs. replaced) | 96 | 7.68% | 2.03% | 5.64% | 3.23% [2.49%, 4.05%] | backbone:adapter 3.23% |
+| far_ood_svhn (smoke obs. replaced) | 96 | 23.75% | 9.53% | 14.22% | 0.20% [0.00%, 0.75%] | dataset:backbone 9.11% |
+| near_ood_tin (smoke obs. replaced) | 96 | 11.49% | 6.21% | 5.28% | 0.00% [0.00%, 0.05%] | dataset:backbone 3.90% |
+## RQ1: sensitivity (smoke observation replaced)
+
+Factors dataset, k_shot, backbone, adapter, head; baselines excluded (full_ft, linear_probe). Seed bootstrap: 2000 resamples, rng seed 20260914.
+Observations replaced: ['cifar_fs|5|mobilenetv3_small|lora|evidential|42']
+
+### accuracy: `accuracy_mean`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Main effects vs the published table (expected to move): max abs diff 0.26 pp. Residual df with two-way terms: 80.
+
+Residual **9.04%** with main effects only → **1.28%** after adding the ten two-way terms (which together take 7.76%).
+
+`backbone:adapter` = **0.77%**, which is 8.50% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| k_shot | 76.31% | [75.19%, 77.57%] | 0.60% | <1e-6 |
+| adapter | 8.98% | [8.35%, 9.60%] | 0.32% | <1e-6 |
+| dataset:backbone | 5.37% | [4.88%, 5.82%] | 0.24% | <1e-6 |
+| backbone | 3.82% | [3.38%, 4.34%] | 0.24% | <1e-6 |
+| dataset | 1.69% | [1.42%, 1.95%] | 0.14% | <1e-6 |
+| k_shot:backbone | 1.02% | [0.80%, 1.26%] | 0.12% | <1e-6 |
+| **backbone:adapter** | 0.77% | [0.58%, 0.98%] | 0.10% | <1e-6 |
+| adapter:head | 0.31% | [0.19%, 0.43%] | 0.06% | 3.8e-05 |
+| head | 0.16% | [0.09%, 0.27%] | 0.05% | 0.0019 |
+| dataset:k_shot | 0.13% | [0.06%, 0.22%] | 0.04% | 0.0057 |
+| backbone:head | 0.10% | [0.04%, 0.18%] | 0.04% | 0.017 |
+| dataset:adapter | 0.02% | [0.00%, 0.06%] | 0.02% | 0.26 |
+| dataset:head | 0.02% | [0.00%, 0.06%] | 0.02% | 0.27 |
+| k_shot:head | 0.02% | [0.00%, 0.06%] | 0.02% | 0.27 |
+| k_shot:adapter | 0.01% | [0.00%, 0.05%] | 0.01% | 0.39 |
+| residual | 1.28% | [1.04%, 1.43%] | 0.10% |  |
+
+### ece: `ece_pooled`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Main effects vs the published table (expected to move): max abs diff 0.08 pp. Residual df with two-way terms: 80.
+
+Residual **7.68%** with main effects only → **2.03%** after adding the ten two-way terms (which together take 5.64%).
+
+`backbone:adapter` = **3.23%**, which is 42.06% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| head | 82.97% | [82.05%, 83.95%] | 0.49% | <1e-6 |
+| backbone | 4.56% | [3.72%, 5.46%] | 0.45% | <1e-6 |
+| **backbone:adapter** | 3.23% | [2.49%, 4.05%] | 0.41% | <1e-6 |
+| k_shot | 2.16% | [1.63%, 2.82%] | 0.31% | <1e-6 |
+| dataset | 1.98% | [1.39%, 2.63%] | 0.32% | <1e-6 |
+| k_shot:backbone | 0.91% | [0.52%, 1.40%] | 0.23% | <1e-6 |
+| adapter | 0.65% | [0.34%, 1.05%] | 0.18% | 2.6e-06 |
+| dataset:backbone | 0.62% | [0.33%, 1.02%] | 0.18% | 4e-06 |
+| dataset:adapter | 0.32% | [0.11%, 0.61%] | 0.13% | 0.00063 |
+| k_shot:adapter | 0.21% | [0.06%, 0.47%] | 0.11% | 0.0049 |
+| k_shot:head | 0.21% | [0.05%, 0.45%] | 0.10% | 0.0057 |
+| dataset:head | 0.10% | [0.01%, 0.29%] | 0.07% | 0.054 |
+| backbone:head | 0.02% | [0.00%, 0.12%] | 0.03% | 0.41 |
+| adapter:head | 0.01% | [0.00%, 0.12%] | 0.03% | 0.45 |
+| dataset:k_shot | 0.01% | [0.00%, 0.10%] | 0.03% | 0.53 |
+| residual | 2.03% | [1.27%, 2.39%] | 0.28% |  |
+
+### far_ood_svhn: `ood_auroc__svhn_far__{native}`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Main effects vs the published table (expected to move): max abs diff 0.17 pp. Residual df with two-way terms: 80.
+
+Residual **23.75%** with main effects only → **9.53%** after adding the ten two-way terms (which together take 14.22%).
+
+`backbone:adapter` = **0.20%**, which is 0.83% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| head | 38.93% | [34.51%, 43.77%] | 2.33% | <1e-6 |
+| k_shot | 22.59% | [19.16%, 26.35%] | 1.84% | <1e-6 |
+| backbone | 11.71% | [9.09%, 14.96%] | 1.50% | <1e-6 |
+| dataset:backbone | 9.11% | [6.61%, 11.70%] | 1.29% | <1e-6 |
+| dataset:head | 2.13% | [1.05%, 3.55%] | 0.65% | 6.1e-05 |
+| adapter | 1.79% | [0.82%, 2.92%] | 0.55% | 0.00022 |
+| backbone:head | 1.31% | [0.53%, 2.44%] | 0.50% | 0.0014 |
+| dataset | 1.23% | [0.47%, 2.33%] | 0.48% | 0.0019 |
+| k_shot:head | 0.66% | [0.16%, 1.45%] | 0.34% | 0.021 |
+| adapter:head | 0.37% | [0.03%, 1.00%] | 0.26% | 0.083 |
+| **backbone:adapter** | 0.20% | [0.00%, 0.75%] | 0.21% | 0.2 |
+| k_shot:backbone | 0.19% | [0.00%, 0.77%] | 0.21% | 0.21 |
+| dataset:k_shot | 0.11% | [0.00%, 0.61%] | 0.16% | 0.33 |
+| dataset:adapter | 0.11% | [0.00%, 0.55%] | 0.16% | 0.33 |
+| k_shot:adapter | 0.02% | [0.00%, 0.33%] | 0.09% | 0.65 |
+| residual | 9.53% | [7.06%, 10.52%] | 0.88% |  |
+
+### near_ood_tin: `ood_auroc__tin_near__{native}`, n=96, balanced=True
+
+Method: eta_squared (exact: balanced design). Main effects vs the published table (expected to move): max abs diff 0.70 pp. Residual df with two-way terms: 80.
+
+Residual **11.49%** with main effects only → **6.21%** after adding the ten two-way terms (which together take 5.28%).
+
+`backbone:adapter` = **0.00%**, which is 0.00% of the main-effects residual.
+
+| term | share | 95% seed bootstrap | bootstrap SD | F-test p |
+|---|---:|---:|---:|---:|
+| k_shot | 43.30% | [40.94%, 45.56%] | 1.21% | <1e-6 |
+| adapter | 21.68% | [20.26%, 23.07%] | 0.73% | <1e-6 |
+| head | 21.44% | [19.73%, 23.42%] | 0.91% | <1e-6 |
+| dataset:backbone | 3.90% | [3.20%, 4.71%] | 0.38% | <1e-6 |
+| dataset | 1.54% | [1.07%, 2.06%] | 0.25% | 2.7e-05 |
+| backbone:head | 0.75% | [0.45%, 1.11%] | 0.17% | 0.0026 |
+| backbone | 0.55% | [0.29%, 0.89%] | 0.16% | 0.0095 |
+| adapter:head | 0.21% | [0.07%, 0.42%] | 0.09% | 0.1 |
+| k_shot:head | 0.14% | [0.03%, 0.35%] | 0.08% | 0.18 |
+| dataset:adapter | 0.13% | [0.03%, 0.33%] | 0.08% | 0.2 |
+| k_shot:adapter | 0.09% | [0.01%, 0.24%] | 0.06% | 0.29 |
+| dataset:k_shot | 0.02% | [0.00%, 0.12%] | 0.03% | 0.58 |
+| k_shot:backbone | 0.02% | [0.00%, 0.12%] | 0.03% | 0.59 |
+| dataset:head | 0.01% | [0.00%, 0.11%] | 0.03% | 0.67 |
+| **backbone:adapter** | 0.00% | [0.00%, 0.05%] | 0.01% | 0.98 |
+| residual | 6.21% | [5.02%, 7.14%] | 0.55% |  |
+
+frozen paths untouched: {'ok': True, 'changed': [], 'paths': ['configs', 'results/grid', 'results/mvt_results.json', 'results/rq_summary.json', 'results/rq_checkpoint_audit.json']}
+wrote /kaggle/working/thesis/results/rq_completion/REPORT.md

@@ -18,7 +18,7 @@ new, and the exact wording that is safe to use.
 | **RQ1** | Which design choice drives which outcome? | Number of shots drives accuracy. Output reading (softmax vs evidential) drives calibration. They barely interact. | Partly new | 3rd |
 | **RQ2** | Is OOD detection caused by the training objective or the scoring rule? | The scoring rule, by far | Partly new | 2nd |
 | **RQ3** | Does accuracy follow adapter design, and calibration follow parameter budget? | Accuracy follows design. Calibration follows **the backbone**, not the budget. | **New** | **1st** |
-| **RQ4** | Can evidential calibration be fixed after training without breaking OOD ranking? | Improved in 48/48 cases; OOD ranking kept in 78% of comparisons. Still worse than plain softmax. | Partly new | 4th |
+| **RQ4** | Can evidential calibration be fixed after training without breaking OOD ranking? | Improved in 60/60 cases; OOD ranking kept in 80% of comparisons. Still worse than plain softmax. | Partly new | 4th |
 
 Main sources: `docs/RQ_SUPERVISOR_REPORT.md` and `docs/RQ_RESULTS_SUMMARY.md`.
 
@@ -53,8 +53,26 @@ That evidential heads are cheap at inference (Sensoy et al. 2018).
 **New.** The formal five-factor breakdown in a PEFT few-shot setting. The finding that calibration and OOD
 become independent once the reading is fixed.
 
-**Limits.** Main effects only (no interactions). One fixed training recipe. One of 96 values is missing
-(see `05_problems_and_open_work.md`).
+**Limits.** One fixed training recipe. One of 96 values is missing for near-OOD — and the cause turned
+out to be that cell's committed metrics file being a **20-episode smoke run**, not the 600-episode
+protocol (see `05_problems_and_open_work.md` B5).
+
+**Interactions — computed 2026-09-15, no longer a limit.** All ten two-way terms, with 2000-resample
+bootstrap intervals and F-test p-values:
+
+| Outcome | Residual (main only) | Residual (+2-way) | Largest interaction | `backbone:adapter` |
+|---|---:|---:|---|---:|
+| Accuracy | 8.95% | 1.31% | `dataset:backbone` 5.27% | 0.73% [0.53, 0.95] |
+| **ECE** | 7.70% | 2.05% | **`backbone:adapter` 3.28%** | **3.28% [2.52, 4.15]**, p<1e-6 |
+| Far-OOD | 23.87% | 9.60% | `dataset:backbone` 9.18% | 0.18%, n.s. |
+| Near-OOD | 11.42% | 6.23% | `dataset:backbone` 3.81% | 0.00%, n.s. |
+
+**The calibration result is the one that matters:** `backbone:adapter` carries 3.28% of ECE variance
+(p<1e-6) — 42.6% of what main effects left unexplained — which is RQ3's finding arriving independently
+from a different method. It is **specific to calibration**; on accuracy and both OOD pools the same term
+is indistinguishable from zero. The large `dataset:backbone` term on the other three outcomes is reported
+but not interpreted — no research question addresses it. Source:
+`results/rq_completion/rq1_interactions.json`.
 
 **Closest prior work to cite.** *One Model, Many Behaviors* (WACV 2026, arXiv:2601.10836) does a similar
 ANOVA at larger scale, but not for PEFT, few-shot or calibration.
@@ -76,8 +94,10 @@ gives a 2 × 4 design.
 
 | OOD type | Share explained by score | Share explained by training objective |
 |---|---:|---:|
-| Far-OOD | 43.7% | 0.27% |
-| Near-OOD | 13.0% | 0.60% |
+| Far-OOD | **42.7%** | **0.17%** |
+| Near-OOD | **14.7%** | **0.63%** |
+
+*(Full 120/120 coverage, 2026-09-15. The earlier 99-record figures were 43.7%/0.27% and 13.0%/0.60%.)*
 
 - Energy scores 0.911 AUROC on evidential-trained models and 0.929 on softmax-trained models (far-OOD):
   almost the same. MSP stays around 0.79 under both.
@@ -85,11 +105,18 @@ gives a 2 × 4 design.
   0.02, and on far-OOD in the *wrong* direction.
 - Energy beats vacuity head-to-head in 162 of 198 far-OOD and 183 of 198 near-OOD comparisons.
 
-⚠️ **Do not quote "163×".** The reports give the score/objective ratio as 163× (far) and 22× (near).
-The objective's share is so close to zero that the ratio is unstable. We recomputed it after removing the
-one setting that is missing half its data (`cifar_fs/5shot/mobilenetv3_small/lora`): far-OOD becomes
-**394×** and near-OOD **19×**. The conclusion does not change. Quote the η² percentages, or say "two to
-three orders of magnitude".
+⚠️ **Do not quote any ratio — and we can now prove why.** On 2026-09-15 the 21 missing models were
+trained and scored, taking coverage to **120/120, fully crossed**. The shares barely moved; the ratio
+moved a lot:
+
+| | score η² (far) | objective η² (far) | ratio | n |
+|---|---:|---:|---:|---:|
+| 99 records (old) | 43.68% | 0.267% | 163.4× | 792 |
+| **120 records (current)** | **42.69%** | **0.170%** | **250.5×** | **960** |
+
+Near-OOD likewise: 12.96%/0.601% (21.6×) → **14.72%/0.634% (23.2×)**. Dividing by a near-zero denominator
+is unstable by construction. **Quote the η² percentages — 42.7% vs 0.17% far, 14.7% vs 0.63% near — or
+say "two to three orders of magnitude".** The conclusion was never in doubt; only the multiplier.
 
 **Not new.** Post-hoc scores often beat training changes, and energy beats MSP (Liu et al. 2020;
 OpenOOD). The ANOVA method itself (WACV 2026).
@@ -100,8 +127,11 @@ as on softmax models. No precedent found.
 **Must cite.** arXiv:2603.07571 (names this exact gap as open), arXiv:2601.10836, and arXiv:2605.22746
 (proves softmax is a special case of evidential, which explains why the objective barely matters).
 
-**Coverage limit.** Only 99 of 120 models were recovered. All 21 missing ones are CIFAR-FS 5-shot adapter
-models, which is the slice holding the project's most-quoted setting.
+**Coverage: complete as of 2026-09-15.** All 120 models are now scored (was 99). The 21 that had been
+missing were re-trained and reproduce the committed grid exactly (max abs diff 0.0). The design is fully
+crossed: 20/20 complete, zero empty objective × score cells. Mean far-OOD AUROC at full coverage —
+energy 0.9185 (evidential-trained) vs 0.9342 (softmax-trained); MSP 0.7993 vs 0.8014. Source:
+`results/rq_completion/REPORT.md`.
 
 ---
 
@@ -185,20 +215,26 @@ reorder which images look most "unknown".
 
 **Answer.**
 
-- ECE improved in **48 of 48** evidential cells. The average fell by 0.137 (from 0.327 to 0.190).
+- ECE improved in **60 of 60** evidential cells (was 48/48 before coverage was completed). The average
+  fell by 0.139 (from 0.323 to 0.185).
 - Refitted scales were mostly about 7–14 (full range 3.6–14.5, median 8.3). The values the head had
   **learned during training** were much lower: scale 1.5–4.5, median 2.9. Training the affine jointly with
   the adapter, under the evidential loss, left it far from the NLL-optimal operating point. *(Older
   documents compared the refit to a "frozen default of 2". The affine was never frozen; see
   `01_what_we_built.md` §1.2.)*
-- OOD AUROC stayed within 0.005 in **150 of 192** comparisons (78%). The average change was +0.004.
-- Reordering does happen, but the worst case still had rank correlation 0.921.
-- In the other 22% of comparisons AUROC dropped by more than 0.005. The worst drops were about −0.03.
+- OOD AUROC stayed within 0.005 in **192 of 240** comparisons (80%). The average change was +0.003.
+- Reordering does happen, but the worst case still had rank correlation **0.866**.
+- In the other 20% of comparisons AUROC dropped by more than 0.005. The worst drop was **−0.032**
+  (Gaussian far-OOD).
+- ⚠️ **Completing coverage made this result slightly weaker, not stronger.** The 12 new evidential cells
+  improved ECE 12/12, but preserved ranking in only 42/48 (87.5%), had mean ΔAUROC **−0.0016**, and
+  contain the new worst-case ρ of 0.866. Report it in that direction.
 
-⚠️ **Still worse than softmax — say this too.** We checked `results/rq_summary.json`. After refitting,
-evidential ECE is still **worse than plain softmax in 48 of 48 cells** (on average 2.18× higher) and
-**worse than temperature-scaled softmax in 48 of 48** (on average 11.9× higher). The refit shrinks the
-gap. It does not close it. `RQ_SUPERVISOR_REPORT.md` §6 does not state this; it should.
+⚠️ **Still worse than softmax — say this too.** After refitting, evidential ECE is still **worse than
+plain softmax in 60 of 60 cells** (mean 2.18× higher, best case 1.07×, worst 5.8×) and **worse than
+temperature-scaled softmax in 60 of 60** (mean 13.6× higher, best 2.27×). The refit shrinks the gap. It
+does not close it. `RQ_SUPERVISOR_REPORT.md` §6 states the 48-cell version and now needs the 60-cell
+numbers. Recomputed from `results/rq_completion/rq2_rq4_summary.json` → `rq4_rows`.
 
 **Correction of our own earlier work.** Step 4.5 swept the *loss* (KL weight × variance term) and found a
 flat calibration surface. That search tuned the wrong knob: the evidence affine was never swept, and the
@@ -292,9 +328,9 @@ The "CNNs are outdated" objection is answered in `docs/DEFENCE_BRIEF.md`.
 | "Calibration follows the parameter budget." | "Calibration follows the backbone. Budget changes the size of the effect; the backbone decides its direction." |
 | "Evidential uncertainty is on par with energy." | "Vacuity is a much better OOD score than softmax-probability scores, but a good logit-based score like energy still beats it." |
 | "Evidential training improves OOD detection." | "The OOD gain comes from the scoring rule, not the training objective." |
-| "The score matters 163× more than the objective." | "The score explains 43.7% (far) / 13.0% (near) of the variation; the objective under 1%." |
-| "Refitting fixes evidential calibration." | "Refitting improves it in 48/48 cells, but it stays worse than plain softmax in all 48." |
-| "Refitting always preserves the OOD ranking." | "It survives in 78% of comparisons, with a measured minority exception." |
+| "The score matters 163× more than the objective." | "The score explains 42.7% (far) / 14.7% (near) of the variation; the objective under 1%. The ratio is unstable — it moved 163×→250× purely by completing coverage." |
+| "Refitting fixes evidential calibration." | "Refitting improves it in 60/60 cells, but it stays worse than plain softmax in all 60." |
+| "Refitting always preserves the OOD ranking." | "It survives in 80% of comparisons (192/240), with a measured minority exception." |
 | "Our 6,928-parameter adapter beats full fine-tuning." | "It matches full fine-tuning. The margin is inside its own seed spread. The ResNet-18 +0.98 points is the margin that clears noise." |
 | "Calibration error has an interior optimum." | "No interior optimum was observed in the tested range." |
 | "We discovered that calibration and accuracy have different drivers." | "We formally decompose it in this setting; the general pattern goes back to Guo et al. 2017." |

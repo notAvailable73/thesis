@@ -16,36 +16,48 @@ Checked against the repo on 2026-09-14.
 
 ## A. Problems in our own documents — fix before they reach the thesis
 
-### A1. The "163×" figure is not stable *(high priority)*
+### A1. The "163×" figure is not stable *(high priority — now demonstrated, not just argued)*
 
-RQ2's headline says the scoring rule matters "163×" more than the training objective (far-OOD).
+RQ2's headline said the scoring rule matters "163×" more than the training objective (far-OOD).
 
-- **Why it's unstable.** The objective's share is tiny (0.27%), so dividing by it swings a lot. One
-  setting (`cifar_fs/5shot/mobilenetv3_small/lora`) has results for softmax training but not evidential.
-  Removing it gives **394×** far-OOD and **19×** near-OOD (recomputed on 2026-09-14 with
-  `scripts/rq_aggregate.py` on `results/rq_factorial/`).
-- **The conclusion is fine;** only the exact multiplier isn't. The Aug 25 audit already said not to quote
-  "163×", but the later documents still do.
-- **Where it appears:**
+- **Why it's unstable.** The objective's share is tiny, so dividing by it swings a lot.
+- **Now proven by the completion run (2026-09-15).** The 21 missing checkpoints were trained and scored,
+  taking coverage to **120/120, fully crossed**. The two shares barely moved — far 43.68% → **42.69%**
+  for the score, 0.267% → **0.170%** for the objective — but the quotient jumped **163× → 250.5×**.
+  Near-OOD: 12.96%/0.601% (21.6×) → **14.72%/0.634% (23.2×)**. Same conclusion, wildly different
+  multiplier. That is exactly the instability this item warned about.
+- **Fix.** Quote the η² shares — **42.7% vs 0.17% far; 14.7% vs 0.63% near** — or say "two to three
+  orders of magnitude". Never the ratio.
+- **Where it still needs fixing:**
   - `docs/RQ_SUPERVISOR_REPORT.md` §1 table and §4.2 (the `.pdf` too);
   - `docs/RQ_RESULTS_SUMMARY.md` lines ~150 and ~258;
   - `docs/DEFENCE_SLIDE_PLAN.md`: slide map, slide 2 table, the **slide 24 title**, the slide 24 table,
     and the contributions slide.
-- **Fix.** Quote the η² shares (43.7% vs 0.27% far; 13.0% vs 0.60% near) or "two to three orders of
-  magnitude".
+  - ✅ `docs/DEFENCE_DECK_25_SLIDES.md` — done (Slides 2, 20, 25, crib, language table).
+- **Source.** `results/rq_completion/REPORT.md`, `results/rq_completion/rq2_rq4_summary.json`.
 
 ### A2. RQ4 leaves out that evidential is still worse than softmax *(high priority)*
 
-`RQ_SUPERVISOR_REPORT.md` §6 reports the refit improving ECE in 48/48 cells, but not that the refitted
-evidential head is still:
+`RQ_SUPERVISOR_REPORT.md` §6 reports the refit improving ECE, but not that the refitted evidential head
+is still worse-calibrated than softmax. **Updated to full 120/120 coverage (2026-09-15):**
 
-- worse than **plain softmax in 48/48** cells (average 2.18× higher ECE, smallest gap 1.07×);
-- worse than **temperature-scaled softmax in 48/48** (average 11.9×, smallest 2.27×).
+| | 48 cells (old) | **60 cells (current)** |
+|---|---|---|
+| ECE improved | 48/48 | **60/60** |
+| Still worse than plain softmax | 48/48 (mean 2.18×, best 1.07×) | **60/60** (mean **2.18×**, best 1.07×, worst 5.8×) |
+| Still worse than TS-softmax | 48/48 (mean 11.9×, best 2.27×) | **60/60** (mean **13.6×**, best 2.27×) |
+| AUROC preserved (Δ ≥ −0.005) | 150/192 (78%) | **192/240 (80%)** |
+| Mean ΔECE | −0.1373 | **−0.1387** (0.323 → 0.185) |
+| Worst Spearman ρ | 0.9212 | **0.8658** |
 
-Recomputed from `results/rq_summary.json` → `rq2_rows`. Without this, a reader may think the refit closes
-the gap.
+Recomputed from `results/rq_completion/rq2_rq4_summary.json` → `rq4_rows` (60 rows). Without this, a
+reader may think the refit closes the gap. **Note the direction:** completing coverage made the
+ranking-preservation result slightly *weaker* (the 12 new cells preserved 42/48 = 87.5% but had mean
+ΔAUROC −0.0016 and contain the new worst-case ρ). Report it that way.
 
-**Status (2026-09-14):** added to `RQ_SUPERVISOR_REPORT.md` §6.1. The `.pdf` is now stale; regenerate it.
+**Status (2026-09-15):** the 48-cell version is in `RQ_SUPERVISOR_REPORT.md` §6.1 and is now itself
+outdated; both it and the `.pdf` need the 60-cell numbers. ✅ `docs/DEFENCE_DECK_25_SLIDES.md` Slide 22 is
+current.
 
 ### A6. The evidence scale/bias were described as "frozen at (2, −6)" *(high priority — fixed in the .md files)*
 
@@ -116,11 +128,11 @@ assume L2. The rationale is documented in `09_methodology.md` §9.3.3.
 
 | # | Problem | Risk | Fix |
 |---|---|---|---|
-| B1 | `eta_squared()` in `scripts/rq_aggregate.py` marks a design "balanced" even when a whole cell is missing (it only compares counts of cells that exist) | Silent wrong variance numbers | Check against the full expected set of factor combinations |
+| B1 | `eta_squared()` in `scripts/rq_aggregate.py` marks a design "balanced" even when a whole cell is missing (it only compares counts of cells that exist) | Silent wrong variance numbers | **Mitigated 2026-09-15**, not fixed: `scripts/rq_completion.py` adds an explicit completeness check (20/20 designs, 0 absent, 0 one-arm-missing, 0 empty objective×score cells) and falls back to OLS Type II when rows are unbalanced. The `rq_aggregate.py` flag itself is still naive — fix it there too |
 | B2 | No test for the Step 11 silent latency bug (laptop CPU chosen over Kaggle CPU in 3 scripts) | The same wrong-number bug could come back unnoticed | Add a test with both profiles present (`progress.txt` item 12.K) |
 | B3 | Phase A checks run inline only; no `tests/test_factorial_scores.py` or `tests/test_evidence_affine_fit.py` | Regressions not caught by pytest | Move the checks into pytest |
 | B4 | TinyImageNet overlap filter for MiniImageNet runs is correct by code reading, but no logged count confirms it | Near-OOD numbers on MiniImageNet could include overlapping classes | Log the removed-class count once |
-| B5 | One missing value: `cifar_fs/5shot/mobilenetv3_small/lora/evidential`, seed 42, TinyImageNet AUROC. `missing_cells` doesn't detect partial gaps | RQ1 uses 95/96 for that metric | Check the run log; make the aggregator report partial gaps |
+| B5 | **Root cause found 2026-09-15 — it is worse than "a missing value".** The committed metrics file for `cifar_fs/5shot/mobilenetv3_small/lora/evidential` seed 42 was written by a **20-episode smoke run**, not the 600-episode protocol: 8 metric keys instead of 12, which is why TinyImageNet AUROC was absent and RQ1's near-OOD row had 95/96 | That cell's accuracy/ECE in `results/mvt_results.json` and `RESULTS_MASTER.md` come from 20 episodes. Visible symptom: its ±1.82 seed spread vs ±0.50–0.63 everywhere else at 5-shot | **Impact measured:** re-scoring over 600 episodes and recomputing every η² moves main effects ≤0.70 pp (near-OOD `k_shot` 42.60→43.30%); `backbone:adapter` on ECE 3.28→3.23%. No conclusion changes. Decide: regenerate the grid tables, or disclose in text. See deck Slide 24 self-correction 5 |
 | B6 | No repeated full run to confirm Phase A determinism | Low (the 99/99 exact match is strong indirect evidence) | Optional |
 
 ---
@@ -136,11 +148,20 @@ assume L2. The rationale is documented in `09_methodology.md` §9.3.3.
    - The seed changes only the adapter's starting weights, never the order of training episodes.
    - Full FT and Linear Probe have **no** seed spread (effectively 1 run), so claims of beating them by
      under 1 point need care.
-4. **RQ2 and RQ4 use 99 of 120 models.** The 21 missing ones are all CIFAR-FS 5-shot adapter models: the
-   project's most-quoted slice.
+4. ~~**RQ2 and RQ4 use 99 of 120 models.**~~ **Closed 2026-09-15.** All 21 were trained and scored;
+   coverage is **120/120, fully crossed** (20/20 designs complete, 0 empty objective×score cells). All 21
+   reproduced the committed Step 10 grid exactly (max abs diff 0.0, best-epoch 21/21), and the unchanged
+   aggregator still reproduces the committed summary on the original 99 records. See
+   `results/rq_completion/REPORT.md`.
 5. **Two backbones only.** RQ3 shows the backbone decides calibration but cannot say *which property* of it
    does.
-6. **RQ1 is main effects only.** Interactions between factors are not modelled.
+6. ~~**RQ1 is main effects only.**~~ **Closed 2026-09-15.** All ten two-way interactions are now computed
+   with 2000-resample bootstrap intervals and F-test p-values (`results/rq_completion/rq1_interactions.json`).
+   Headline: adding them cuts the unexplained residual from 8.95%→1.31% (accuracy), 7.70%→2.05% (ECE),
+   23.87%→9.60% (far-OOD), 11.42%→6.23% (near-OOD). The `backbone:adapter` term is significant **only on
+   calibration** (3.28%, p<1e-6 — an independent corroboration of RQ3) and ≈0 elsewhere; the largest
+   interaction on the other three outcomes is `dataset:backbone`, which no research question addresses.
+   **Still unmodelled:** three-way and higher terms.
 7. **Baselines exist only for ResNet-18 + CIFAR-FS.** So "MobileNetV3-Small adapter matches full
    fine-tuning" compares across backbones.
 8. **No real edge device.** Latency is from a single CPU thread standing in for one, and is not
@@ -238,7 +259,7 @@ Citation clean-up items are collected in 08 §8.10.
 | # | Decision | Options |
 |---|---|---|
 | E1 | Are the optional Step 12 experiments dropped? | Formally drop them in `progress.txt`, or schedule some. The supervisor asked earlier that "every combination should be tested" (item 12.F) |
-| E2 | Retrain the 21 missing CIFAR-FS 5-shot models for RQ2/RQ4? | About 7 GPU-hours; removes limit C4 |
+| E2 | ~~Retrain the 21 missing CIFAR-FS 5-shot models for RQ2/RQ4?~~ | **Done 2026-09-15** — `scripts/rq_completion.py`, outputs in `results/rq_completion/`. C4 closed |
 | E3 | Add backbones to find RQ3's mechanism? | Needs a third and fourth backbone; otherwise state it as a limit |
 | E4 | Is `proposal.txt` §4 edited to the new RQs, or kept and marked superseded? | Decide with the supervisor; don't keep two "official" versions |
 | E5 | Where do the large raw files live? | About 4.7 GB of zips in `results/` are not in git (saved models and per-episode scores). They may be the only copies. Back them up or accept losing the ability to re-analyse without retraining |
