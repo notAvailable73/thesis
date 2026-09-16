@@ -1,0 +1,15 @@
+[0] Config.pm:307> INFO - This is Biber 2.19
+[0] Config.pm:310> INFO - Logfile is 'main_strict.blg'
+[50] biber:340> INFO - === Wed Sep 16, 2026, 19:08:27
+[61] Biber.pm:419> INFO - Reading 'main_strict.bcf'
+[116] Biber.pm:979> INFO - Found 67 citekeys in bib section 0
+[125] Biber.pm:4419> INFO - Processing section 0
+[133] Biber.pm:4610> INFO - Looking for bibtex file 'citations.bib' for section 0
+[136] bibtex.pm:1713> INFO - LaTeX decoding ...
+[176] bibtex.pm:1519> INFO - Found BibTeX data source 'citations.bib'
+[700] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[700] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[700] Biber.pm:4239> INFO - Sorting list 'nyt/global//global/global' of type 'entry' with template 'nyt' and locale 'en-US'
+[700] Biber.pm:4245> INFO - No sort tailoring available for locale 'en-US'
+[760] bbl.pm:660> INFO - Writing 'main_strict.bbl' with encoding 'UTF-8'
+[800] bbl.pm:763> INFO - Output to main_strict.bbl

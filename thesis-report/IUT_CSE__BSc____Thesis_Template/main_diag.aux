@@ -1,0 +1,538 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\abx@aux@refcontext{nyt/global//global/global}
+\abx@aux@cite{0}{deng2009imagenet}
+\abx@aux@segm{0}{0}{deng2009imagenet}
+\@writefile{toc}{\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:introduction}{{1}{1}{Introduction}{chapter.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1.1}{\ignorespaces No single design choice makes a few-shot model reliable on every axis.}}{1}{table.caption.5}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:opening-summary}{{1.1}{1}{No single design choice makes a few-shot model reliable on every axis}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {1.1}Background and Motivation}{1}{section.1.1}\protected@file@percent }
+\abx@aux@cite{0}{houlsby2019adapters}
+\abx@aux@segm{0}{0}{houlsby2019adapters}
+\abx@aux@cite{0}{hu2022lora}
+\abx@aux@segm{0}{0}{hu2022lora}
+\abx@aux@cite{0}{benzaken2022bitfit}
+\abx@aux@segm{0}{0}{benzaken2022bitfit}
+\abx@aux@cite{0}{somvanshi2025tinydl}
+\abx@aux@segm{0}{0}{somvanshi2025tinydl}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\abx@aux@cite{0}{hendrycks2017baseline}
+\abx@aux@segm{0}{0}{hendrycks2017baseline}
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\@writefile{toc}{\contentsline {section}{\numberline {1.2}Problem Statement}{3}{section.1.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1.1}{\ignorespaces Accuracy is not reliability. Left: a known-class input, confidently misclassified (miscalibration). Right: an input from an unseen class, confidently assigned to a known class with no indication of uncertainty (no OOD flag).}}{3}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:accuracy-vs-reliability}{{1.1}{3}{Accuracy is not reliability. Left: a known-class input, confidently misclassified (miscalibration). Right: an input from an unseen class, confidently assigned to a known class with no indication of uncertainty (no OOD flag)}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Parameter inefficiency.}{3}{section*.7}\protected@file@percent }
+\abx@aux@cite{0}{jia2022vpt}
+\abx@aux@segm{0}{0}{jia2022vpt}
+\abx@aux@cite{0}{chen2022adaptformer}
+\abx@aux@segm{0}{0}{chen2022adaptformer}
+\abx@aux@cite{0}{jie2023fact}
+\abx@aux@segm{0}{0}{jie2023fact}
+\abx@aux@cite{0}{zhang2022noah}
+\abx@aux@segm{0}{0}{zhang2022noah}
+\abx@aux@cite{0}{lian2022ssf}
+\abx@aux@segm{0}{0}{lian2022ssf}
+\abx@aux@cite{0}{chen2024convadapter}
+\abx@aux@segm{0}{0}{chen2024convadapter}
+\abx@aux@cite{0}{aleem2024convlora}
+\abx@aux@segm{0}{0}{aleem2024convlora}
+\abx@aux@cite{0}{zhong2024convlorasam}
+\abx@aux@segm{0}{0}{zhong2024convlorasam}
+\abx@aux@cite{0}{li2022tsa}
+\abx@aux@segm{0}{0}{li2022tsa}
+\@writefile{toc}{\contentsline {paragraph}{The reliability gap.}{4}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Architectural bias in the PEFT literature.}{4}{section*.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1.2}{\ignorespaces The three challenges motivating this thesis, and its response to each.}}{4}{table.caption.10}\protected@file@percent }
+\newlabel{tab:problem-response}{{1.2}{4}{The three challenges motivating this thesis, and its response to each}{table.caption.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {1.3}Research Questions}{4}{section.1.3}\protected@file@percent }
+\newlabel{sec:intro-rqs}{{1.3}{4}{Research Questions}{section.1.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1.3}{\ignorespaces The four research questions and the evidence each is answered by.}}{6}{table.caption.11}\protected@file@percent }
+\newlabel{tab:rq-roadmap}{{1.3}{6}{The four research questions and the evidence each is answered by}{table.caption.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1.2}{\ignorespaces All four research questions are instances of one overarching question — which design choice governs which reliability aspect — each resolved by a specific, named piece of evidence.}}{6}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:research-roadmap}{{1.2}{6}{All four research questions are instances of one overarching question — which design choice governs which reliability aspect — each resolved by a specific, named piece of evidence}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {1.4}Research Challenges}{6}{section.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Confounded comparisons.}{6}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The evidential-collapse failure mode.}{7}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reproducibility under a small-sample, high-variance regime.}{7}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{An honest audit trail.}{7}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1.5}Contributions}{7}{section.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1.6}Thesis Organization}{9}{section.1.6}\protected@file@percent }
+\abx@aux@cite{0}{houlsby2019adapters}
+\abx@aux@segm{0}{0}{houlsby2019adapters}
+\abx@aux@cite{0}{hu2022lora}
+\abx@aux@segm{0}{0}{hu2022lora}
+\abx@aux@cite{0}{benzaken2022bitfit}
+\abx@aux@segm{0}{0}{benzaken2022bitfit}
+\abx@aux@cite{0}{he2022unified}
+\abx@aux@segm{0}{0}{he2022unified}
+\abx@aux@cite{0}{chen2024convadapter}
+\abx@aux@segm{0}{0}{chen2024convadapter}
+\abx@aux@cite{0}{aleem2024convlora}
+\abx@aux@segm{0}{0}{aleem2024convlora}
+\abx@aux@cite{0}{zhong2024convlorasam}
+\abx@aux@segm{0}{0}{zhong2024convlorasam}
+\@writefile{toc}{\contentsline {chapter}{\numberline {2}Related Works}{10}{chapter.2}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:related-works}{{2}{10}{Related Works}{chapter.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.1}Parameter-Efficient Fine-Tuning}{10}{section.2.1}\protected@file@percent }
+\newlabel{sec:related-peft}{{2.1}{10}{Parameter-Efficient Fine-Tuning}{section.2.1}{}}
+\abx@aux@cite{0}{lakshminarayanan2017ensembles}
+\abx@aux@segm{0}{0}{lakshminarayanan2017ensembles}
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\abx@aux@cite{0}{yang2024laplacelora}
+\abx@aux@segm{0}{0}{yang2024laplacelora}
+\abx@aux@cite{0}{wang2024blob}
+\abx@aux@segm{0}{0}{wang2024blob}
+\abx@aux@cite{0}{samplawski2025scalabl}
+\abx@aux@segm{0}{0}{samplawski2025scalabl}
+\abx@aux@cite{0}{shihab2026stiefelbayes}
+\abx@aux@segm{0}{0}{shihab2026stiefelbayes}
+\abx@aux@cite{0}{duan2026bara}
+\abx@aux@segm{0}{0}{duan2026bara}
+\abx@aux@cite{0}{zhang2026bayesiansparselora}
+\abx@aux@segm{0}{0}{zhang2026bayesiansparselora}
+\abx@aux@cite{0}{samplawski2026bagym}
+\abx@aux@segm{0}{0}{samplawski2026bagym}
+\abx@aux@cite{0}{pandey2024bayesianpeft}
+\abx@aux@segm{0}{0}{pandey2024bayesianpeft}
+\abx@aux@cite{0}{gao2024edlsurvey}
+\abx@aux@segm{0}{0}{gao2024edlsurvey}
+\@writefile{toc}{\contentsline {section}{\numberline {2.2}Bayesian and Evidential Deep Learning}{11}{section.2.2}\protected@file@percent }
+\newlabel{sec:related-edl}{{2.2}{11}{Bayesian and Evidential Deep Learning}{section.2.2}{}}
+\abx@aux@cite{0}{bengs2022pitfalls}
+\abx@aux@segm{0}{0}{bengs2022pitfalls}
+\abx@aux@cite{0}{shen2024mirage}
+\abx@aux@segm{0}{0}{shen2024mirage}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\abx@aux@cite{0}{minderer2021revisiting}
+\abx@aux@segm{0}{0}{minderer2021revisiting}
+\abx@aux@cite{0}{tao2024benchmarkcalibration}
+\abx@aux@segm{0}{0}{tao2024benchmarkcalibration}
+\abx@aux@cite{0}{kull2019dirichlet}
+\abx@aux@segm{0}{0}{kull2019dirichlet}
+\@writefile{toc}{\contentsline {section}{\numberline {2.3}Calibration of Neural Network Confidence}{12}{section.2.3}\protected@file@percent }
+\newlabel{sec:related-calibration}{{2.3}{12}{Calibration of Neural Network Confidence}{section.2.3}{}}
+\abx@aux@cite{0}{hendrycks2017baseline}
+\abx@aux@segm{0}{0}{hendrycks2017baseline}
+\abx@aux@cite{0}{liu2020energy}
+\abx@aux@segm{0}{0}{liu2020energy}
+\abx@aux@cite{0}{yang2022openood}
+\abx@aux@segm{0}{0}{yang2022openood}
+\abx@aux@cite{0}{zhang2024openoodv15}
+\abx@aux@segm{0}{0}{zhang2024openoodv15}
+\abx@aux@cite{0}{mcnamara2026vacuity}
+\abx@aux@segm{0}{0}{mcnamara2026vacuity}
+\abx@aux@cite{0}{genc2026objectives}
+\abx@aux@segm{0}{0}{genc2026objectives}
+\abx@aux@cite{0}{krumpl2026onemodel}
+\abx@aux@segm{0}{0}{krumpl2026onemodel}
+\abx@aux@cite{0}{hayta2026pluginlosses}
+\abx@aux@segm{0}{0}{hayta2026pluginlosses}
+\@writefile{toc}{\contentsline {section}{\numberline {2.4}Out-of-Distribution Detection}{13}{section.2.4}\protected@file@percent }
+\newlabel{sec:related-ood}{{2.4}{13}{Out-of-Distribution Detection}{section.2.4}{}}
+\abx@aux@cite{0}{vinyals2016matching}
+\abx@aux@segm{0}{0}{vinyals2016matching}
+\abx@aux@cite{0}{ravi2017optimization}
+\abx@aux@segm{0}{0}{ravi2017optimization}
+\abx@aux@cite{0}{snell2017protonet}
+\abx@aux@segm{0}{0}{snell2017protonet}
+\abx@aux@cite{0}{finn2017maml}
+\abx@aux@segm{0}{0}{finn2017maml}
+\abx@aux@cite{0}{chen2019closerlook}
+\abx@aux@segm{0}{0}{chen2019closerlook}
+\abx@aux@cite{0}{lee2019metaoptnet}
+\abx@aux@segm{0}{0}{lee2019metaoptnet}
+\abx@aux@cite{0}{hu2022pmf}
+\abx@aux@segm{0}{0}{hu2022pmf}
+\abx@aux@cite{0}{he2016resnet}
+\abx@aux@segm{0}{0}{he2016resnet}
+\abx@aux@cite{0}{howard2019mobilenetv3}
+\abx@aux@segm{0}{0}{howard2019mobilenetv3}
+\abx@aux@cite{0}{somvanshi2025tinydl}
+\abx@aux@segm{0}{0}{somvanshi2025tinydl}
+\abx@aux@cite{0}{simeoni2025dinov3}
+\abx@aux@segm{0}{0}{simeoni2025dinov3}
+\abx@aux@cite{0}{kaya2025cnnvit}
+\abx@aux@segm{0}{0}{kaya2025cnnvit}
+\@writefile{toc}{\contentsline {section}{\numberline {2.5}Few-Shot Learning}{14}{section.2.5}\protected@file@percent }
+\newlabel{sec:related-fewshot}{{2.5}{14}{Few-Shot Learning}{section.2.5}{}}
+\abx@aux@cite{0}{li2022tsa}
+\abx@aux@segm{0}{0}{li2022tsa}
+\@writefile{toc}{\contentsline {section}{\numberline {2.6}CNN Backbones and Edge Deployment}{15}{section.2.6}\protected@file@percent }
+\newlabel{sec:related-cnn}{{2.6}{15}{CNN Backbones and Edge Deployment}{section.2.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2.7}Closest Prior Work and Positioning}{15}{section.2.7}\protected@file@percent }
+\newlabel{sec:related-positioning}{{2.7}{15}{Closest Prior Work and Positioning}{section.2.7}{}}
+\abx@aux@cite{0}{shysheya2023fit}
+\abx@aux@segm{0}{0}{shysheya2023fit}
+\abx@aux@cite{0}{zhang2022tipadapter}
+\abx@aux@segm{0}{0}{zhang2022tipadapter}
+\abx@aux@cite{0}{gao2025clipadapter}
+\abx@aux@segm{0}{0}{gao2025clipadapter}
+\abx@aux@cite{0}{linghu2022bel}
+\abx@aux@segm{0}{0}{linghu2022bel}
+\abx@aux@cite{0}{moralesalvarez2025bayesadapter}
+\abx@aux@segm{0}{0}{moralesalvarez2025bayesadapter}
+\abx@aux@cite{0}{xin2024vpeftsurvey}
+\abx@aux@segm{0}{0}{xin2024vpeftsurvey}
+\abx@aux@cite{0}{somvanshi2025tinydl}
+\abx@aux@segm{0}{0}{somvanshi2025tinydl}
+\@writefile{toc}{\contentsline {section}{\numberline {2.8}Chapter Summary}{16}{section.2.8}\protected@file@percent }
+\abx@aux@cite{0}{li2022tsa}
+\abx@aux@segm{0}{0}{li2022tsa}
+\abx@aux@cite{0}{linghu2022bel}
+\abx@aux@segm{0}{0}{linghu2022bel}
+\abx@aux@cite{0}{moralesalvarez2025bayesadapter}
+\abx@aux@segm{0}{0}{moralesalvarez2025bayesadapter}
+\@writefile{lot}{\contentsline {table}{\numberline {2.1}{\ignorespaces The research gap: each of the three closest prior works covers some, but never all, of the four properties this thesis studies jointly. Published comparisons in this space typically vary two design axes at once (e.g.\ training objective and scoring rule together); this thesis separates them explicitly (\autoref {sec:results-rq2}, \autoref {sec:results-rq3}).}}{17}{table.caption.17}\protected@file@percent }
+\newlabel{tab:research-gap}{{2.1}{17}{The research gap: each of the three closest prior works covers some, but never all, of the four properties this thesis studies jointly. Published comparisons in this space typically vary two design axes at once (e.g.\ training objective and scoring rule together); this thesis separates them explicitly (\autoref {sec:results-rq2}, \autoref {sec:results-rq3})}{table.caption.17}{}}
+\abx@aux@cite{0}{krizhevsky2009cifar}
+\abx@aux@segm{0}{0}{krizhevsky2009cifar}
+\abx@aux@cite{0}{bertinetto2019r2d2}
+\abx@aux@segm{0}{0}{bertinetto2019r2d2}
+\abx@aux@cite{0}{ravi2017optimization}
+\abx@aux@segm{0}{0}{ravi2017optimization}
+\abx@aux@cite{0}{deng2009imagenet}
+\abx@aux@segm{0}{0}{deng2009imagenet}
+\abx@aux@cite{0}{yang2022openood}
+\abx@aux@segm{0}{0}{yang2022openood}
+\@writefile{toc}{\contentsline {chapter}{\numberline {3}Datasets, Models, and Evaluation Protocol}{18}{chapter.3}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:background}{{3}{18}{Datasets, Models, and Evaluation Protocol}{chapter.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.1}Datasets and Splits}{18}{section.3.1}\protected@file@percent }
+\newlabel{sec:proto-datasets}{{3.1}{18}{Datasets and Splits}{section.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1.1}In-Distribution Datasets}{18}{subsection.3.1.1}\protected@file@percent }
+\abx@aux@cite{0}{netzer2011svhn}
+\abx@aux@segm{0}{0}{netzer2011svhn}
+\abx@aux@cite{0}{le2015tinyimagenet}
+\abx@aux@segm{0}{0}{le2015tinyimagenet}
+\abx@aux@cite{0}{malinin2018priornetworks}
+\abx@aux@segm{0}{0}{malinin2018priornetworks}
+\abx@aux@cite{0}{deng2009imagenet}
+\abx@aux@segm{0}{0}{deng2009imagenet}
+\abx@aux@cite{0}{he2016resnet}
+\abx@aux@segm{0}{0}{he2016resnet}
+\abx@aux@cite{0}{howard2019mobilenetv3}
+\abx@aux@segm{0}{0}{howard2019mobilenetv3}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1.2}Out-of-Distribution Pools}{19}{subsection.3.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3.2}Backbone Networks}{19}{section.3.2}\protected@file@percent }
+\newlabel{sec:proto-backbones}{{3.2}{19}{Backbone Networks}{section.3.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.3}Episodic Few-Shot Protocol}{20}{section.3.3}\protected@file@percent }
+\newlabel{sec:proto-episodic}{{3.3}{20}{Episodic Few-Shot Protocol}{section.3.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces One 5-way, 5-shot episode: a support grid of 5 labelled images per class, and a query block of 15 unlabelled images per class to be classified. A fresh set of 5 classes is sampled for every episode, and the 20 test classes are never used to train the adapter.}}{20}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:few-shot-episode}{{3.1}{20}{One 5-way, 5-shot episode: a support grid of 5 labelled images per class, and a query block of 15 unlabelled images per class to be classified. A fresh set of 5 classes is sampled for every episode, and the 20 test classes are never used to train the adapter}{figure.caption.18}{}}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\@writefile{toc}{\contentsline {section}{\numberline {3.4}Evaluation Metrics}{21}{section.3.4}\protected@file@percent }
+\newlabel{sec:proto-metrics}{{3.4}{21}{Evaluation Metrics}{section.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}Accuracy and Macro-F1}{21}{subsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Calibration}{21}{subsection.3.4.2}\protected@file@percent }
+\newlabel{eq:ece}{{3.1}{21}{Calibration}{equation.3.4.1}{}}
+\newlabel{eq:brier}{{3.2}{21}{Calibration}{equation.3.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.3}Out-of-Distribution Detection}{22}{subsection.3.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.4}Efficiency}{22}{subsection.3.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}Proposed Methodology}{23}{chapter.4}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:methodology}{{4}{23}{Proposed Methodology}{chapter.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.1}Overview of the Methodology}{23}{section.4.1}\protected@file@percent }
+\newlabel{sec:method-overview}{{4.1}{23}{Overview of the Methodology}{section.4.1}{}}
+\abx@aux@cite{0}{houlsby2019adapters}
+\abx@aux@segm{0}{0}{houlsby2019adapters}
+\abx@aux@cite{0}{he2022unified}
+\abx@aux@segm{0}{0}{he2022unified}
+\abx@aux@cite{0}{li2022tsa}
+\abx@aux@segm{0}{0}{li2022tsa}
+\abx@aux@cite{0}{chen2024convadapter}
+\abx@aux@segm{0}{0}{chen2024convadapter}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces The B-PEFT pipeline. Support and query images pass through the frozen backbone with a small trainable adapter inserted at each stage; the resulting features feed a parameter-free prototype head, whose similarity logits are read as either softmax or evidential (Dirichlet) probabilities. Only the adapter (orange) and, in the evidential interpretation, its two evidence-affine parameters are trained; the backbone (grey) is frozen and the prototype head has no learnable weights of its own.}}{24}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:pipeline}{{4.1}{24}{The B-PEFT pipeline. Support and query images pass through the frozen backbone with a small trainable adapter inserted at each stage; the resulting features feed a parameter-free prototype head, whose similarity logits are read as either softmax or evidential (Dirichlet) probabilities. Only the adapter (orange) and, in the evidential interpretation, its two evidence-affine parameters are trained; the backbone (grey) is frozen and the prototype head has no learnable weights of its own}{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.2}Parameter-Efficient Adapters}{24}{section.4.2}\protected@file@percent }
+\newlabel{sec:method-adapters}{{4.2}{24}{Parameter-Efficient Adapters}{section.4.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Bottleneck adapter~\blx@tocontentsinit {0}\cite {houlsby2019adapters}.}{24}{section*.20}\protected@file@percent }
+\newlabel{eq:bottleneck}{{4.1}{24}{Bottleneck adapter~\cite {houlsby2019adapters}}{equation.4.2.1}{}}
+\abx@aux@cite{0}{hu2022lora}
+\abx@aux@segm{0}{0}{hu2022lora}
+\abx@aux@cite{0}{aleem2024convlora}
+\abx@aux@segm{0}{0}{aleem2024convlora}
+\abx@aux@cite{0}{zhong2024convlorasam}
+\abx@aux@segm{0}{0}{zhong2024convlorasam}
+\abx@aux@cite{0}{chen2024convadapter}
+\abx@aux@segm{0}{0}{chen2024convadapter}
+\abx@aux@cite{0}{benzaken2022bitfit}
+\abx@aux@segm{0}{0}{benzaken2022bitfit}
+\@writefile{toc}{\contentsline {paragraph}{LoRA~\blx@tocontentsinit {0}\cite {hu2022lora}.}{25}{section*.21}\protected@file@percent }
+\newlabel{eq:lora}{{4.2}{25}{LoRA~\cite {hu2022lora}}{equation.4.2.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.2}{\ignorespaces The two adapter architectures compared throughout this thesis: the parallel bottleneck, a down-project/ReLU/up-project side branch added at every stage; and LoRA, a low-rank update inside a single frozen $1{\times }1$ convolution.}}{25}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:adapter-zooms}{{4.2}{25}{The two adapter architectures compared throughout this thesis: the parallel bottleneck, a down-project/ReLU/up-project side branch added at every stage; and LoRA, a low-rank update inside a single frozen $1{\times }1$ convolution}{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{BitFit~\blx@tocontentsinit {0}\cite {benzaken2022bitfit}.}{25}{section*.23}\protected@file@percent }
+\abx@aux@cite{0}{chen2019closerlook}
+\abx@aux@segm{0}{0}{chen2019closerlook}
+\abx@aux@cite{0}{snell2017protonet}
+\abx@aux@segm{0}{0}{snell2017protonet}
+\@writefile{toc}{\contentsline {paragraph}{Full-Fine-Tuning (baseline).}{26}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Linear-Probe (baseline).}{26}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4.3}The Parameter-Free Prototype Head}{26}{section.4.3}\protected@file@percent }
+\newlabel{sec:method-head}{{4.3}{26}{The Parameter-Free Prototype Head}{section.4.3}{}}
+\newlabel{eq:prototype}{{4.3}{26}{The Parameter-Free Prototype Head}{equation.4.3.3}{}}
+\newlabel{eq:proto-logit}{{4.4}{26}{The Parameter-Free Prototype Head}{equation.4.3.4}{}}
+\abx@aux@cite{0}{snell2017protonet}
+\abx@aux@segm{0}{0}{snell2017protonet}
+\abx@aux@cite{0}{chen2019closerlook}
+\abx@aux@segm{0}{0}{chen2019closerlook}
+\abx@aux@cite{0}{snell2017protonet}
+\abx@aux@segm{0}{0}{snell2017protonet}
+\@writefile{toc}{\contentsline {section}{\numberline {4.4}From Logits to Belief: Softmax versus Evidential Interpretation}{27}{section.4.4}\protected@file@percent }
+\newlabel{sec:method-evidence-affine}{{4.4}{27}{From Logits to Belief: Softmax versus Evidential Interpretation}{section.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.1}Softmax interpretation}{27}{subsection.4.4.1}\protected@file@percent }
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4.2}Evidential (Dirichlet) interpretation}{28}{subsection.4.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.3}{\ignorespaces One set of raw similarity logits, read two ways: softmax probabilities scored by MSP/energy, or Dirichlet evidence scored by vacuity. The two interpretations differ by exactly the two evidence-affine parameters.}}{28}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:head-two-readouts}{{4.3}{28}{One set of raw similarity logits, read two ways: softmax probabilities scored by MSP/energy, or Dirichlet evidence scored by vacuity. The two interpretations differ by exactly the two evidence-affine parameters}{figure.caption.26}{}}
+\newlabel{eq:evidence-affine}{{4.5}{28}{Evidential (Dirichlet) interpretation}{equation.4.4.5}{}}
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\abx@aux@cite{0}{gao2024edlsurvey}
+\abx@aux@segm{0}{0}{gao2024edlsurvey}
+\@writefile{lot}{\contentsline {table}{\numberline {4.1}{\ignorespaces The two head interpretations compared. Both read the same underlying similarity logits (\autoref {eq:proto-logit}); they differ only in the transform applied afterward and its two extra parameters.}}{29}{table.caption.27}\protected@file@percent }
+\newlabel{tab:head-comparison}{{4.1}{29}{The two head interpretations compared. Both read the same underlying similarity logits (\autoref {eq:proto-logit}); they differ only in the transform applied afterward and its two extra parameters}{table.caption.27}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.5}The Evidential Training Objective}{29}{section.4.5}\protected@file@percent }
+\newlabel{sec:method-evidential-loss}{{4.5}{29}{The Evidential Training Objective}{section.4.5}{}}
+\abx@aux@cite{0}{yang2022openood}
+\abx@aux@segm{0}{0}{yang2022openood}
+\@writefile{toc}{\contentsline {section}{\numberline {4.6}Episodic Meta-Training Procedure}{30}{section.4.6}\protected@file@percent }
+\newlabel{sec:method-training}{{4.6}{30}{Episodic Meta-Training Procedure}{section.4.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.7}Post-Hoc Recalibration of the Evidential Head}{30}{section.4.7}\protected@file@percent }
+\newlabel{sec:method-recalibration}{{4.7}{30}{Post-Hoc Recalibration of the Evidential Head}{section.4.7}{}}
+\abx@aux@cite{0}{hendrycks2017baseline}
+\abx@aux@segm{0}{0}{hendrycks2017baseline}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\abx@aux@cite{0}{liu2020energy}
+\abx@aux@segm{0}{0}{liu2020energy}
+\@writefile{toc}{\contentsline {section}{\numberline {4.8}Out-of-Distribution Scoring Rules}{31}{section.4.8}\protected@file@percent }
+\newlabel{sec:method-ood-scores}{{4.8}{31}{Out-of-Distribution Scoring Rules}{section.4.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.9}Experimental Design}{31}{section.4.9}\protected@file@percent }
+\newlabel{sec:method-grid-design}{{4.9}{31}{Experimental Design}{section.4.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.1}The main grid}{31}{subsection.4.9.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4.4}{\ignorespaces The full experimental design: the base grid (120 runs), re-scored with 4 OOD scores and a post-hoc refit at no extra training cost, followed by the matched-budget experiment (48 runs) and the rank sweep (21 runs) — 189 training runs in total.}}{32}{figure.caption.28}\protected@file@percent }
+\newlabel{fig:experimental-design-flow}{{4.4}{32}{The full experimental design: the base grid (120 runs), re-scored with 4 OOD scores and a post-hoc refit at no extra training cost, followed by the matched-budget experiment (48 runs) and the rank sweep (21 runs) — 189 training runs in total}{figure.caption.28}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4.2}{\ignorespaces Trainable-parameter counts (softmax head; the evidential head adds exactly 2 to each cell) for the two balanced-factorial adapters, by backbone. The ordering reverses between backbones.}}{33}{table.caption.29}\protected@file@percent }
+\newlabel{tab:param-reversal}{{4.2}{33}{Trainable-parameter counts (softmax head; the evidential head adds exactly 2 to each cell) for the two balanced-factorial adapters, by backbone. The ordering reverses between backbones}{table.caption.29}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9.2}The matched-budget follow-up experiment}{33}{subsection.4.9.2}\protected@file@percent }
+\newlabel{sec:method-matched-budget}{{4.9.2}{33}{The matched-budget follow-up experiment}{subsection.4.9.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4.10}Implementation and Reproducibility}{34}{section.4.10}\protected@file@percent }
+\newlabel{sec:method-implementation}{{4.10}{34}{Implementation and Reproducibility}{section.4.10}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {5}Results and Discussion}{35}{chapter.5}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:results}{{5}{35}{Results and Discussion}{chapter.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.1}Overview of the Experiment Grid}{35}{section.5.1}\protected@file@percent }
+\abx@aux@cite{0}{chen2019closerlook}
+\abx@aux@segm{0}{0}{chen2019closerlook}
+\@writefile{lot}{\contentsline {table}{\numberline {5.1}{\ignorespaces The experimental grid: 40 unique configurations $\times $ 3 seeds = 120 runs.}}{36}{table.caption.30}\protected@file@percent }
+\newlabel{tab:grid-recap}{{5.1}{36}{The experimental grid: 40 unique configurations $\times $ 3 seeds = 120 runs}{table.caption.30}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.2}Results: Parameter Efficiency}{36}{section.5.2}\protected@file@percent }
+\newlabel{sec:results-param-efficiency}{{5.2}{36}{Results: Parameter Efficiency}{section.5.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.1}{\ignorespaces Full fine-tuning versus the parallel-bottleneck adapter versus the linear probe: trainable parameters and accuracy, CIFAR-FS 5-shot, ResNet-18.}}{36}{figure.caption.31}\protected@file@percent }
+\newlabel{fig:param-efficiency-bars}{{5.1}{36}{Full fine-tuning versus the parallel-bottleneck adapter versus the linear probe: trainable parameters and accuracy, CIFAR-FS 5-shot, ResNet-18}{figure.caption.31}{}}
+\abx@aux@cite{0}{krumpl2026onemodel}
+\abx@aux@segm{0}{0}{krumpl2026onemodel}
+\@writefile{toc}{\contentsline {section}{\numberline {5.3}RQ1: Attribution of Outcome Variance Across Design Axes}{37}{section.5.3}\protected@file@percent }
+\newlabel{sec:results-rq1}{{5.3}{37}{RQ1: Attribution of Outcome Variance Across Design Axes}{section.5.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.2}{\ignorespaces Per-seed $\eta ^2$ variance decomposition (96 observations) across the five balanced-factorial design axes. Bold marks the dominant axis for each outcome.}}{37}{table.caption.32}\protected@file@percent }
+\newlabel{tab:rq1-eta2}{{5.2}{37}{Per-seed $\eta ^2$ variance decomposition (96 observations) across the five balanced-factorial design axes. Bold marks the dominant axis for each outcome}{table.caption.32}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.2}{\ignorespaces Main-effects heatmap: share of variance ($\eta ^2$, \%) each design axis explains for each outcome. Accuracy is dominated by shots; ECE by head; neither OOD pool has one dominant factor.}}{37}{figure.caption.33}\protected@file@percent }
+\newlabel{fig:main-effects-heatmap}{{5.2}{37}{Main-effects heatmap: share of variance ($\eta ^2$, \%) each design axis explains for each outcome. Accuracy is dominated by shots; ECE by head; neither OOD pool has one dominant factor}{figure.caption.33}{}}
+\abx@aux@cite{0}{bengs2022pitfalls}
+\abx@aux@segm{0}{0}{bengs2022pitfalls}
+\abx@aux@cite{0}{hoarau2026epistemic}
+\abx@aux@segm{0}{0}{hoarau2026epistemic}
+\@writefile{lot}{\contentsline {table}{\numberline {5.3}{\ignorespaces Pooled ECE for the ResNet-18, Bottleneck-parallel configuration, evidential versus softmax (with and without post-hoc temperature scaling). Lower is better; the evidential head is worse in every row.}}{38}{table.caption.34}\protected@file@percent }
+\newlabel{tab:head-ece-subset}{{5.3}{38}{Pooled ECE for the ResNet-18, Bottleneck-parallel configuration, evidential versus softmax (with and without post-hoc temperature scaling). Lower is better; the evidential head is worse in every row}{table.caption.34}{}}
+\abx@aux@cite{0}{tao2024benchmarkcalibration}
+\abx@aux@segm{0}{0}{tao2024benchmarkcalibration}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\abx@aux@cite{0}{minderer2021revisiting}
+\abx@aux@segm{0}{0}{minderer2021revisiting}
+\@writefile{toc}{\contentsline {section}{\numberline {5.4}RQ2: Training Objective versus Scoring Rule}{39}{section.5.4}\protected@file@percent }
+\newlabel{sec:results-rq2}{{5.4}{39}{RQ2: Training Objective versus Scoring Rule}{section.5.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.4}{\ignorespaces $\eta ^2$ decomposition of OOD-detection variance into training objective and scoring rule, on the full cross-applied $2 \times 4$ factorial (120/120 checkpoints, $n=960$ comparisons per pool).}}{40}{table.caption.35}\protected@file@percent }
+\newlabel{tab:rq2-eta2}{{5.4}{40}{$\eta ^2$ decomposition of OOD-detection variance into training objective and scoring rule, on the full cross-applied $2 \times 4$ factorial (120/120 checkpoints, $n=960$ comparisons per pool)}{table.caption.35}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.3}{\ignorespaces OOD AUROC by scoring rule, split by which objective trained the model, for far- and near-OOD pools. The same score gives nearly the same AUROC regardless of which objective produced the logits it scores; the gap between scores dwarfs the gap between objectives.}}{40}{figure.caption.36}\protected@file@percent }
+\newlabel{fig:ood-score-vs-objective}{{5.3}{40}{OOD AUROC by scoring rule, split by which objective trained the model, for far- and near-OOD pools. The same score gives nearly the same AUROC regardless of which objective produced the logits it scores; the gap between scores dwarfs the gap between objectives}{figure.caption.36}{}}
+\abx@aux@cite{0}{genc2026objectives}
+\abx@aux@segm{0}{0}{genc2026objectives}
+\abx@aux@cite{0}{krumpl2026onemodel}
+\abx@aux@segm{0}{0}{krumpl2026onemodel}
+\abx@aux@cite{0}{hayta2026pluginlosses}
+\abx@aux@segm{0}{0}{hayta2026pluginlosses}
+\@writefile{toc}{\contentsline {section}{\numberline {5.5}RQ3: Adapter Architecture versus Parameter Budget}{41}{section.5.5}\protected@file@percent }
+\newlabel{sec:results-rq3}{{5.5}{41}{RQ3: Adapter Architecture versus Parameter Budget}{section.5.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{The 16-pair evidence}{42}{section*.37}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5.5}{\ignorespaces Summary of 16 matched bottleneck-versus-LoRA comparisons. Because the parameter-budget ordering reverses between backbones (\autoref {tab:param-reversal}), the ``8/16'' entries are arithmetically implied by the other column, not independent evidence.}}{42}{table.caption.38}\protected@file@percent }
+\newlabel{tab:rq3-16pair}{{5.5}{42}{Summary of 16 matched bottleneck-versus-LoRA comparisons. Because the parameter-budget ordering reverses between backbones (\autoref {tab:param-reversal}), the ``8/16'' entries are arithmetically implied by the other column, not independent evidence}{table.caption.38}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.4}{\ignorespaces The 16 matched pairs: which adapter wins on accuracy and ECE, by backbone. The accuracy winner is constant (bottleneck); the ECE winner flips with the backbone.}}{42}{figure.caption.39}\protected@file@percent }
+\newlabel{fig:matched-pairs-deltas}{{5.4}{42}{The 16 matched pairs: which adapter wins on accuracy and ECE, by backbone. The accuracy winner is constant (bottleneck); the ECE winner flips with the backbone}{figure.caption.39}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.5}{\ignorespaces The trainable-parameter-count reversal behind \autoref {tab:param-reversal}: bottleneck is the larger adapter on ResNet-18, LoRA is the larger adapter on MobileNetV3-Small.}}{43}{figure.caption.40}\protected@file@percent }
+\newlabel{fig:parameter-bars-reversal}{{5.5}{43}{The trainable-parameter-count reversal behind \autoref {tab:param-reversal}: bottleneck is the larger adapter on ResNet-18, LoRA is the larger adapter on MobileNetV3-Small}{figure.caption.40}{}}
+\@writefile{toc}{\contentsline {subsubsection}{The matched-budget adjudication}{43}{section*.41}\protected@file@percent }
+\newlabel{sec:results-matched-budget}{{5.5}{43}{The matched-budget adjudication}{section*.41}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5.6}{\ignorespaces Matched-budget calibration results (averaged over the two pre-registered budget levels per backbone $\times $ head cell). Full per-level numbers are in \autoref {apx:results}.}}{44}{table.caption.42}\protected@file@percent }
+\newlabel{tab:rq3-matched}{{5.6}{44}{Matched-budget calibration results (averaged over the two pre-registered budget levels per backbone $\times $ head cell). Full per-level numbers are in \autoref {apx:results}}{table.caption.42}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.6}{\ignorespaces $\Delta $ECE (LoRA $-$ bottleneck), unmatched versus matched budget, by backbone and head. The gap stays intact on ResNet-18 and roughly halves on MobileNetV3-Small — the backbone determines the sign, the budget only modulates the magnitude.}}{44}{figure.caption.43}\protected@file@percent }
+\newlabel{fig:matched-budget-bars}{{5.6}{44}{$\Delta $ECE (LoRA $-$ bottleneck), unmatched versus matched budget, by backbone and head. The gap stays intact on ResNet-18 and roughly halves on MobileNetV3-Small — the backbone determines the sign, the budget only modulates the magnitude}{figure.caption.43}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.7}{\ignorespaces Residual parameter-count mismatch for each matched-budget pair, all under 3.1\% — the matched arms are close enough in size that the budget confound of \autoref {tab:param-reversal} genuinely no longer applies.}}{44}{figure.caption.44}\protected@file@percent }
+\newlabel{fig:budget-match-inset}{{5.7}{44}{Residual parameter-count mismatch for each matched-budget pair, all under 3.1\% — the matched arms are close enough in size that the budget confound of \autoref {tab:param-reversal} genuinely no longer applies}{figure.caption.44}{}}
+\abx@aux@cite{0}{pandey2024bayesianpeft}
+\abx@aux@segm{0}{0}{pandey2024bayesianpeft}
+\abx@aux@cite{0}{muhlematter2026loraensemble}
+\abx@aux@segm{0}{0}{muhlematter2026loraensemble}
+\@writefile{toc}{\contentsline {subsubsection}{A demoted hypothesis: the interior-optimum budget curve}{46}{section*.45}\protected@file@percent }
+\newlabel{sec:results-rq5-demoted}{{5.5}{46}{A demoted hypothesis: the interior-optimum budget curve}{section*.45}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.6}RQ4: Post-Hoc Remediation of the Calibration Deficit}{46}{section.5.6}\protected@file@percent }
+\newlabel{sec:results-rq4}{{5.6}{46}{RQ4: Post-Hoc Remediation of the Calibration Deficit}{section.5.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.8}{\ignorespaces Pooled ECE before and after the post-hoc refit, against the plain-softmax reference. The refit closes most, but not all, of the gap to softmax.}}{47}{figure.caption.46}\protected@file@percent }
+\newlabel{fig:ece-before-after}{{5.8}{47}{Pooled ECE before and after the post-hoc refit, against the plain-softmax reference. The refit closes most, but not all, of the gap to softmax}{figure.caption.46}{}}
+\abx@aux@cite{0}{kull2019dirichlet}
+\abx@aux@segm{0}{0}{kull2019dirichlet}
+\abx@aux@cite{0}{zhao2026invertible}
+\abx@aux@segm{0}{0}{zhao2026invertible}
+\abx@aux@cite{0}{guo2017calibration}
+\abx@aux@segm{0}{0}{guo2017calibration}
+\abx@aux@cite{0}{linghu2022bel}
+\abx@aux@segm{0}{0}{linghu2022bel}
+\abx@aux@cite{0}{sensoy2018edl}
+\abx@aux@segm{0}{0}{sensoy2018edl}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.9}{\ignorespaces Change in OOD AUROC after the post-hoc refit, per pool and cell. Most changes cluster near zero; the minority exception is visible as the scattered points furthest from it.}}{48}{figure.caption.47}\protected@file@percent }
+\newlabel{fig:delta-auroc-strip}{{5.9}{48}{Change in OOD AUROC after the post-hoc refit, per pool and cell. Most changes cluster near zero; the minority exception is visible as the scattered points furthest from it}{figure.caption.47}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.7}Implications: Deployment Cost}{48}{section.5.7}\protected@file@percent }
+\newlabel{sec:results-implications}{{5.7}{48}{Implications: Deployment Cost}{section.5.7}{}}
+\abx@aux@cite{0}{hu2022pmf}
+\abx@aux@segm{0}{0}{hu2022pmf}
+\abx@aux@cite{0}{caron2021dino}
+\abx@aux@segm{0}{0}{caron2021dino}
+\abx@aux@cite{0}{hu2022pmf}
+\abx@aux@segm{0}{0}{hu2022pmf}
+\abx@aux@cite{0}{caron2021dino}
+\abx@aux@segm{0}{0}{caron2021dino}
+\abx@aux@cite{0}{hu2022pmf}
+\abx@aux@segm{0}{0}{hu2022pmf}
+\abx@aux@cite{0}{caron2021dino}
+\abx@aux@segm{0}{0}{caron2021dino}
+\abx@aux@cite{0}{hu2022pmf}
+\abx@aux@segm{0}{0}{hu2022pmf}
+\abx@aux@cite{0}{linghu2022bel}
+\abx@aux@segm{0}{0}{linghu2022bel}
+\abx@aux@cite{0}{lee2019metaoptnet}
+\abx@aux@segm{0}{0}{lee2019metaoptnet}
+\@writefile{lot}{\contentsline {table}{\numberline {5.7}{\ignorespaces Measured effect of each design choice on inference latency. The backbone dominates; adapter choice matters far more for accuracy (\autoref {sec:results-rq3}) than for latency.}}{49}{table.caption.48}\protected@file@percent }
+\newlabel{tab:latency-effects}{{5.7}{49}{Measured effect of each design choice on inference latency. The backbone dominates; adapter choice matters far more for accuracy (\autoref {sec:results-rq3}) than for latency}{table.caption.48}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5.10}{\ignorespaces Effect on inference latency of backbone, adapter type, and head interpretation, measured on a canonical edge-proxy CPU session.}}{49}{figure.caption.49}\protected@file@percent }
+\newlabel{fig:latency-effect-bars}{{5.10}{49}{Effect on inference latency of backbone, adapter type, and head interpretation, measured on a canonical edge-proxy CPU session}{figure.caption.49}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.8}Positioning Against the State of the Art}{49}{section.5.8}\protected@file@percent }
+\newlabel{sec:results-positioning}{{5.8}{49}{Positioning Against the State of the Art}{section.5.8}{}}
+\abx@aux@cite{0}{lian2022ssf}
+\abx@aux@segm{0}{0}{lian2022ssf}
+\abx@aux@cite{0}{jia2022vpt}
+\abx@aux@segm{0}{0}{jia2022vpt}
+\abx@aux@cite{0}{zhou2022coop}
+\abx@aux@segm{0}{0}{zhou2022coop}
+\abx@aux@cite{0}{somvanshi2025tinydl}
+\abx@aux@segm{0}{0}{somvanshi2025tinydl}
+\abx@aux@cite{0}{simeoni2025dinov3}
+\abx@aux@segm{0}{0}{simeoni2025dinov3}
+\@writefile{lot}{\contentsline {table}{\numberline {5.8}{\ignorespaces Accuracy versus trainable-parameter budget on the same 5-way 5-shot episodic protocol. No competing method in this table reports macro-F1, calibration, or OOD detection.}}{50}{table.caption.50}\protected@file@percent }
+\newlabel{tab:positioning-accuracy}{{5.8}{50}{Accuracy versus trainable-parameter budget on the same 5-way 5-shot episodic protocol. No competing method in this table reports macro-F1, calibration, or OOD detection}{table.caption.50}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5.9}Threats to Validity and Limitations}{51}{section.5.9}\protected@file@percent }
+\newlabel{sec:results-limitations}{{5.9}{51}{Threats to Validity and Limitations}{section.5.9}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {6}Conclusion}{53}{chapter.6}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{chapter:conclusion}{{6}{53}{Conclusion}{chapter.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6.1}Restating the Research Questions}{53}{section.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.2}Summary of Key Findings}{53}{section.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.1}{\ignorespaces What this thesis learned: no single design choice optimises every reliability axis.}}{54}{table.caption.51}\protected@file@percent }
+\newlabel{tab:conclusion-summary}{{6.1}{54}{What this thesis learned: no single design choice optimises every reliability axis}{table.caption.51}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6.1}{\ignorespaces Every design factor tested against every reliability outcome: which links were found, which were tested and not supported, and which are partial. Adapter budget alone does not reach calibration or OOD ranking; architecture and scoring rule do the work that a first look at parameter count alone would suggest budget was doing.}}{55}{figure.caption.52}\protected@file@percent }
+\newlabel{fig:findings-graph}{{6.1}{55}{Every design factor tested against every reliability outcome: which links were found, which were tested and not supported, and which are partial. Adapter budget alone does not reach calibration or OOD ranking; architecture and scoring rule do the work that a first look at parameter count alone would suggest budget was doing}{figure.caption.52}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6.3}Contributions of the Research}{55}{section.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.4}Limitations}{56}{section.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.5}Suggestions for Future Work}{56}{section.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.6}Concluding Remarks}{56}{section.6.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{Appendices}{58}{section*.53}\protected@file@percent }
+\gdef \LT@i {\LT@entry 
+    {5}{73.93988pt}\LT@entry 
+    {5}{38.20998pt}\LT@entry 
+    {5}{76.7799pt}\LT@entry 
+    {1}{100.2037pt}\LT@entry 
+    {5}{56.61998pt}\LT@entry 
+    {1}{60.70992pt}\LT@entry 
+    {1}{62.39993pt}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {A}Full Experimental Result Tables}{59}{appendix.1.A}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{apx:results}{{A}{59}{Full Experimental Result Tables}{appendix.1.A}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {A.1}{\ignorespaces Accuracy, macro-F1, and trainable parameters for all 40 grid configurations.}}{59}{table.1.A.1}\protected@file@percent }
+\newlabel{tab:apx-accuracy}{{A.1}{59}{Accuracy, macro-F1, and trainable parameters for all 40 grid configurations}{table.1.A.1}{}}
+\gdef \FBLTpage@i {\gdef\flrow@LTlastpage{3}}
+\gdef \LT@ii {\LT@entry 
+    {5}{73.93988pt}\LT@entry 
+    {5}{38.20998pt}\LT@entry 
+    {1}{142.88284pt}\LT@entry 
+    {1}{68.73991pt}\LT@entry 
+    {1}{69.30988pt}\LT@entry 
+    {5}{39.20999pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {A.2}{\ignorespaces Calibration (pooled ECE, per-episode ECE, Brier score) for all 40 grid configurations. ECE after temperature scaling applies to softmax cells only.}}{61}{table.1.A.2}\protected@file@percent }
+\newlabel{tab:apx-calibration}{{A.2}{61}{Calibration (pooled ECE, per-episode ECE, Brier score) for all 40 grid configurations. ECE after temperature scaling applies to softmax cells only}{table.1.A.2}{}}
+\gdef \FBLTpage@ii {\gdef\flrow@LTlastpage{2}}
+\gdef \LT@iii {\LT@entry 
+    {5}{73.93988pt}\LT@entry 
+    {5}{38.20998pt}\LT@entry 
+    {1}{108.73918pt}\LT@entry 
+    {5}{39.20999pt}\LT@entry 
+    {1}{40.05998pt}\LT@entry 
+    {1}{60.36958pt}\LT@entry 
+    {5}{39.20999pt}\LT@entry 
+    {5}{39.20999pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {A.3}{\ignorespaces OOD-detection AUROC by pool, primary score per head (vacuity for evidential, MSP for softmax). ``Near'' lists CIFAR-100-heldout for CIFAR-FS rows and MiniImageNet-heldout for MiniImageNet rows (\autoref {sec:proto-datasets}).}}{62}{table.1.A.3}\protected@file@percent }
+\newlabel{tab:apx-auroc}{{A.3}{62}{OOD-detection AUROC by pool, primary score per head (vacuity for evidential, MSP for softmax). ``Near'' lists CIFAR-100-heldout for CIFAR-FS rows and MiniImageNet-heldout for MiniImageNet rows (\autoref {sec:proto-datasets})}{table.1.A.3}{}}
+\gdef \FBLTpage@iii {\gdef\flrow@LTlastpage{4}}
+\gdef \LT@iv {\LT@entry 
+    {5}{73.93988pt}\LT@entry 
+    {5}{38.20998pt}\LT@entry 
+    {1}{125.81102pt}\LT@entry 
+    {5}{39.20999pt}\LT@entry 
+    {1}{40.05998pt}\LT@entry 
+    {1}{66.06006pt}\LT@entry 
+    {5}{39.20999pt}}
+\@writefile{lot}{\contentsline {table}{\numberline {A.4}{\ignorespaces OOD FPR@95\%TPR by pool, primary score per head (lower is better). ``Near'' lists CIFAR-100-heldout for CIFAR-FS rows and MiniImageNet-heldout for MiniImageNet rows (\autoref {sec:proto-datasets}).}}{65}{table.1.A.4}\protected@file@percent }
+\newlabel{tab:apx-fpr95}{{A.4}{65}{OOD FPR@95\%TPR by pool, primary score per head (lower is better). ``Near'' lists CIFAR-100-heldout for CIFAR-FS rows and MiniImageNet-heldout for MiniImageNet rows (\autoref {sec:proto-datasets})}{table.1.A.4}{}}
+\gdef \FBLTpage@iv {\gdef\flrow@LTlastpage{3}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {B}Reproducibility and Configuration Details}{68}{appendix.1.B}\protected@file@percent }
+\@writefile{lof}{\addvspace {10\p@ }}
+\@writefile{lot}{\addvspace {10\p@ }}
+\newlabel{apx:repro}{{B}{68}{Reproducibility and Configuration Details}{appendix.1.B}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B.1}Configuration System}{68}{section.1.B.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B.2}Frozen Artefacts}{68}{section.1.B.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B.3}Determinism}{69}{section.1.B.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B.4}Experiment Tracking and Hardware}{69}{section.1.B.4}\protected@file@percent }
+\abx@aux@read@bbl@mdfivesum{nohash}
+\abx@aux@read@bblrerun
+\gdef \@abspage@last{80}

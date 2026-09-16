@@ -1,0 +1,826 @@
+% =====================================================================
+% B-PEFT thesis bibliography
+%
+% Assembled from the repository's audited citation set
+% (thesis-report/CITATION_AUDIT.md, thesis-report/refs.bib, built
+% 2026-09-13). Contains only works actually cited in this thesis; the
+% read-but-unused papers identified in the audit (ODIN, Mahalanobis,
+% ConvNeXt, Bayesian-LoRA/Meo, BH-PEFT/Chai, TFB/Shi, the Ulmer and Han
+% surveys) are deliberately excluded, as are three entries flagged by
+% the audit as mis-cited or unverified in earlier project drafts
+% (arXiv:2302.09369, arXiv:2410.21228, arXiv:2602.15283) — kept out of
+% the citation set entirely rather than cited with a caveat.
+%
+% Encoding: UTF-8. Compile with biblatex + biber (see main.tex).
+% =====================================================================
+
+
+% =====================================================================
+% 1. DATASETS, SPLITS AND BACKBONES
+% =====================================================================
+
+@inproceedings{bertinetto2019r2d2,
+  author    = {Bertinetto, Luca and Henriques, Jo{\~a}o F. and Torr, Philip H. S. and Vedaldi, Andrea},
+  title     = {Meta-learning with differentiable closed-form solvers},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019},
+  eprint    = {1805.08136},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV}
+}
+
+@inproceedings{ravi2017optimization,
+  author    = {Ravi, Sachin and Larochelle, Hugo},
+  title     = {Optimization as a Model for Few-Shot Learning},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2017}
+}
+
+@inproceedings{he2016resnet,
+  author    = {He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+  title     = {Deep Residual Learning for Image Recognition},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {770--778},
+  year      = {2016}
+}
+
+@inproceedings{howard2019mobilenetv3,
+  author    = {Howard, Andrew and Sandler, Mark and Chu, Grace and Chen, Liang-Chieh and Chen, Bo
+               and Tan, Mingxing and Wang, Weijun and Zhu, Yukun and Pang, Ruoming
+               and Vasudevan, Vijay and Le, Quoc V. and Adam, Hartwig},
+  title     = {Searching for MobileNetV3},
+  booktitle = {IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      = {2019},
+  eprint    = {1905.02244},
+  archivePrefix = {arXiv}
+}
+
+@techreport{krizhevsky2009cifar,
+  author      = {Krizhevsky, Alex},
+  title       = {Learning Multiple Layers of Features from Tiny Images},
+  institution = {University of Toronto},
+  year        = {2009}
+}
+
+@inproceedings{netzer2011svhn,
+  author    = {Netzer, Yuval and Wang, Tao and Coates, Adam and Bissacco, Alessandro
+               and Wu, Bo and Ng, Andrew Y.},
+  title     = {Reading Digits in Natural Images with Unsupervised Feature Learning},
+  booktitle = {NIPS Workshop on Deep Learning and Unsupervised Feature Learning},
+  year      = {2011}
+}
+
+@techreport{le2015tinyimagenet,
+  author      = {Le, Ya and Yang, Xuan},
+  title       = {Tiny ImageNet Visual Recognition Challenge},
+  institution = {Stanford University, CS231N},
+  year        = {2015}
+}
+
+@inproceedings{deng2009imagenet,
+  author    = {Deng, Jia and Dong, Wei and Socher, Richard and Li, Li-Jia and Li, Kai and Fei-Fei, Li},
+  title     = {{ImageNet}: A Large-Scale Hierarchical Image Database},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2009}
+}
+
+
+% =====================================================================
+% 2. PARAMETER-EFFICIENT FINE-TUNING
+% =====================================================================
+
+@inproceedings{houlsby2019adapters,
+  author    = {Houlsby, Neil and Giurgiu, Andrei and Jastrz{\k{e}}bski, Stanis{\l}aw and Morrone, Bruna
+               and de Laroussilhe, Quentin and Gesmundo, Andrea and Attariyan, Mona and Gelly, Sylvain},
+  title     = {Parameter-Efficient Transfer Learning for {NLP}},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {97},
+  year      = {2019},
+  eprint    = {1902.00751},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{hu2022lora,
+  author    = {Hu, Edward J. and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi
+               and Wang, Shean and Wang, Lu and Chen, Weizhu},
+  title     = {{LoRA}: Low-Rank Adaptation of Large Language Models},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022},
+  eprint    = {2106.09685},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{benzaken2022bitfit,
+  author    = {Ben-Zaken, Elad and Ravfogel, Shauli and Goldberg, Yoav},
+  title     = {{BitFit}: Simple Parameter-efficient Fine-tuning for Transformer-based Masked Language-models},
+  booktitle = {Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year      = {2022},
+  eprint    = {2106.10199},
+  archivePrefix = {arXiv}
+}
+
+@article{chen2024convadapter,
+  author  = {Chen, Hao and Tao, Ran and Zhang, Han and Wang, Yidong and Li, Xiang and Ye, Wei
+             and Wang, Jindong and Hu, Guosheng and Savvides, Marios},
+  title   = {{Conv-Adapter}: Exploring Parameter Efficient Transfer Learning for {ConvNets}},
+  journal = {arXiv preprint arXiv:2208.07463},
+  year    = {2024}
+}
+
+@inproceedings{aleem2024convlora,
+  author    = {Aleem, Sidra and Dietlmeier, Julia and Arazo, Eric and Little, Suzanne},
+  title     = {{ConvLoRA} and {AdaBN} based Domain Adaptation via Self-Training},
+  booktitle = {IEEE International Symposium on Biomedical Imaging (ISBI)},
+  year      = {2024},
+  eprint    = {2402.04964},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{zhong2024convlorasam,
+  author    = {Zhong, Zihan and Tang, Zhiqiang and He, Tong and Fang, Haoyang and Yuan, Chun},
+  title     = {Convolution Meets {LoRA}: Parameter Efficient Finetuning for Segment Anything Model},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  eprint    = {2401.17868},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{he2022unified,
+  author    = {He, Junxian and Zhou, Chunting and Ma, Xuezhe and Berg-Kirkpatrick, Taylor and Neubig, Graham},
+  title     = {Towards a Unified View of Parameter-Efficient Transfer Learning},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022},
+  eprint    = {2110.04366},
+  archivePrefix = {arXiv}
+}
+
+
+% =====================================================================
+% 3. FEW-SHOT LEARNING
+% =====================================================================
+
+@inproceedings{snell2017protonet,
+  author    = {Snell, Jake and Swersky, Kevin and Zemel, Richard S.},
+  title     = {Prototypical Networks for Few-shot Learning},
+  booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+  year      = {2017},
+  eprint    = {1703.05175},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{vinyals2016matching,
+  author    = {Vinyals, Oriol and Blundell, Charles and Lillicrap, Timothy and Kavukcuoglu, Koray and Wierstra, Daan},
+  title     = {Matching Networks for One Shot Learning},
+  booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+  year      = {2016},
+  eprint    = {1606.04080},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{chen2019closerlook,
+  author    = {Chen, Wei-Yu and Liu, Yen-Cheng and Kira, Zsolt and Wang, Yu-Chiang Frank and Huang, Jia-Bin},
+  title     = {A Closer Look at Few-shot Classification},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019},
+  eprint    = {1904.04232},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{finn2017maml,
+  author    = {Finn, Chelsea and Abbeel, Pieter and Levine, Sergey},
+  title     = {Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {70},
+  year      = {2017},
+  eprint    = {1703.03400},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{lee2019metaoptnet,
+  author    = {Lee, Kwonjoon and Maji, Subhransu and Ravichandran, Avinash and Soatto, Stefano},
+  title     = {Meta-Learning with Differentiable Convex Optimization},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2019},
+  eprint    = {1904.03758},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{hu2022pmf,
+  author    = {Hu, Shell Xu and Li, Da and St{\"u}hmer, Jan and Kim, Minyoung and Hospedales, Timothy M.},
+  title     = {Pushing the Limits of Simple Pipelines for Few-Shot Learning:
+               External Data and Fine-Tuning Make a Difference},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2022},
+  eprint    = {2204.07305},
+  archivePrefix = {arXiv}
+}
+
+
+% =====================================================================
+% 4. UNCERTAINTY, EVIDENTIAL LEARNING AND CALIBRATION
+% =====================================================================
+
+@inproceedings{sensoy2018edl,
+  author    = {Sensoy, Murat and Kaplan, Lance and Kandemir, Melih},
+  title     = {Evidential Deep Learning to Quantify Classification Uncertainty},
+  booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+  year      = {2018},
+  eprint    = {1806.01768},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{guo2017calibration,
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  title     = {On Calibration of Modern Neural Networks},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {70},
+  year      = {2017},
+  eprint    = {1706.04599},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{malinin2018priornetworks,
+  author    = {Malinin, Andrey and Gales, Mark},
+  title     = {Predictive Uncertainty Estimation via Prior Networks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2018},
+  eprint    = {1802.10501},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{lakshminarayanan2017ensembles,
+  author    = {Lakshminarayanan, Balaji and Pritzel, Alexander and Blundell, Charles},
+  title     = {Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles},
+  booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+  year      = {2017},
+  eprint    = {1612.01474},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{amini2020der,
+  author    = {Amini, Alexander and Schwarting, Wilko and Soleimany, Ava and Rus, Daniela},
+  title     = {Deep Evidential Regression},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+  eprint    = {1910.02600},
+  archivePrefix = {arXiv}
+}
+
+@article{gao2024edlsurvey,
+  author  = {Gao, Junyu and Chen, Mengyuan and Xiang, Liangyu and Xu, Changsheng},
+  title   = {A Comprehensive Survey on Evidential Deep Learning and Its Applications},
+  journal = {arXiv preprint arXiv:2409.04720},
+  year    = {2024}
+}
+
+@inproceedings{minderer2021revisiting,
+  author    = {Minderer, Matthias and Djolonga, Josip and Romijnders, Rob and Hubis, Frances
+               and Zhai, Xiaohua and Houlsby, Neil and Tran, Dustin and Lucic, Mario},
+  title     = {Revisiting the Calibration of Modern Neural Networks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2021},
+  eprint    = {2106.07998},
+  archivePrefix = {arXiv}
+}
+
+@article{bengs2022pitfalls,
+  author  = {Bengs, Viktor and H{\"u}llermeier, Eyke and Waegeman, Willem},
+  title   = {Pitfalls of Epistemic Uncertainty Quantification through Loss Minimisation},
+  journal = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year    = {2022},
+  eprint  = {2203.06102},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{shen2024mirage,
+  author    = {Shen, Maohao and Ryu, J. Jon and Ghosh, Soumya and Bu, Yuheng and Sattigeri, Prasanna
+               and Das, Subhro and Wornell, Gregory W.},
+  title     = {Are Uncertainty Quantification Capabilities of Evidential Deep Learning a Mirage?},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  eprint    = {2402.06160},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{tao2024benchmarkcalibration,
+  author    = {Tao, Linwei and Zhu, Younan and Guo, Haolan and Dong, Minjing and Xu, Chang},
+  title     = {A Benchmark Study on Calibration},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  eprint    = {2308.11838},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{kull2019dirichlet,
+  author    = {Kull, Meelis and Perell{\'o}-Nieto, Miquel and K{\"a}ngsepp, Markus
+               and Silva Filho, Telmo and Song, Hao and Flach, Peter},
+  title     = {Beyond Temperature Scaling: Obtaining Well-Calibrated Multiclass
+               Probabilities with Dirichlet Calibration},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2019}
+}
+
+@inproceedings{bitterwolf2022breaking,
+  author    = {Bitterwolf, Julian and Meinke, Alexander and Augustin, Maximilian and Hein, Matthias},
+  title     = {Breaking Down Out-of-Distribution Detection: Many Methods Based on
+               {OOD} Training Data Estimate a Combination of the Same Core Quantities},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2022}
+}
+
+@inproceedings{charpentier2020postnet,
+  author    = {Charpentier, Bertrand and Z{\"u}gner, Daniel and G{\"u}nnemann, Stephan},
+  title     = {Posterior Network: Uncertainty Estimation without {OOD} Samples
+               via Density-Based Pseudo-Counts},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020}
+}
+
+
+% =====================================================================
+% 5. OUT-OF-DISTRIBUTION DETECTION
+% =====================================================================
+
+@inproceedings{hendrycks2017baseline,
+  author    = {Hendrycks, Dan and Gimpel, Kevin},
+  title     = {A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2017},
+  eprint    = {1610.02136},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{liu2020energy,
+  author    = {Liu, Weitang and Wang, Xiaoyun and Owens, John D. and Li, Yixuan},
+  title     = {Energy-based Out-of-distribution Detection},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+  eprint    = {2010.03759},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{yang2022openood,
+  author    = {Yang, Jingkang and Wang, Pengyun and Zou, Dejian and Zhou, Zitang and Ding, Kunyuan
+               and Peng, Wenxuan and Wang, Haoqi and Chen, Guangyao and Li, Bo and Sun, Yiyou
+               and Du, Xuefeng and Zhou, Kaiyang and Zhang, Wayne and Hendrycks, Dan
+               and Li, Yixuan and Liu, Ziwei},
+  title     = {{OpenOOD}: Benchmarking Generalized Out-of-Distribution Detection},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS),
+               Datasets and Benchmarks Track},
+  year      = {2022},
+  eprint    = {2210.07242},
+  archivePrefix = {arXiv}
+}
+
+@article{zhang2024openoodv15,
+  author  = {Zhang, Jingyang and Yang, Jingkang and Wang, Pengyun and Wang, Haoqi and Lin, Yueqian
+             and Zhang, Haoran and Sun, Yiyou and Du, Xuefeng and Li, Yixuan and Liu, Ziwei
+             and Chen, Yiran and Li, Hai},
+  title   = {{OpenOOD} v1.5: Enhanced Benchmark for Out-of-Distribution Detection},
+  journal = {Journal of Data-centric Machine Learning Research (JDMLR)},
+  year    = {2024},
+  eprint  = {2306.09301},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{genc2026objectives,
+  author    = {Gen{\c{c}}, Furkan and {\"O}zdemir, Onat and Akba{\c{s}}, Emre},
+  title     = {A Systematic Comparison of Training Objectives for Out-of-Distribution
+               Detection in Image Classification},
+  booktitle = {ECCV Workshop on Uncertainty Quantification for Computer Vision},
+  year      = {2026},
+  eprint    = {2603.07571},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{krumpl2026onemodel,
+  author    = {Krumpl, Gerhard and Avenhaus, Henning and Possegger, Horst},
+  title     = {One Model, Many Behaviors: Training-Induced Effects on
+               Out-of-Distribution Detection},
+  booktitle = {IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year      = {2026},
+  eprint    = {2601.10836},
+  archivePrefix = {arXiv}
+}
+
+@article{mcnamara2026vacuity,
+  author  = {McNamara, Claire},
+  title   = {Rethinking Vacuity for {OOD} Detection in Evidential Deep Learning},
+  journal = {arXiv preprint arXiv:2605.06382},
+  year    = {2026}
+}
+
+@article{hayta2026pluginlosses,
+  author  = {Hayta, Berk and Laus, Hannah and Mittermaier, Simon and Krahmer, Felix},
+  title   = {Plug-in Losses for Evidential Deep Learning: A Simplified Framework for
+             Uncertainty Estimation that Includes the Softmax Classifier},
+  journal = {arXiv preprint arXiv:2605.22746},
+  year    = {2026}
+}
+
+
+% =====================================================================
+% 6. CLOSEST PRIOR WORK — frozen backbone + adapter + few-shot
+% =====================================================================
+
+@inproceedings{li2022tsa,
+  author    = {Li, Wei-Hong and Liu, Xialei and Bilen, Hakan},
+  title     = {Cross-domain Few-shot Learning with Task-specific Adapters},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2022},
+  eprint    = {2107.00358},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{shysheya2023fit,
+  author    = {Shysheya, Aliaksandra and Bronskill, John and Patacchiola, Massimiliano
+               and Nowozin, Sebastian and Turner, Richard E.},
+  title     = {{FiT}: Parameter Efficient Few-shot Transfer Learning for
+               Personalized and Federated Image Classification},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  eprint    = {2206.08671},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{zhang2022tipadapter,
+  author    = {Zhang, Renrui and Zhang, Wei and Fang, Rongyao and Gao, Peng and Li, Kunchang
+               and Dai, Jifeng and Qiao, Yu and Li, Hongsheng},
+  title     = {{Tip-Adapter}: Training-free Adaption of {CLIP} for Few-shot Classification},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year      = {2022},
+  eprint    = {2207.09519},
+  archivePrefix = {arXiv}
+}
+
+@article{gao2025clipadapter,
+  author  = {Gao, Peng and Geng, Shijie and Zhang, Renrui and Ma, Teli and Fang, Rongyao
+             and Zhang, Yongfeng and Li, Hongsheng and Qiao, Yu},
+  title   = {{CLIP-Adapter}: Better Vision-Language Models with Feature Adapters},
+  journal = {International Journal of Computer Vision (IJCV)},
+  year    = {2025},
+  eprint  = {2110.04544},
+  archivePrefix = {arXiv}
+}
+
+@article{moralesalvarez2025bayesadapter,
+  author  = {Morales-{\'A}lvarez, Pablo and Christodoulidis, Stergios and Vakalopoulou, Maria
+             and Piantanida, Pablo and Dolz, Jose},
+  title   = {{BayesAdapter}: Enhanced Uncertainty Estimation in {CLIP} Few-Shot Adaptation},
+  journal = {arXiv preprint arXiv:2412.09718},
+  year    = {2025}
+}
+
+@article{linghu2022bel,
+  author  = {Linghu, Xiongkun and Bai, Yan and Lou, Yihang and Wu, Shengsen and Li, Jinze
+             and He, Jianzhong and Bai, Tao},
+  title   = {Bayesian Evidential Learning for Few-Shot Classification},
+  journal = {arXiv preprint arXiv:2207.13137},
+  year    = {2022}
+}
+
+@inproceedings{zhang2021metaqda,
+  author    = {Zhang, Xueting and Meng, Debin and Gouk, Henry and Hospedales, Timothy},
+  title     = {Shallow {Bayesian} Meta Learning for Real-World Few-Shot Recognition},
+  booktitle = {IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      = {2021},
+  eprint    = {2101.02833},
+  archivePrefix = {arXiv}
+}
+
+
+% =====================================================================
+% 7. BAYESIAN PEFT — motivating literature (background, not method)
+% =====================================================================
+
+@inproceedings{yang2024laplacelora,
+  author    = {Yang, Adam X. and Robeyns, Maxime and Wang, Xi and Aitchison, Laurence},
+  title     = {Bayesian Low-Rank Adaptation for Large Language Models},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  eprint    = {2308.13111},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{wang2024blob,
+  author    = {Wang, Yibin and Shi, Haizhou and Han, Ligong and Metaxas, Dimitris and Wang, Hao},
+  title     = {{BLoB}: Bayesian Low-Rank Adaptation by Backpropagation for Large Language Models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  eprint    = {2406.11675},
+  archivePrefix = {arXiv}
+}
+
+@article{muhlematter2026loraensemble,
+  author  = {M{\"u}hlematter, Dominik J. and Halbheer, Michelle and Becker, Alexander
+             and Narnhofer, Dominik and Aasen, Helge and Schindler, Konrad and Turkoglu, Mehmet Ozgur},
+  title   = {{LoRA-Ensemble}: Efficient Uncertainty Modelling for Self-Attention Networks},
+  journal = {Transactions on Machine Learning Research (TMLR)},
+  year    = {2026},
+  eprint  = {2405.14438},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{samplawski2025scalabl,
+  author    = {Samplawski, Colin and Cobb, Adam D. and Acharya, Manoj and Kaur, Ramneet and Jha, Susmit},
+  title     = {Scalable Bayesian Low-Rank Adaptation of Large Language Models via
+               Stochastic Variational Subspace Inference},
+  booktitle = {Conference on Uncertainty in Artificial Intelligence (UAI)},
+  year      = {2025},
+  eprint    = {2506.21408},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{samplawski2026bagym,
+  author    = {Samplawski, Colin and Kaur, Ramneet and Acharya, Manoj and Roy, Anirban and Cobb, Adam D.},
+  title     = {Bayesian Adaptation Gym: A Benchmark for the Bayesian Low-Rank
+               Adaptation of Multi-Modal Language Models},
+  booktitle = {Conference on Uncertainty in Artificial Intelligence (UAI)},
+  year      = {2026},
+  eprint    = {2606.22188},
+  archivePrefix = {arXiv}
+}
+
+@article{shihab2026stiefelbayes,
+  author  = {Shihab, Ibne Farabi and Akter, Sanjeda and Sharma, Anuj},
+  title   = {Calibrated Adaptation: Bayesian {Stiefel} Manifold Priors for
+             Reliable Parameter-Efficient Fine-Tuning},
+  journal = {arXiv preprint arXiv:2602.17809},
+  year    = {2026}
+}
+
+@article{duan2026bara,
+  author  = {Duan, Zhibin and Wang, Yuhong and Fu, Jiahong and Yue, Zongsheng and Chen, Bo and Xu, Zongben},
+  title   = {{BaRA}: Bayesian Adaptive Rank Allocation for Parameter-Efficient Fine-Tuning},
+  journal = {arXiv preprint arXiv:2606.29184},
+  year    = {2026}
+}
+
+@inproceedings{zhang2026bayesiansparselora,
+  author    = {Zhang, Jijie and Ren, Zhe and Zhang, Quan and Guo, Dandan},
+  title     = {Bayesian Sparse Low-Rank Adaptation for Large Language Model Uncertainty Estimation},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2026},
+  eprint    = {2607.02182},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{pandey2024bayesianpeft,
+  author    = {Pandey, Pranav and Pyakurel, Prakash and Yu, Qi},
+  title     = {Bayesian-{PEFT}},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+  note      = {Metadata not independently machine-verified; distinct from this
+               thesis in backbone family (ViT foundation models), mechanism
+               (base-rate adjustment plus evidential ensembling), and research
+               question (no architecture-versus-budget dissociation).}
+}
+
+
+% =====================================================================
+% 8. EDL AND CALIBRATION — recent work the thesis pre-empts
+% =====================================================================
+
+@article{zhao2026invertible,
+  author  = {Zhao, Lening and Zhan, Qipeng and Shen, Li},
+  title   = {Invertible Logits Transformation for Accuracy-Preserving
+             Post-Hoc Uncertainty Calibration},
+  journal = {arXiv preprint arXiv:2608.10372},
+  year    = {2026}
+}
+
+@article{carlotti2026density,
+  author  = {Carlotti, Pietro and Gligi{\'c}, Nevena and Farahi, Arya},
+  title   = {Density-Informed Pseudo-Counts for Calibrated Evidential Deep Learning},
+  journal = {arXiv preprint arXiv:2602.01477},
+  year    = {2026}
+}
+
+@inproceedings{turacan2026invascal,
+  author    = {Turacan, Kerim and Reichert, Hannes and Bolandut, Andrei and Doll, Konrad},
+  title     = {{Invascal}: Inverse-Vacuity Self-Calibration for Uncertainty-Aware
+               {LiDAR} Range-View Semantic Segmentation},
+  booktitle = {IEEE International Conference on Intelligent Transportation Systems (ITSC)},
+  year      = {2026},
+  eprint    = {2606.00069},
+  archivePrefix = {arXiv}
+}
+
+@article{hoarau2026epistemic,
+  author  = {Hoarau, Arthur},
+  title   = {Can we trust our models? Epistemic calibration in second-order classification},
+  journal = {arXiv preprint arXiv:2606.10777},
+  year    = {2026}
+}
+
+@article{chen2024reedl,
+  author  = {Chen, Mengyuan and Gao, Junyu and Xu, Changsheng},
+  title   = {Revisiting Essential and Nonessential Settings of Evidential Deep Learning},
+  journal = {arXiv preprint arXiv:2410.00393},
+  year    = {2024}
+}
+
+@article{yang2025bilevel,
+  author  = {Yang, Zhen and Ma, Yansong and Chen, Lei},
+  title   = {Bi-level Meta-Policy Control for Dynamic Uncertainty Calibration
+             in Evidential Deep Learning},
+  journal = {arXiv preprint arXiv:2510.08938},
+  year    = {2025}
+}
+
+
+% =====================================================================
+% 9. PEFT LANDSCAPE, EDGE DEPLOYMENT AND POSITIONING
+% =====================================================================
+
+@inproceedings{lian2022ssf,
+  author    = {Lian, Dongze and Zhou, Daquan and Feng, Jiashi and Wang, Xinchao},
+  title     = {Scaling \& Shifting Your Features: A New Baseline for Efficient Model Tuning},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+  eprint    = {2210.08823},
+  archivePrefix = {arXiv}
+}
+
+@article{xin2024vpeftsurvey,
+  author  = {Xin, Yi and Yang, Jianjiang and Luo, Siqi and Du, Yuntao and Qin, Qi and Cen, Kangrui
+             and He, Yangfan and Zhang, Zhiwei and Fu, Bin and Yang, Xiaokang and Zhai, Guangtao
+             and Yang, Ming-Hsuan and Liu, Xiaohong},
+  title   = {Parameter-Efficient Fine-Tuning for Pre-Trained Vision Models:
+             A Survey and Benchmark},
+  journal = {arXiv preprint arXiv:2402.02242},
+  year    = {2024}
+}
+
+@article{zhou2022coop,
+  author  = {Zhou, Kaiyang and Yang, Jingkang and Loy, Chen Change and Liu, Ziwei},
+  title   = {Learning to Prompt for Vision-Language Models},
+  journal = {International Journal of Computer Vision (IJCV)},
+  year    = {2022},
+  eprint  = {2109.01134},
+  archivePrefix = {arXiv}
+}
+
+@article{ding2024lorac,
+  author  = {Ding, Chuntao and Cao, Xu and Xie, Jianhang and Fan, Linlin and Wang, Shangguang and Lu, Zhichao},
+  title   = {{LoRA-C}: Parameter-Efficient Fine-Tuning of Robust {CNN} for {IoT} Devices},
+  journal = {arXiv preprint arXiv:2410.16954},
+  year    = {2024}
+}
+
+@inproceedings{kwak2026loraedge,
+  author    = {Kwak, Hyunseok and Lee, Kyeongwon and Lee, Jae-Jin and Lee, Woojoo},
+  title     = {{LoRA-Edge}: Tensor-Train-Assisted {LoRA} for Practical {CNN}
+               Fine-Tuning on Edge Devices},
+  booktitle = {Design, Automation and Test in Europe Conference (DATE)},
+  year      = {2026},
+  eprint    = {2511.03765},
+  archivePrefix = {arXiv}
+}
+
+@article{rivera2025colora,
+  author  = {Rivera, Mariano and Hoyos, Angello},
+  title   = {{CoLoRA}: Efficient Fine-Tuning for Convolutional Models with a Study Case
+             on Optical Coherence Tomography Image Classification},
+  journal = {arXiv preprint arXiv:2505.18315},
+  year    = {2025}
+}
+
+@inproceedings{jia2022vpt,
+  author    = {Jia, Menglin and Tang, Luming and Chen, Bor-Chun and Cardie, Claire
+               and Belongie, Serge and Hariharan, Bharath and Lim, Ser-Nam},
+  title     = {Visual Prompt Tuning},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year      = {2022},
+  eprint    = {2203.12119},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{chen2022adaptformer,
+  author    = {Chen, Shoufa and Ge, Chongjian and Tong, Zhan and Wang, Jiangliu
+               and Song, Yibing and Wang, Jue and Luo, Ping},
+  title     = {{AdaptFormer}: Adapting Vision Transformers for Scalable Visual Recognition},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+  eprint    = {2205.13535},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{jie2023fact,
+  author    = {Jie, Shibo and Deng, Zhi-Hong},
+  title     = {{FacT}: Factor-Tuning for Lightweight Adaptation on Vision Transformer},
+  booktitle = {AAAI Conference on Artificial Intelligence},
+  year      = {2023},
+  eprint    = {2212.03145},
+  archivePrefix = {arXiv}
+}
+
+@article{zhang2022noah,
+  author  = {Zhang, Yuanhan and Zhou, Kaiyang and Liu, Ziwei},
+  title   = {Neural Prompt Search},
+  journal = {arXiv preprint arXiv:2206.04673},
+  year    = {2022}
+}
+
+@article{somvanshi2025tinydl,
+  author  = {Somvanshi, Shriyank and Islam, Md Monzurul and Chhetri, Gaurab and Chakraborty, Rohit
+             and Mimi, Mahmuda Sultana and Shuvo, Sawgat Ahmed and Islam, Kazi Sifatul
+             and Javed, Syed Aaqib and Rafat, Sharif Ahmed and Dutta, Anandi and Das, Subasish},
+  title   = {From Tiny Machine Learning to Tiny Deep Learning: A Survey},
+  journal = {ACM Computing Surveys},
+  year    = {2025},
+  eprint  = {2506.18927},
+  archivePrefix = {arXiv}
+}
+
+@article{kaya2025cnnvit,
+  author  = {Kaya, Alon and Bilik, Igal and Stainvas, Inna},
+  title   = {A Comparative Study of Vision Transformers and {CNNs} for Few-Shot
+             Rigid Transformation and Fundamental Matrix Estimation},
+  journal = {arXiv preprint arXiv:2510.04794},
+  year    = {2025},
+  note    = {Studies few-shot geometric estimation, not image classification;
+             cited in this thesis only for its low-data CNN-versus-ViT finding,
+             scoped explicitly to that domain.}
+}
+
+@article{simeoni2025dinov3,
+  author  = {Sim{\'e}oni, Oriane and Vo, Huy V. and Seitzer, Maximilian and Baldassarre, Federico
+             and Oquab, Maxime and Jose, Cijo and Khalidov, Vasil and Szafraniec, Marc
+             and Yi, Seungeun and Ramamonjisoa, Micha{\"e}l and Massa, Francisco
+             and Haziza, Daniel and Wehrstedt, Luca and Wang, Jianyuan and Darcet, Timoth{\'e}e
+             and Moutakanni, Th{\'e}o and Sentana, Leonel and Roberts, Claire and Vedaldi, Andrea
+             and Tolan, Jamie and Brandt, John and Couprie, Camille and Mairal, Julien
+             and J{\'e}gou, Herv{\'e} and Labatut, Patrick and Bojanowski, Piotr},
+  title   = {{DINOv3}},
+  journal = {arXiv preprint arXiv:2508.10104},
+  year    = {2025}
+}
+
+@inproceedings{wang2026cptensor,
+  author    = {Wang, Xinjue and Wang, Xiuheng and Zhang, Yejun and Vorobyov, Sergiy A.
+               and Ollila, Esa and Wang, Zhi-Yong},
+  title     = {Finer Parameter Steps for Low-Rank {PEFT}: A Controlled Study with
+               {CP} Tensor Adapters},
+  booktitle = {ICML Workshop on CoLoRAI},
+  year      = {2026},
+  eprint    = {2606.00428},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{ding2024fairness,
+  author    = {Ding, Zhoujie and Liu, Ken Ziyu and Peetathawatchai, Pura and Isik, Berivan and Koyejo, Sanmi},
+  title     = {On Fairness of Low-Rank Adaptation of Large Models},
+  booktitle = {Conference on Language Modeling (COLM)},
+  year      = {2024},
+  eprint    = {2405.17512},
+  archivePrefix = {arXiv}
+}
+
+
+% =====================================================================
+% 10. COMPARISON-TABLE ROWS (secondary citations)
+% =====================================================================
+
+@inproceedings{sung2018relationnet,
+  author    = {Sung, Flood and Yang, Yongxin and Zhang, Li and Xiang, Tao
+               and Torr, Philip H. S. and Hospedales, Timothy M.},
+  title     = {Learning to Compare: Relation Network for Few-Shot Learning},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2018}
+}
+
+@inproceedings{oreshkin2018tadam,
+  author    = {Oreshkin, Boris N. and Rodr{\'i}guez, Pau and Lacoste, Alexandre},
+  title     = {{TADAM}: Task dependent adaptive metric for improved few-shot learning},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2018}
+}
+
+@inproceedings{rusu2019leo,
+  author    = {Rusu, Andrei A. and Rao, Dushyant and Sygnowski, Jakub and Vinyals, Oriol
+               and Pascanu, Razvan and Osindero, Simon and Hadsell, Raia},
+  title     = {Meta-Learning with Latent Embedding Optimization},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+@inproceedings{caron2021dino,
+  author    = {Caron, Mathilde and Touvron, Hugo and Misra, Ishan and J{\'e}gou, Herv{\'e}
+               and Mairal, Julien and Bojanowski, Piotr and Joulin, Armand},
+  title     = {Emerging Properties in Self-Supervised Vision Transformers},
+  booktitle = {IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year      = {2021}
+}
+
+@inproceedings{radford2021clip,
+  author    = {Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya
+               and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda
+               and Mishkin, Pamela and Clark, Jack and Krueger, Gretchen and Sutskever, Ilya},
+  title     = {Learning Transferable Visual Models From Natural Language Supervision},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2021}
+}

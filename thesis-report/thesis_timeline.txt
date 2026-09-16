@@ -1,0 +1,159 @@
+THESIS TIMELINE — B-PEFT (Bayesian PEFT for Reliable Few-Shot Vision)
+======================================================================
+
+01 - 2026-04-21
+Work - Initial pipeline built (frozen ResNet-18 + Bottleneck adapter +
+  evidential/linear head) and demoed on a single toy episode.
+Purpose - Pre-defence proof-of-concept for the proposal's core claim.
+Result - Evidential head showed an OOD/uncertainty edge but was badly
+  miscalibrated (ECE = 0.526).
+
+02 - 2026-04-21
+Work - Step 1: Calibration fix. Corrected the evidential loss (was
+  cross-entropy-on-softplus instead of evidential MSE+KL; KL prior was
+  disabled), switched ReLU->softplus, added KL annealing 0->0.5 over 200
+  steps.
+Purpose - Fix the two bugs causing the ECE=0.526 miscalibration.
+Result - ECE 0.526 -> 0.167 (order-of-magnitude fix), accuracy parity
+  with softmax, AUROC(evidential) > AUROC(softmax) by a wide margin.
+
+03 - 2026-05-13
+Work - Step 2: Refactored into a config-driven repo (src/ subpackages,
+  YAML `extends` config system, scripts/train.py + scripts/evaluate.py
+  as sole entry points, 28 pytest tests).
+Purpose - Make the codebase reproducible and extensible before scaling
+  up experiments.
+Result - Step 1 reproduced via CLI within tolerance (+/-1% acc,
+  +/-0.01 ECE); no dead code; 28/28 tests passing.
+
+04 - 2026-05-16
+Work - Step 3: Added W&B logging (online/offline/disabled modes) and a
+  reproducibility harness (deterministic seeding, frozen 600
+  test-episode seed list in configs/test_episodes.yaml).
+Purpose - Enable tracked, comparable, byte-identical experiment runs
+  going forward.
+Result - Same config run twice -> byte-identical metrics.json; all
+  future evaluation now shares one frozen 600-episode test set.
+
+05 - 2026-05-21 to 2026-06-11
+Work - Step 4: Real CIFAR-FS Bertinetto 64/16/20 split + true episodic
+  meta-training (parameter-free prototype head replacing the toy linear
+  head).
+Purpose - Move off the single-episode toy demo onto the real 5-way
+  k-shot benchmark the thesis is judged on.
+Result - NEGATIVE. Evidential AUROC gap over softmax (+0.006) fell
+  below the pre-registered 0.05 bar, and evidential was worse
+  calibrated (ECE 0.344 vs 0.119). Escalation triggered -> Step 4.5.
+
+06 - 2026-07-07
+Work - Step 4.5 "Settle the science": added temperature scaling (Guo
+  2017), energy score (Liu 2020) as fair baselines, real TinyImageNet +
+  CIFAR-100-heldout near-OOD sets, and a real VAL-only (seeds
+  10000-10099) hyperparameter sweep of the evidential loss.
+Purpose - Re-test RQ2/RQ3 fairly before building more PEFT methods on
+  top of a disputed Step 4 result.
+Result - TIER 3. Evidential vacuity decisively beats both softmax
+  scores (MSP, TS-MSP) on every OOD pool (+0.076 to +0.141 AUROC), but
+  is only competitive (not clearly better) than the energy score,
+  losing TinyImageNet-near by -0.013. Calibration still ~7x worse than
+  TS-softmax; VAL sweep confirmed the ECE surface is flat (~0.285-0.296).
+
+07 - 2026-07-21
+Work - Step 5: Rewrote LoRA as true backbone-weight reparameterization
+  (was a pooled-feature stub), added BitFit, Full-Fine-Tuning and
+  Linear-Probe baselines; 8 configs trained and evaluated (4 adapters x
+  2 heads, N=600).
+Purpose - RQ1 breadth (more PEFT methods) + proposal §6's mandatory
+  non-PEFT baselines.
+Result - Evidential's OOD edge over softmax generalises across all 4
+  adapter types (+0.010 to +0.134 AUROC). Full-FT overfits on 5-shot as
+  predicted, demonstrating why PEFT is necessary.
+
+08 - 2026-07-21
+Work - Step 6: Adapter placement study (serial vs parallel bottleneck
+  insertion inside ResNet-18 blocks); 4 configs.
+Purpose - RQ1 primary - does adapter placement affect the
+  accuracy/parameter tradeoff?
+Result - Parallel placement is the Pareto winner (0.915 acc, 0.933
+  far-OOD AUROC at 31.7K params), beating both post-pool bottleneck and
+  Step 5's Full-FT.
+
+09 - 2026-07-22
+Work - Step 7: Added Gaussian-noise far-OOD pool and consolidated
+  near-OOD (TinyImageNet) results on the Step 6 placement winner
+  (parallel).
+Purpose - RQ3 primary - broaden the OOD pool beyond SVHN/CIFAR-100.
+Result - Evidential beats softmax MSP on every OOD pool tested, with a
+  LARGER margin on near-OOD (+0.08 to +0.10) than far-OOD (+0.045 to
+  +0.048).
+
+10 - 2026-07-26
+Work - Step 8: Added MobileNetV3-Small as a second backbone; 4 configs
+  (post-pool + parallel bottleneck x 2 heads) on CIFAR-FS.
+Purpose - RQ4 prep - proposal's second mandatory lightweight backbone.
+Result - Accuracy nearly free on the smaller backbone (~0.90-0.91), and
+  parallel placement becomes a strict Pareto win there (matches or beats
+  post-pool with FEWER params).
+
+11 - 2026-07-30
+Work - Step 9: Added MiniImageNet as a second in-distribution dataset
+  (frozen Ravi & Larochelle 64/16/20 split); 10 configs across 2
+  backbones x 2 placements x 2 heads + linear-probe references.
+Purpose - RQ2/RQ3 breadth - proposal's second mandatory ID dataset.
+Result - Accuracy near-saturated (0.94-0.96), confirming a measured
+  ImageNet-pretraining-overlap confound; bottleneck/parallel remained
+  the best (adapter, head) combination.
+
+12 - 2026-08-06
+Work - Step 10: Full MVT (Model x View x Task) grid: 120 cells = (2
+  backbones x 5 adapters x 2 heads x 2 datasets x 2 shot regimes, most
+  at 3 seeds), ~36.3 GPU-hours on Kaggle T4.
+Purpose - Answer all four RQs at statistical scale instead of single
+  configurations.
+Result - RQ1 CONFIRMED - parallel bottleneck wins 16/16 matched
+  comparisons. RQ2 CONFIRMED NEGATIVE at scale - evidential ECE worse
+  than softmax in 20/20 pairs. RQ3 SPLIT - crushes softmax scores
+  (37-38/40 wins) but loses to the energy score in ~70% of cells,
+  CORRECTING the earlier Step 4.5 "on par with energy" read.
+
+13 - 2026-08-09
+Work - Step 11: Efficiency + Pareto-frontier measurement (RQ4): params,
+  FLOPs, GPU+CPU latency, peak memory for all 12 grid keys on a
+  canonical Kaggle T4 session, plus real (trained-free) ViT-B/16 and
+  DeiT-Tiny reference measurements.
+Purpose - RQ4 - map the latency vs uncertainty-quality Pareto frontier
+  for edge deployment.
+Result - RQ4 ANSWERED - backbone choice drives latency (5.12x ResNet-18
+  vs MobileNetV3-Small), adapter choice barely does (3.9-5.8%);
+  evidential head is ~free at inference (1.29% overhead, below the
+  5.91% noise floor). Two real bugs found and fixed during closeout: (1)
+  a CUDA/CPU device-placement crash in an optional reference-backbone
+  feature; (2) a SILENT bug where three plotting scripts picked the
+  wrong (dev-laptop) latency profile over the canonical Kaggle one by
+  dict-ordering accident, causing up to 47% error on individual
+  Pareto/Table-8 cells before being caught and fixed.
+
+14 - 2026-08-27
+Work - RQ3 matched-budget experiment: 48 runs rebuilding bottleneck vs
+  LoRA at an EQUAL trainable-parameter budget within each backbone
+  (MiniImageNet 5-shot, 2 backbones x 2 budgets x 2 arms x 2 heads x 3
+  seeds).
+Purpose - Disentangle whether Step 10's finding (the calibration winner
+  flips exactly when parameter ranking flips between backbones) was
+  driven by parameter BUDGET or by backbone IDENTITY - the 120-run grid
+  could not separate these two explanations.
+Result - "Backbone-intrinsic" confirmed - fired in 3/4 pre-registered
+  cells vs the budget hypothesis's 0/4. Equalising the budget left
+  ResNet-18's calibration gap fully intact and roughly halved
+  MobileNetV3-Small's already-tiny one. Bottleneck's accuracy (8/8) and
+  near-OOD AUROC (8/8) advantage survives unchanged at matched budget -
+  the RQ3 dissociation (accuracy/near-OOD follow architecture,
+  calibration follows backbone) is restated, not explained (mechanism
+  still open).
+
+======================================================================
+STATUS AS OF 2026-08-27: All four research questions have numerical
+answers (RQ1-RQ4 + the RQ3 matched-budget follow-up). No blockers.
+Next: optional Step 12 breadth work, or Phase 6 (thesis writing) -
+already underway per docs/PRESENTATION_SLIDE_SCRIPT.md and
+docs/PROGRESS_AND_CONCEPTS_GUIDE.md.

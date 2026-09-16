@@ -1,0 +1,69 @@
+PAPERS ACTUALLY USED IN THIS REPO
+==================================
+Revised per thesis-report/CITATION_AUDIT.md (2026-09-13 verification pass).
+The original 32-paper reading list (PAPER SUMMARIES/*.txt) was NOT all
+actually used — this file now separates load-bearing papers from
+read-but-unused ones, and adds the mandatory dataset/backbone citations
+that were missing from the reading list entirely.
+
+TIER A — LOAD-BEARING (18) — cite these, they justify implementation choices
+------------------------------------------------------------------------
+Parameter-Efficient Transfer Learning for NLP — Houlsby (bottleneck adapter form)
+LoRA: Low-Rank Adaptation of Large Language Models — Hu (src/adapters/lora.py)
+BitFit: Simple Parameter-efficient Fine-tuning — Ben-Zaken (src/adapters/bitfit.py)
+Conv-Adapter: Exploring Parameter Efficient Transfer Learning for ConvNets — Chen (1x1 locality caveat, RQ1)
+ConvLoRA and AdaBN based Domain Adaptation via Self-Training — Aleem (conv-form LoRA)
+Convolution Meets LoRA (Segment Anything Model) — Zhong (low-data conv-LoRA evidence)
+Towards a Unified View of Parameter-Efficient Transfer Learning — He (serial-vs-parallel vocabulary, RQ1)
+Evidential Deep Learning to Quantify Classification Uncertainty — Sensoy (entire evidential head + loss)
+On Calibration of Modern Neural Networks — Guo (temperature scaling)
+A Baseline for Detecting Misclassified and OOD Examples — Hendrycks (MSP baseline)
+Energy-based Out-of-distribution Detection — Liu (energy score, drives the Step 10 RQ3 correction)
+OpenOOD: Benchmarking Generalized OOD Detection — Yang (near/far OOD split design)
+OpenOOD v1.5 — Zhang (benchmark protocol references)
+A Closer Look at Few-shot Classification — Chen (linear-probe baseline; Step 9 confound analysis)
+Matching Networks for One Shot Learning — Vinyals (MiniImageNet provenance)
+Prototypical Networks for Few-shot Learning — Snell (prototype head + episodic protocol)
+Searching for MobileNetV3 — Howard (second backbone, Step 8)
+Predictive Uncertainty Estimation via Prior Networks — Malinin (near-OOD degradation rationale)
+
+TIER B — RELATED-WORK / PASSING MENTION ONLY (6) — cite, not as method grounding
+------------------------------------------------------------------------
+Bayesian Low-Rank Adaptation for Large Language Models — Yang (Laplace-LoRA; related-work table row only)
+BLoB: Bayesian Low-Rank Adaptation by Backpropagation — Wang (same table rows)
+A Comprehensive Survey on Evidential Deep Learning — Gao (one substantive use: KL-regulariser design)
+Model-Agnostic Meta-Learning — Finn (comparison table row + literature map; no implementation)
+Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles — Lakshminarayanan (one line, ensemble cost comparison)
+Deep Evidential Regression — Amini (one line; note: this is a REGRESSION paper, thesis is classification)
+
+TIER C — NEVER USED ANYWHERE (8) — do NOT cite as implementation grounding
+------------------------------------------------------------------------
+Bayesian-LoRA (quantization/compression, not uncertainty) — Meo
+A Bayesian Hybrid Parameter-Efficient Fine-Tuning Method — Chai
+Training-Free Bayesianization for Low-Rank Adapters — Shi
+Prior and Posterior Networks: A Survey on EDL — Ulmer
+Parameter-Efficient Fine-Tuning for Large Models: A Comprehensive Survey — Han
+Enhancing the Reliability of OOD Image Detection (ODIN) — Liang (never implemented as an OOD score)
+A Simple Unified Framework for Detecting OOD Samples (Mahalanobis) — Lee (deferred at Step 4.5, never added)
+A ConvNet for the 2020s (ConvNeXt) — Liu (only appears as dropped scope, Step 12 backlog)
+Note: these four Bayesian-PEFT papers (Meo/Chai/Shi + Yang/Wang from Tier B) are legitimate
+Related-Work/background citations for the thesis title — just not implementation sources.
+
+CRITICAL — USED IN THE REPO BUT MISSING FROM THE ORIGINAL READING LIST (7)
+------------------------------------------------------------------------
+These were never in PAPER SUMMARIES/ at all, yet the repo depends on them directly —
+add them before the bibliography is frozen, especially the two frozen-split sources.
+Meta-learning with differentiable closed-form solvers (R2D2) — Bertinetto (defines the frozen CIFAR-FS split)
+Optimization as a Model for Few-Shot Learning — Ravi & Larochelle (defines the frozen MiniImageNet 64/16/20 split)
+Deep Residual Learning (ResNet) — He (the primary backbone, every result)
+Learning Multiple Layers of Features from Tiny Images (CIFAR-10/100) — Krizhevsky (source of CIFAR-FS + CIFAR-100-heldout near-OOD)
+Reading Digits in Natural Images with Unsupervised Feature Learning (SVHN) — Netzer (the far-OOD pool)
+Tiny ImageNet Visual Recognition Challenge — Le & Yang (the near-OOD pool)
+ImageNet: A Large-Scale Hierarchical Image Database — Deng (pretraining source for the frozen backbone)
+
+------------------------------------------------------------------------
+Full detail, including ~40 additional related-work/positioning/comparison-table
+citations (closest prior work, concurrent work, calibration theory, contradictions
+prepared for), verification errors found (2 wrong attributions, 1 out-of-domain
+citation), and role classification (IMPL/COMP/LIT) for docs/refs.bib's 87 entries:
+see thesis-report/CITATION_AUDIT.md.
