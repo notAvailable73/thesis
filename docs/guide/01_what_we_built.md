@@ -11,8 +11,9 @@ A normal image model needs many examples to learn a new class. We want a **small
 learn a new class from **1 or 5 examples**. It should also know **when it is unsure** and **when it sees
 something it was never taught**.
 
-The thesis title is: *Bayesian Parameter-Efficient Fine-Tuning for Reliable Few-Shot Vision with
-Lightweight CNN Backbones.*
+The thesis title is: *Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study.*
+(The project codename B-PEFT comes from the original proposal title, "Bayesian Parameter-Efficient
+Fine-Tuning for Reliable Few-Shot Vision with Lightweight CNN Backbones", which is no longer the thesis title.)
 
 ---
 

@@ -1,5 +1,5 @@
-THESIS IMPLEMENTATION GUIDE — B-PEFT (Bayesian Parameter-Efficient Fine-Tuning
-for Reliable Few-Shot Vision with Lightweight CNN Backbones)
+THESIS IMPLEMENTATION GUIDE — B-PEFT
+Thesis title: Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study
 ================================================================================
 Read this file in full before implementing, modifying, or debugging ANY part of
 this thesis codebase. This file governs how you use the paper summaries.

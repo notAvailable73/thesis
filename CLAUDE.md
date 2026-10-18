@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A masters thesis codebase: **B-PEFT** (Bayesian Parameter-Efficient Fine-Tuning for Reliable Few-Shot Vision with
-Lightweight CNN Backbones). It trains a frozen ImageNet-pretrained CNN backbone (ResNet-18 or MobileNetV3-Small) + a
+A masters thesis codebase. **Official thesis title: _Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study_** (project codename **B-PEFT**, from the
+original proposal title "Bayesian Parameter-Efficient Fine-Tuning for Reliable Few-Shot Vision with Lightweight CNN
+Backbones" — do not use that as the thesis title). It trains a frozen ImageNet-pretrained CNN backbone (ResNet-18 or MobileNetV3-Small) + a
 small trainable adapter (parallel Bottleneck / LoRA; Full-FT and Linear-Probe as baselines; BitFit built but not in
 the grid) + a parameter-free Prototype head read as softmax or Evidential Dirichlet, evaluated on 5-way {1,5}-shot
 episodes (CIFAR-FS, MiniImageNet) for accuracy, calibration (ECE, Brier), and OOD detection (SVHN / Gaussian far-OOD,

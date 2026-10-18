@@ -1,0 +1,149 @@
+\chapter{Related Work}
+\label{ch:related}
+
+This thesis draws on five lines of work that are usually studied separately: parameter-efficient
+fine-tuning, evidential and Bayesian uncertainty, calibration, out-of-distribution detection, and
+few-shot learning. We review each with an eye on the design decision it informs, then position the
+thesis against the closest prior work.
+
+\section{Parameter-Efficient Fine-Tuning}
+
+Houlsby et al.~\cite{houlsby2019adapters} introduced adapters for transformers: small bottleneck modules
+(a down-projection, a non-linearity and an up-projection) inserted into a frozen network, with only the
+bottlenecks trained. LoRA~\cite{hu2022lora} instead learns a low-rank update to an existing weight
+matrix, $W = W_0 + BA$. Because the update can be merged into $W_0$ after training, LoRA adds no
+inference latency. He et al.~\cite{he2022unified} show that adapters, LoRA and prefix tuning can be
+written as variants of one update, differing in where the update is applied and whether it runs in
+series with or in parallel to the frozen layer. We use their serial/parallel vocabulary. In vision, the
+same ideas were carried over to Vision Transformers, for example visual prompt tuning~\cite{jia2022vpt}
+and AdaptFormer~\cite{chen2022adaptformer}; a recent survey~\cite{xin2024peftsurvey} covers this body of
+work and does not discuss calibration or OOD detection.
+
+Work on CNNs is thinner. Conv-Adapter~\cite{chen2024convadapter} studies adapter design for ConvNets
+and argues that adapters should respect the spatial structure of convolutional features, preferring
+depth-wise $k \times k$ adapters to purely $1 \times 1$ ones. Convolutional variants of LoRA have been
+proposed for domain adaptation~\cite{aleem2024convlora} and for the Segment Anything
+model~\cite{zhong2024convlora}. Closest to our setting, Task-Specific Adapters (TSA)~\cite{li2022tsa}
+attach adapters to a frozen ResNet-18 for cross-domain few-shot learning, classify with a
+parameter-free nearest-centroid head, and find that parallel (residual) adapters outperform serial ones.
+FiT~\cite{shysheya2023fit} adapts frozen CNN backbones with FiLM layers for few-shot transfer. For
+vision-language models, CLIP-Adapter~\cite{gao2024clipadapter} and Tip-Adapter~\cite{zhang2022tipadapter}
+attach small adapters to a frozen CLIP encoder. None of these works measures calibration and OOD
+detection together with the adapter choice.
+
+\section{Evidential and Bayesian Uncertainty}
+
+A standard softmax classifier outputs one probability vector and has no way of saying ``none of the
+above''. Bayesian methods place a distribution over weights, and deep
+ensembles~\cite{lakshminarayanan2017ensembles} approximate this by training several networks, at a
+multiplied training and inference cost. Evidential deep learning~\cite{sensoy2018edl} instead places a
+distribution over the output. The network produces non-negative evidence $e_k$ for each class, which
+defines a Dirichlet with parameters $\alpha_k = e_k + 1$, total strength $S = \sum_k \alpha_k$,
+expected probabilities $\hat p_k = \alpha_k / S$ and vacuity $u = K/S$. Little evidence for any class
+gives small $S$ and high vacuity, and all of this is available from a single deterministic forward
+pass. Prior networks~\cite{malinin2018prior} use a related Dirichlet parameterisation but need OOD data
+during training. Gao et al.~\cite{gao2024edlsurvey} survey the evidential literature, and Chen et
+al.~\cite{chen2024redl} show that two standard ingredients of the EDL loss, the fixed ``$+1$'' prior and
+the variance term, are not essential and can hurt calibration. Our evidential loss drops the variance
+term accordingly (\cref{sec:edl-loss}).
+
+The evidential approach has known weaknesses. Bengs et al.~\cite{bengs2022pitfalls} show that
+uncertainty estimators trained by loss minimisation, standard EDL objectives included, need not behave
+like faithful epistemic uncertainty, and Shen et al.~\cite{shen2024mirage} question how much of EDL's
+apparent uncertainty quality is real. Hayta et al.~\cite{hayta2026plugin} show that the softmax
+classifier is a special case of an evidential classifier under a family of plug-in losses, which helps
+explain one of our RQ2 findings.
+
+Bayesian ideas have also been combined with PEFT. Laplace-LoRA~\cite{yang2024laplacelora} fits a
+post-hoc Laplace approximation over LoRA weights, and BLoB~\cite{wang2024blob} learns a variational
+posterior over LoRA during training; both target large language models. In vision, Pandey et
+al.~\cite{pandey2024bayesianpeft} find that PEFT-adapted vision foundation models are underconfident in
+few-shot settings and propose a Bayesian PEFT framework with base-rate adjustment and an evidential
+ensemble. BayesAdapter~\cite{moralesalvarez2026bayesadapter} learns a probability distribution over the
+parameters of a CLIP adapter instead of a point estimate and reports better calibration and selective
+classification. Bayesian Evidential Learning
+(BEL)~\cite{linghu2022bel} brings evidential uncertainty to few-shot classification; on miniImageNet
+5-shot it lowers the ECE of a Meta-Baseline model with a Conv-4 backbone from 14.69\% to 3.59\%. Its
+backbone is meta-trained end to end, unlike ours.
+
+\section{Calibration}
+
+Guo et al.~\cite{guo2017calibration} showed that modern deep networks are overconfident, popularised
+the expected calibration error (ECE) as a summary measure, and proposed temperature scaling: dividing
+the logits by one scalar fitted on held-out data by minimising the negative log-likelihood. Because it
+is a monotone rescaling, temperature scaling never changes the predicted class. Minderer et
+al.~\cite{minderer2021revisiting} revisit calibration for newer architectures and find that model family
+matters a great deal, and Tao et al.~\cite{tao2024benchmark} study calibration across a large space of
+architectures. Neither decomposes calibration variance across design factors the way RQ1 does. Dirichlet
+calibration~\cite{kull2019dirichlet} uses the word ``Dirichlet'' in a different sense: it is a post-hoc
+calibration map for softmax outputs and is unrelated to evidential Dirichlet evidence. More flexible
+accuracy-preserving calibrators also exist for softmax classifiers~\cite{zhao2026invlt}. For evidential
+models, recent fixes change the model or its training, for example density-informed
+pseudo-counts~\cite{carlotti2026dipedl} or a self-calibrated evidence-strength head~\cite{turacan2026invascal};
+neither is a small post-hoc refit of the kind studied in RQ4.
+
+\section{Out-of-Distribution Detection}
+
+Hendrycks and Gimpel~\cite{hendrycks2017baseline} proposed the maximum softmax probability (MSP) as a
+baseline OOD score and established AUROC as the standard evaluation. Liu et al.~\cite{liu2020energy}
+proposed the energy score, the log-sum-exp of the logits, which needs no retraining and separates OOD
+inputs better than MSP. OpenOOD~\cite{yang2022openood,zhang2024openood15} standardised the distinction
+between far-OOD (semantically unrelated data, such as digits for an animal classifier) and near-OOD
+(related but unseen classes) that we follow. McNamara~\cite{mcnamara2026vacuity} shows that
+vacuity-based AUROC can be inflated when the in-distribution and OOD evaluations use different numbers
+of classes; in our protocol every OOD image is scored by the same 5-way episode head, so this artefact
+does not arise.
+
+Two recent studies are close to RQ2. Gen{\c{c}} et al.~\cite{genc2026objectives} compare training
+objectives for OOD detection and note that, in prior work, each objective tends to be evaluated with
+the confidence measure natural to its output space, so objective and score are not fully separated.
+Their objectives do not include an evidential one, and they do not study frozen backbones or episodic
+evaluation. Krumpl et al.~\cite{krumpl2026onemodel} cross 56 ImageNet-trained ResNet-50 models with 21
+post-hoc detectors on 8 OOD sets and find a strong dependence between training strategy and detector.
+We run a smaller crossing of the same kind, with evidential models included.
+
+\section{Few-Shot Learning}
+
+Few-shot classification is usually evaluated with $N$-way $K$-shot episodes~\cite{vinyals2016matching}:
+each episode samples $N$ classes, $K$ labelled support images per class, and a set of query images to
+classify. We use the MiniImageNet split of Ravi and Larochelle~\cite{ravi2017optimization} and the
+CIFAR-FS split of Bertinetto et al.~\cite{bertinetto2019r2d2}. Prototypical networks~\cite{snell2017protonet}
+classify a query by its distance to each class prototype, the mean embedding of the class's support
+images, and need no trainable classifier. Chen et al.~\cite{chen2019closer} show that simple baselines
+with a cosine-similarity classifier are strong few-shot competitors. MetaOptNet~\cite{lee2019metaoptnet}
+is a representative method trained from scratch on the base classes, while P>M>F~\cite{hu2022pmf} shows
+how much large-scale pretraining (for example DINO~\cite{caron2021dino}) adds when the whole backbone is
+then meta-trained and fine-tuned.
+
+\section{Backbones for Edge Deployment}
+
+We use ResNet-18~\cite{he2016resnet} and MobileNetV3-Small~\cite{howard2019mobilenetv3}, both
+pretrained on ImageNet. They were chosen because they are realistic for constrained hardware, not for
+peak accuracy. A recent survey of tiny machine learning~\cite{somvanshi2025tinydl} describes the memory
+and compute limits of such hardware and the continued role of compact CNNs there.
+
+\section{Positioning}
+
+\Cref{tab:gap} compares this thesis with the three closest pieces of prior work. Each covers some of
+the four properties we study, but none covers all of them. In addition, we separate two pairs of factors
+that published comparisons usually change together: the training objective versus the OOD scoring rule
+(RQ2), and adapter architecture versus parameter budget (RQ3).
+
+\begin{table}[H]
+\centering
+\caption{The research gap. Each close prior work covers some, but not all, of the four properties
+studied here.}
+\label{tab:gap}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& Frozen lightweight CNN & Parameter-efficient adapter & Calibration & OOD detection \\
+\midrule
+TSA~\cite{li2022tsa} & \cmark & \cmark & \xmark & \xmark \\
+BEL~\cite{linghu2022bel} & \xmark\ (meta-trained) & \xmark & \cmark & \xmark \\
+BayesAdapter~\cite{moralesalvarez2026bayesadapter} & \xmark\ (frozen CLIP) & \cmark & \cmark & \xmark \\
+This work & \cmark & \cmark & \cmark & \cmark \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

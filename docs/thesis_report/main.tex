@@ -1,0 +1,205 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{adjustbox}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[table]{xcolor}
+\usepackage{pifont}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+\onehalfspacing
+\setlength{\emergencystretch}{2em}
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+\setlist{itemsep=2pt,topsep=4pt}
+
+\titleformat{\chapter}[display]{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{16pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{-20pt}{24pt}
+
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{--}
+
+\begin{document}
+
+% ------------------------------------------------------------------ title
+\begin{titlepage}
+\centering
+{\large\bfseries BACHELOR OF SCIENCE IN COMPUTER SCIENCE AND ENGINEERING\par}
+\vspace{3cm}
+{\LARGE\bfseries Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study\par}
+\vspace{3cm}
+{\large
+Hamim Saad Al Raji\\ 210042143\\[6pt]
+MD Mainul Hasan\\ 210042173\\[6pt]
+Ahmed Sadman Labib\\ 210042135\par}
+\vfill
+{\large Department of Computer Science and Engineering\\
+Islamic University of Technology\\
+September, 2026\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+% ------------------------------------------------------------ declaration
+\chapter*{Declaration of Candidate}
+\addcontentsline{toc}{chapter}{Declaration of Candidate}
+This is to certify that the work presented in this thesis is the outcome of the analysis and
+experiments carried out by Hamim Saad Al Raji, MD Mainul Hasan, and Ahmed Sadman Labib under the
+supervision of Shahriar Ivan, Assistant Professor, Department of Computer Science and Engineering,
+and the co-supervision of Md.\ Bakhtiar Hasan, Assistant Professor, Department of Computer Science
+and Engineering, Islamic University of Technology, Dhaka, Bangladesh. Neither this thesis nor any
+part of it has been submitted anywhere else for any degree or diploma. Information derived from the
+published and unpublished work of others has been acknowledged in the text, and a list of references
+is given.
+
+\vspace{1.5cm}
+\noindent
+{\small
+\begin{minipage}[t]{0.58\textwidth}
+\rule{6cm}{0.4pt}\\
+Shahriar Ivan\\
+Assistant Professor\\
+Department of Computer Science and Engineering\\
+Islamic University of Technology (IUT)\\
+Date: September 17, 2026\\[1.4cm]
+\rule{6cm}{0.4pt}\\
+Md.\ Bakhtiar Hasan\\
+Assistant Professor\\
+Department of Computer Science and Engineering\\
+Islamic University of Technology (IUT)\\
+Date: September 17, 2026
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.38\textwidth}
+\rule{5cm}{0.4pt}\\
+Hamim Saad Al Raji\\
+Student ID: 210042143\\
+Date: September 17, 2026\\[1.2cm]
+\rule{5cm}{0.4pt}\\
+MD Mainul Hasan\\
+Student ID: 210042173\\
+Date: September 17, 2026\\[1.2cm]
+\rule{5cm}{0.4pt}\\
+Ahmed Sadman Labib\\
+Student ID: 210042135\\
+Date: September 17, 2026
+\end{minipage}}
+
+% ------------------------------------------------------------- dedication
+\clearpage
+\vspace*{\fill}
+\begin{center}
+\itshape Dedicated to everyone who insisted that a model's confidence should mean something.
+\end{center}
+\vspace*{\fill}
+
+% -------------------------------------------------------- acknowledgement
+\chapter*{Acknowledgement}
+\addcontentsline{toc}{chapter}{Acknowledgement}
+We are grateful to our supervisor, Shahriar Ivan, Assistant Professor, Department of Computer
+Science and Engineering, for his guidance and his patience while this project grew from a single
+proof-of-concept episode into a full experimental study. He let our negative results stand as
+negative results, and this thesis is better for it.
+
+We are equally grateful to our co-supervisor, Md.\ Bakhtiar Hasan, Assistant Professor, Department of
+Computer Science and Engineering, for his advice on the evidential and calibration parts of the work,
+and for pushing us toward a cleaner experimental design whenever a shortcut looked tempting.
+
+We thank the Department of Computer Science and Engineering, Islamic University of Technology, for the
+environment and coursework that made this research possible. Almost all of our training runs were
+done on the free Tesla T4 GPUs offered by Google Colab and Kaggle, and we relied throughout on PyTorch
+and the wider open-source Python ecosystem.
+
+Finally, we thank our families and friends for their patience during the months when a screen full of
+calibration numbers seemed to us like the most interesting thing in the world.
+
+% --------------------------------------------------------------- abstract
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+Parameter-efficient fine-tuning (PEFT) adapts a pretrained network by training only a small add-on
+module, and it is usually judged by accuracy alone. In few-shot image classification on small devices,
+accuracy is not enough: the model's confidence should be trustworthy and it should notice inputs that
+belong to none of the known classes. This thesis is a controlled study of which design choices govern
+which of these properties when a frozen, ImageNet-pretrained lightweight CNN (ResNet-18 or
+MobileNetV3-Small) is adapted with a small trainable adapter (a parallel bottleneck or LoRA, at most
+31.7K parameters) and classified by a parameter-free prototype head whose logits are read either as a
+softmax or as evidential (Dirichlet) evidence. We train a balanced factorial grid of 120 models (five
+two-level factors, two baselines, three seeds) on 5-way 1- and 5-shot CIFAR-FS and MiniImageNet
+episodes and measure accuracy, calibration (ECE) and out-of-distribution detection (AUROC against four
+OOD sets per dataset). Four questions are asked of this grid. First, shot count explains about 76\% of the
+variation in accuracy and head type about 83\% of the variation in calibration, while the head barely
+affects accuracy. Second, when every model is scored with every uncertainty score, the scoring rule
+explains 42.7\% of far-OOD variation and the training objective only 0.17\%; the parameter-free energy
+score is the strongest score in most settings. Third, a pre-registered experiment that gives both
+adapters the same parameter budget shows that accuracy follows adapter architecture (the bottleneck
+wins 8 of 8 comparisons) whereas the calibration gap follows the backbone, not the budget (budget
+hypothesis supported in 0 of 4 cells, backbone dependence in 3 of 4). Fourth, refitting only the two
+evidence parameters of the evidential head on validation episodes improves its calibration in all 60
+models (mean ECE 0.323 to 0.185) but does not bring it level with softmax, and does not lower OOD
+AUROC by more than 0.005 in 80\% of comparisons. No single design choice makes the model reliable on every
+axis; what the thesis offers is a map of which choice controls which property.
+
+% ------------------------------------------------------------------ lists
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{List of Abbreviations}
+\addcontentsline{toc}{chapter}{List of Abbreviations}
+\begin{tabular}{@{}ll@{}}
+AUROC & Area Under the Receiver Operating Characteristic Curve\\
+CNN   & Convolutional Neural Network\\
+ECE   & Expected Calibration Error\\
+EDL   & Evidential Deep Learning\\
+FPR@95 & False Positive Rate at 95\% True Positive Rate\\
+FT    & Fine-Tuning\\
+ID    & In-Distribution\\
+KL    & Kullback--Leibler (divergence)\\
+LoRA  & Low-Rank Adaptation\\
+MSP   & Maximum Softmax Probability\\
+NLL   & Negative Log-Likelihood\\
+OOD   & Out-of-Distribution\\
+PEFT  & Parameter-Efficient Fine-Tuning\\
+TIN   & TinyImageNet\\
+TS    & Temperature Scaling\\
+ViT   & Vision Transformer\\
+\end{tabular}
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{chapters/ch1_introduction}
+\input{chapters/ch2_related}
+\input{chapters/ch3_data}
+\input{chapters/ch4_method}
+\input{chapters/ch5_results}
+\input{chapters/ch6_conclusion}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\renewcommand{\bibname}{References}
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\appendix
+\input{chapters/appendix}
+
+\end{document}

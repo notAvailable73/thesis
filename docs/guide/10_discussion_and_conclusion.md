@@ -35,7 +35,7 @@ The separation is not perfect:
 
 But the dominant term differs for each property.
 
-**A consequence for the thesis title.** The titular "Bayesian" component, the evidential Dirichlet head,
+**A consequence for the original "Bayesian PEFT" framing.** The proposal's "Bayesian" component, the evidential Dirichlet head,
 contributes to reliability through its **uncertainty score**, not through its **training objective** or its
 **probabilities**:
 
