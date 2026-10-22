@@ -1,7 +1,7 @@
 # TMLR follow-up — pre-specified hypotheses and decision rules
 
 **Status:** pre-specified. Committed and pushed **before any result of the runs below existed.**
-**Commit:** `<filled in by the follow-up commit>`. **Pushed to GitHub:** `<date/time UTC>`.
+**Commit:** `787aa257a52ff4af92d3b8bdbb62792343a82e53` (branch `tmlr`), committed 2026-10-22 15:46 UTC. Pushed to `github.com/notAvailable73/thesis` the same day, before Wave 0. The remote branch head was verified with `git ls-remote` to equal this commit before any run was launched.
 **Executable form:** [`scripts/tmlr_adjudicate.py`](../scripts/tmlr_adjudicate.py), which is authoritative if this prose and the code ever disagree. Tests: `tests/test_tmlr_adjudicate.py`.
 **Design:** [`scripts/tmlr_design.py`](../scripts/tmlr_design.py) and `configs/tmlr/manifest.json` (658 runs).
 **Plan:** [`docs/superpowers/plans/2026-10-22-tmlr-publication.md`](superpowers/plans/2026-10-22-tmlr-publication.md), Part A.
