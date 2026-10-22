@@ -1,4 +1,6 @@
 from .resnet18 import build_frozen_resnet18
+from .resnet34 import build_frozen_resnet34
+from .mobilenetv2 import build_frozen_mobilenetv2, MOBILENETV2_FEATURE_DIM
 from .mobilenetv3 import (
     build_frozen_mobilenetv3_small,
     mobilenetv3_stage_paths,
@@ -13,6 +15,9 @@ from .mobilenetv3 import (
 BACKBONE_FEATURE_DIMS = {
     "resnet18": 512,
     "mobilenetv3_small": MOBILENETV3_SMALL_FEATURE_DIM,
+    # TMLR plan E2 (second member of each backbone family).
+    "resnet34": 512,
+    "mobilenetv2": MOBILENETV2_FEATURE_DIM,
 }
 
 #: Accepted config spellings -> canonical name.
@@ -23,6 +28,11 @@ _ALIASES = {
     "mobilenet_v3_small": "mobilenetv3_small",
     "mobilenetv3": "mobilenetv3_small",
     "mbnet": "mobilenetv3_small",
+    "resnet34": "resnet34",
+    "resnet_34": "resnet34",
+    "mobilenetv2": "mobilenetv2",
+    "mobilenet_v2": "mobilenetv2",
+    "mbnet2": "mobilenetv2",
 }
 
 
@@ -53,6 +63,10 @@ def build_backbone(name: str, pretrained: bool = True):
         return build_frozen_resnet18(pretrained=pretrained)
     if canonical == "mobilenetv3_small":
         return build_frozen_mobilenetv3_small(pretrained=pretrained)
+    if canonical == "resnet34":
+        return build_frozen_resnet34(pretrained=pretrained)
+    if canonical == "mobilenetv2":
+        return build_frozen_mobilenetv2(pretrained=pretrained)
     raise ValueError(f"Unknown backbone: {name}")
 
 
@@ -60,6 +74,9 @@ __all__ = [
     "build_backbone",
     "build_frozen_resnet18",
     "build_frozen_mobilenetv3_small",
+    "build_frozen_resnet34",
+    "build_frozen_mobilenetv2",
+    "MOBILENETV2_FEATURE_DIM",
     "mobilenetv3_stage_paths",
     "backbone_feature_dim",
     "canonical_backbone_name",

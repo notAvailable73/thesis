@@ -120,6 +120,20 @@ class LoRAConv2d(nn.Module):
 # implementation.txt 5.1 RISK.
 _DEFAULT_LORA_TARGETS: List[str] = ["layer4.0.downsample.0"]
 
+def _last_dense_1x1(block: nn.Module) -> Optional[str]:
+    """Name (relative to `block`) of the LAST dense (groups == 1) 1x1 conv in an
+    inverted-residual block, i.e. its linear projection conv. The depthwise conv
+    is grouped and the squeeze-excite 1x1s come before the projection, so the
+    last dense 1x1 in module order is the projection. None if there is none.
+    """
+    last_name = None
+    for name, m in block.named_modules():
+        if (isinstance(m, nn.Conv2d) and tuple(m.kernel_size) == (1, 1)
+                and m.groups == 1):
+            last_name = name
+    return last_name
+
+
 def _mobilenetv3_default_lora_target(features: nn.Module) -> List[str]:
     """Step 8: the MobileNetV3 analogue of the ResNet default — the 1x1 LINEAR
     PROJECTION conv of the DEEPEST inverted-residual block (for
@@ -140,11 +154,7 @@ def _mobilenetv3_default_lora_target(features: nn.Module) -> List[str]:
         block = features[i]
         if not hasattr(block, "use_res_connect"):
             continue
-        last_name = None
-        for name, m in block.named_modules():
-            if (isinstance(m, nn.Conv2d) and tuple(m.kernel_size) == (1, 1)
-                    and m.groups == 1):
-                last_name = name
+        last_name = _last_dense_1x1(block)
         if last_name:
             return [f"features.{i}.{last_name}"]
     raise ValueError(
@@ -169,6 +179,36 @@ def default_lora_targets(backbone: nn.Module) -> List[str]:
         f"No default LoRA target known for {type(backbone).__name__}; set "
         f"cfg.adapter.lora_targets explicitly."
     )
+
+
+def multisite_lora_targets(backbone: nn.Module) -> List[str]:
+    """TMLR plan A3 `lora_ms`: one LoRA target per stage, at the SAME
+    stage-final blocks the parallel bottleneck uses (`resolve_stage_paths`).
+
+    ResNet (BasicBlock)  : `<stage>.conv2`, the second 3x3 conv, whose output
+                           feeds the residual sum where the bottleneck adds.
+    Inverted residual    : the block's linear 1x1 projection conv
+                           (`_last_dense_1x1`), the analogue of lora_ss's site.
+
+    Unlike the single-site default (on the ResNet SHORTCUT path), every
+    multi-site target is on the main path in both families, which is what lets
+    E1/E2 test whether LoRA's site role explains the RQ3 calibration flip.
+    """
+    from .placement import resolve_stage_paths
+    targets: List[str] = []
+    for path in resolve_stage_paths(backbone):
+        block = backbone.get_submodule(path)
+        conv2 = getattr(block, "conv2", None)
+        if isinstance(conv2, nn.Conv2d):
+            targets.append(f"{path}.conv2")
+            continue
+        name = _last_dense_1x1(block)
+        if not name:
+            raise ValueError(
+                f"no conv2 and no dense 1x1 projection conv in stage block {path!r}; "
+                f"set cfg.adapter.lora_targets explicitly.")
+        targets.append(f"{path}.{name}")
+    return targets
 
 
 def _replace_submodule(root: nn.Module, dotted: str, new_module: nn.Module) -> None:
@@ -207,7 +247,8 @@ class LoRAAdapter(nn.Module):
     def __init__(self, backbone: nn.Module, rank: int,
                  alpha: Optional[float] = None,
                  targets: Optional[Sequence[str]] = None,
-                 dropout: float = 0.0):
+                 dropout: float = 0.0,
+                 ranks: Optional[Sequence[int]] = None):
         super().__init__()
         if backbone is None:
             raise ValueError("LoRAAdapter requires the backbone to inject into")
@@ -215,16 +256,29 @@ class LoRAAdapter(nn.Module):
         self.alpha = alpha
         self.targets: List[str] = (list(targets) if targets
                                    else default_lora_targets(backbone))
+        # TMLR plan A3: optional per-target ranks (lora_ms budget matching).
+        # Absent -> every target uses `rank` (the Step 5-10 behaviour).
+        if ranks is None:
+            self.ranks: List[int] = [self.rank] * len(self.targets)
+        else:
+            self.ranks = [int(r) for r in ranks]
+            if len(self.ranks) != len(self.targets):
+                raise ValueError(
+                    f"lora ranks has {len(self.ranks)} entries but there are "
+                    f"{len(self.targets)} targets: {self.targets}")
+            if any(r < 1 for r in self.ranks):
+                raise ValueError(f"every LoRA rank must be >= 1, got {self.ranks}")
         injected = 0
-        for name in self.targets:
+        for name, target_rank in zip(self.targets, self.ranks):
             base = backbone.get_submodule(name)
             if not isinstance(base, nn.Conv2d):
                 raise TypeError(
                     f"LoRA target {name!r} is a {type(base).__name__}, not "
                     f"nn.Conv2d. cfg.adapter.lora_targets must name conv layers."
                 )
+            # alpha=None -> alpha = this target's rank (scaling 1), as before.
             _replace_submodule(backbone, name,
-                               LoRAConv2d(base, self.rank, alpha, dropout))
+                               LoRAConv2d(base, target_rank, alpha, dropout))
             injected += 1
         if injected == 0:
             raise ValueError("LoRAAdapter injected 0 layers; check lora_targets")

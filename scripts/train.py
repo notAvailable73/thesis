@@ -37,6 +37,7 @@ from src.utils import (
     set_seed, get_device, count_trainable_params, load_config, get_logger,
     WandbRun, make_run_name,
 )
+from src.utils.seed import effective_train_seed_offset
 from src.datasets import (
     build_dataset, sample_episode, get_id_split,
     EpisodicIterableDataset,
@@ -267,7 +268,8 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
     q_query = int(cfg.dataset.q_query)
     eps_per_epoch    = int(cfg.trainer.episodes_per_epoch)
     val_eps_per_epoch = int(cfg.trainer.val_episodes_per_epoch)
-    train_seed_offset = int(cfg.trainer.train_seed_offset)
+    # TMLR plan A6: unchanged unless trainer.vary_train_stream_with_seed is on.
+    train_seed_offset = effective_train_seed_offset(cfg)
 
     # Frozen val seeds (configs/val_episodes.yaml).
     repo_root = Path(__file__).resolve().parents[1]
@@ -316,6 +318,13 @@ def _train_episodic(cfg, args, logger, device, wb) -> None:
                 f"{p}({c}ch)" for p, c in zip(model.adapter.stage_paths,
                                               model.adapter.stage_channels))
         )
+    # TMLR plan A3: same audit trail for the LoRA arms (lora_ss / lora_ms with
+    # per-site ranks) and the single-site bottleneck (btl_ss).
+    if hasattr(model.adapter, "targets") and hasattr(model.adapter, "ranks"):
+        logger.info("lora sites: " + ", ".join(
+            f"{t}(r{r})" for t, r in zip(model.adapter.targets, model.adapter.ranks)))
+    elif hasattr(model.adapter, "target"):
+        logger.info(f"single-site bottleneck: {model.adapter.target}(r{model.adapter.rank})")
     logger.info(f"trainable params: {n_params:,}")
     wb.update_summary({"n_params": int(n_params)})
 

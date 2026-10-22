@@ -45,6 +45,10 @@ def _is_resnet(backbone: nn.Module) -> bool:
 
 
 def _is_mobilenetv3(backbone: nn.Module) -> bool:
+    # Also true for torchvision MobileNetV2 (TMLR plan E2): its InvertedResidual
+    # blocks carry the same `use_res_connect` / `out_channels` attributes, so
+    # `mobilenetv3_stage_paths` serves it unchanged. Name kept for Step 8
+    # reproducibility.
     features = getattr(backbone, "features", None)
     return features is not None and any(
         hasattr(m, "use_res_connect") for m in features

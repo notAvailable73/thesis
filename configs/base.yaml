@@ -77,6 +77,10 @@ trainer:
   early_stop_patience: 5
   collapse_threshold: 0.25  # R-EPISODIC-COLLAPSE guard
   train_seed_offset: 20000  # base seed for training-stream episode RNG
+  # TMLR plan A6: when true, the stream shifts by 100000 * (seed - 42), so extra
+  # seeds vary the episode ORDER too. Seed 42 is unchanged. Default false keeps
+  # every pre-existing config byte-identical (src/utils/seed.py).
+  vary_train_stream_with_seed: false
 
 train:
   lr: 5.0e-3

@@ -48,5 +48,46 @@ def set_seed(seed: int, deterministic: bool = True) -> None:
         pass
 
 
+#: Per-seed shift of the training-episode stream when
+#: `trainer.vary_train_stream_with_seed` is on (TMLR plan A6). Seed 42 maps to
+#: shift 0, so it reproduces every pre-existing run exactly.
+TRAIN_STREAM_STRIDE = 100_000
+_TRAIN_STREAM_BASE_SEED = 42
+#: Seed ranges reserved by the frozen episode files; the training stream must
+#: never draw an episode seed from them.
+_RESERVED_SEED_RANGES = ((0, 600), (10_000, 10_100))   # TEST, VAL (half-open)
+
+
+def effective_train_seed_offset(cfg) -> int:
+    """First episode seed of the training stream for this config.
+
+    Default (flag absent or false): `trainer.train_seed_offset`, unchanged from
+    Step 4 onwards, so every existing config keeps its stream byte-for-byte.
+    With `trainer.vary_train_stream_with_seed: true` the stream is shifted by
+    TRAIN_STREAM_STRIDE * (seed - 42), so extra seeds vary the episode order and
+    not only the adapter initialisation.
+
+    Raises ValueError for seed < 42 under the flag, or if the stream
+    [offset, offset + num_epochs * episodes_per_epoch) would touch the TEST or
+    VAL seed ranges.
+    """
+    trainer = cfg["trainer"]
+    offset = int(trainer["train_seed_offset"])
+    if bool(trainer.get("vary_train_stream_with_seed", False)):
+        seed = int(cfg["seed"])
+        if seed < _TRAIN_STREAM_BASE_SEED:
+            raise ValueError(
+                f"vary_train_stream_with_seed needs seed >= {_TRAIN_STREAM_BASE_SEED}, "
+                f"got {seed}")
+        offset += TRAIN_STREAM_STRIDE * (seed - _TRAIN_STREAM_BASE_SEED)
+    end = offset + int(trainer.get("num_epochs", 30)) * int(trainer.get("episodes_per_epoch", 100))
+    for lo, hi in _RESERVED_SEED_RANGES:
+        if offset < hi and lo < end:
+            raise ValueError(
+                f"training stream seeds [{offset}, {end}) overlap the reserved "
+                f"frozen range [{lo}, {hi})")
+    return offset
+
+
 def get_device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -180,6 +180,138 @@ framework adapts, not for the adapter/uncertainty methods themselves.
    convolutional sites for adapter/LoRA insertion, and its on-device latency
    methodology directly feeds the thesis's efficiency/Pareto (RQ4) analysis.
 
+==== PAPER: Deep Residual Learning for Image Recognition (ResNet) ====
+[Added 2026-10-22 for the TMLR follow-up (ResNet-34 backbone, plan Task 0.2).
+ Source: arXiv:1512.03385v1 PDF, pages 1-6 read directly.]
+
+1. TITLE / AUTHORS / VENUE
+   Title: "Deep Residual Learning for Image Recognition"
+   Authors: Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun (Microsoft Research).
+   Venue as printed: arXiv:1512.03385v1 [cs.CV], 10 Dec 2015 (the PDF prints only
+   the arXiv line; the published version is CVPR 2016).
+
+2. CORE IDEA
+   Deeper "plain" nets suffer a degradation problem: training error rises with
+   depth, and the paper argues this is not overfitting. Stacked layers are recast
+   to fit a residual F(x) := H(x) - x, so a block computes y = F(x, {W_i}) + x
+   through an identity shortcut that adds no parameters or computation (Eqn. 1).
+   With mismatched dimensions, a linear projection W_s x is used instead (Eqn. 2).
+
+3. METHOD / ARCHITECTURE
+   Basic block (ResNet-18/34): two 3x3 convs with BN and ReLU, then the shortcut
+   is added, and the second ReLU comes after the addition (Fig. 2, Fig. 5 left).
+   Table 1, 34-layer: conv1 7x7, 64, stride 2 -> 3x3 max pool, stride 2 ->
+     conv2_x [3x3,64; 3x3,64] x3   (56x56)
+     conv3_x [3x3,128; 3x3,128] x4 (28x28)
+     conv4_x [3x3,256; 3x3,256] x6 (14x14)
+     conv5_x [3x3,512; 3x3,512] x3 (7x7)
+     -> average pool, 1000-d fc, softmax.   FLOPs (multiply-adds): 3.6x10^9
+   (the 18-layer net uses x2 in every stage, 1.8x10^9 FLOPs).
+   Downsampling is done by conv3_1, conv4_1 and conv5_1 with stride 2. When the
+   dimensions increase, the shortcut is either (A) zero-padding identity or
+   (B) a 1x1 projection, both with stride 2; (C) makes every shortcut a projection.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   SGD, mini-batch 256, LR 0.1 divided by 10 at plateaus, up to 60x10^4 iterations,
+   weight decay 0.0001, momentum 0.9, no dropout. BN after each conv and before
+   the activation. Scale augmentation (shorter side in [256,480]), 224x224 crops.
+
+5. DATASETS & METRICS
+   ImageNet 2012 (1.28M train / 50k val / 100k test), top-1/top-5 error; CIFAR-10.
+   ResNet-34 top-1 error (10-crop, ImageNet val), Table 3: A 25.03, B 24.52,
+   C 24.19 (plain-34: 28.54). Table 2 (Option A): ResNet-18 27.88 vs ResNet-34
+   25.03.
+
+6. IMPLEMENTATION NOTES
+   - The paper compares A/B/C and calls the differences small; it uses B for the
+     deeper models. The PDF does not say which option torchvision's
+     IMAGENET1K_V1 weights use. Torchvision's layout has a 1x1 conv + BN
+     "downsample" at the first block of stages 2-4 (i.e. option B), which is
+     what our code introspects (verified 2026-10-22: layer4.0.downsample.0 is
+     256->512, 1x1, stride 2).
+   - Stage-final blocks for ResNet-34 in torchvision naming: layer1.2, layer2.3,
+     layer3.5, layer4.2 (3,4,6,3 blocks), the same widths 64/128/256/512 as
+     ResNet-18.
+
+7. OFFICIAL CODE REPO
+   None printed in the PDF.
+
+8. RELEVANCE TO THESIS (TMLR follow-up)
+   ResNet-34 is the second member of the ResNet family in plan E2. It shares
+   ResNet-18's block type and stage widths but has more blocks per stage, so it
+   tests whether the RQ3 calibration pattern is a property of the residual-basic-
+   block FAMILY. Because widths are identical, every adapter budget matches
+   ResNet-18's exactly. FIT: frozen ImageNet weights, used exactly like ResNet-18.
+   CONS / LIMITS: depth also changes feature statistics, so ResNet-18 vs
+   ResNet-34 confounds depth with "family member"; this is reported as such.
+   The paper gives no FLOPs for the adapter sites; latency is not part of E2.
+
+==== PAPER: MobileNetV2: Inverted Residuals and Linear Bottlenecks ====
+[Added 2026-10-22 for the TMLR follow-up (MobileNetV2 backbone, plan Task 0.2).
+ Source: arXiv:1801.04381v4 PDF, pages 1-8 read directly.]
+
+1. TITLE / AUTHORS / VENUE
+   Title: "MobileNetV2: Inverted Residuals and Linear Bottlenecks"
+   Authors: Mark Sandler, Andrew Howard, Menglong Zhu, Andrey Zhmoginov,
+            Liang-Chieh Chen (Google Inc.).
+   Venue as printed: arXiv:1801.04381v4 [cs.CV], 21 Mar 2019 (published at CVPR 2018;
+   the PDF prints only the arXiv line).
+
+2. CORE IDEA
+   Inverted residual with linear bottleneck: a low-dimensional input is expanded
+   (1x1), filtered with a 3x3 depthwise conv, then projected back with a LINEAR
+   1x1 conv. The shortcuts connect the thin bottlenecks. Removing the
+   non-linearity in the narrow layer preserves information; the paper argues
+   that ReLU collapses low-dimensional manifolds (Sec. 3.2, Fig. 1).
+
+3. METHOD / ARCHITECTURE
+   Table 1 bottleneck block (k -> k' channels, stride s, expansion t):
+     1x1 conv2d, ReLU6 -> 3x3 dwise s=s, ReLU6 -> linear 1x1 conv2d
+   Table 2 (t, c, n, s): conv2d 32 s2; bottleneck (1,16,1,1), (6,24,2,2),
+   (6,32,3,2), (6,64,4,2), (6,96,3,1), (6,160,3,2), (6,320,1,1); conv2d 1x1 -> 1280;
+   avgpool 7x7; conv2d 1x1 -> k classes. All spatial convs are 3x3. The first
+   layer of each sequence has stride s; the shortcut is used only when stride is
+   1 and the input and output channels match (Fig. 4d).
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   TensorFlow, RMSProp (decay and momentum 0.9), BN after every layer, weight
+   decay 0.00004, initial LR 0.045 with decay 0.98 per epoch, 16 async workers,
+   batch size 96. Expansion factor 6 for the main experiments; the paper states
+   rates between 5 and 10 give nearly identical results.
+
+5. DATASETS & METRICS
+   ImageNet top-1 (Table 4): MobileNetV2 72.0%, 3.4M params, 300M MAdds, 75 ms
+   (Pixel 1 CPU); MobileNetV2 (1.4) 74.7%, 6.9M, 585M. COCO detection with SSDLite
+   (22.1 mAP, 4.3M params); PASCAL VOC segmentation with DeepLabv3 heads.
+
+6. IMPLEMENTATION NOTES
+   - The ablation (Fig. 6a) reports that linear bottlenecks beat ReLU6 in the
+     bottleneck, so the projection conv must stay linear. Our lora_ms / lora_ss
+     targets (the 1x1 projection convs) are therefore linear maps, and LoRA's
+     linear update keeps them linear. The btl_ss arm wraps the projection conv
+     with a ReLU branch, which reintroduces a non-linearity in parallel, not in
+     series; we flag this, the paper does not address it.
+   - Torchvision naming, verified 2026-10-22: residual stage-final blocks
+     features.3/6/10/13/16 (widths 24/32/64/96/160); deepest block features.17
+     (960->320, no residual); projection conv = "<block>.conv.2"; pooled
+     feature = 1280-d after features.18.
+
+7. OFFICIAL CODE REPO
+   The paper states the implementation is part of the TensorFlow-Slim model
+   library (ref [4]); no URL beyond that reference.
+
+8. RELEVANCE TO THESIS (TMLR follow-up)
+   MobileNetV2 is the second member of the inverted-residual family in plan E2,
+   alongside MobileNetV3-Small (which builds on this block and adds SE and
+   h-swish). Together with ResNet-18/34 it gives two backbone families x two
+   members, testing whether RQ3's calibration flip follows the family.
+   CONS / LIMITS: MobileNetV2 has five residual width groups, not four, so the
+   multi-site arms insert at five sites; its pooled feature is 1280-d (after the
+   1x1 expansion), whereas our MobileNetV3-Small uses the 576-d pre-expansion
+   feature. Both differences are reported. No calibration or OOD results appear
+   in the paper.
+
 ################################################################################
 SUMMARY: 2 PDFs found in folder, 2 papers processed (0 skipped, 0 parse failures).
++ 2 entries added 2026-10-22 from arXiv PDFs (ResNet, MobileNetV2) for the TMLR follow-up.
 ################################################################################

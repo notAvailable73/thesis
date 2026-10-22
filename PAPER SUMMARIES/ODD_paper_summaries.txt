@@ -403,6 +403,68 @@ SCOPE NOTE
    (covariate-shift, cf. your CIFAR-10-C robustness goal) splits map almost
    one-to-one onto your planned OOD/calibration experiments.
 
+==== PAPER: Scaling Out-of-Distribution Detection for Real-World Settings (MaxLogit) ====
+[Added 2026-10-22 for the TMLR follow-up (MaxLogit score, plan Task 0.2).
+ Source: arXiv:1911.11132 abstract page and ar5iv HTML. The full PDF was not
+ read page by page (download exceeded the fetch size limit); the numbers
+ below are from the HTML rendering.]
+
+1. TITLE / AUTHORS / VENUE
+   "Scaling Out-of-Distribution Detection for Real-World Settings" — Dan Hendrycks,
+   Steven Basart, Mantas Mazeika, Andy Zou, Joe Kwon, Mohammadreza Mostajabi,
+   Jacob Steinhardt, Dawn Song. ICML 2022 (arXiv v4, 15 May 2022; first posted 2019).
+
+2. CORE IDEA
+   OOD research has been small-scale. The paper builds large-scale benchmarks:
+   multiclass (Species, ImageNet-21K-pretrained models), multi-label (PASCAL VOC,
+   COCO) and anomaly segmentation (road anomalies / CAOS). It finds that a simple
+   maximum-logit detector beats MSP and prior methods there.
+
+3. METHOD
+   Anomaly score = the NEGATIVE of the maximum UNNORMALIZED logit, -max_k f(x)_k
+   (MSP uses the softmax-normalised max probability instead). Rationale given:
+   with many classes, probability mass disperses over visually similar classes,
+   so low MSP can reflect class ambiguity rather than unfamiliarity. Logits are
+   unnormalized and "not affected by the number of classes".
+
+4. KEY HYPERPARAMETERS
+   None. The score is parameter-free and post-hoc.
+
+5. DATASETS & METRICS / KEY NUMBERS (as rendered in ar5iv)
+   Table 1 (ResNet-50, averaged over OOD sets):
+     ImageNet-1K: FPR95 44.2 (MSP) vs 35.8 (MaxLogit); AUROC 84.6 vs 87.2;
+                  AUPR 38.2 vs 45.8.
+     Places365:   FPR95 52.6 vs 36.6; AUROC 76.0 vs 85.8; AUPR 8.2 vs 19.2.
+   Table 2 (Species, mean AUROC): ResNet 54.6 vs 63.2; ViT 53.7 vs 61.9;
+   MLP-Mixer 54.7 vs 62.5.
+   Small-scale CIFAR-10 numbers the paper cites: MSP 90.08 vs MaxLogit 90.22 AUROC.
+   NOTE: the rendered appendix Table 5 lists different MSP values for ImageNet
+   (FPR95 41.3, AUPR 37) than Table 1. This is an inconsistency in the source;
+   do not quote either without checking the PDF.
+
+6. IMPLEMENTATION NOTES / LIMITATIONS
+   - The authors say it is "not ... a mathematically innovative formulation".
+   - The paper does not mention energy / logsumexp. (Energy, Liu 2020, is a
+     smooth max over the same logits; the relation is our observation, not the
+     paper's claim.)
+   - The paper reports that the advantage over MSP is small in small-scale
+     settings (CIFAR-10 example above). Our episodes have only K=5 classes, so a
+     large gain over MSP should NOT be assumed; we measure it.
+
+7. OFFICIAL CODE REPO
+   Not recorded here (not verified from the PDF).
+
+8. RELEVANCE TO THESIS (TMLR follow-up)
+   Added to RQ2's score axis (plan A7) as a second logit-space score next to
+   energy. For our cosine prototype head, MaxLogit = tau x (max cosine
+   similarity to a prototype), i.e. a nearest-prototype similarity, which
+   doubles as a simple feature-space score. PROS: parameter-free, applies
+   identically to evidential- and softmax-trained logits, which is exactly
+   what RQ2's objective x score crossing needs. CONS: the paper's motivation
+   (thousands of classes) does not hold in 5-way episodes. FIT: a cheap,
+   reviewer-expected baseline; whatever it shows is reported.
+
 ################################################################################
 END — 6 papers summarized from 6 PDFs in this folder.
++ 1 entry added 2026-10-22 (MaxLogit, from arXiv abstract + ar5iv HTML) for the TMLR follow-up.
 ################################################################################
