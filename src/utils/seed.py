@@ -73,7 +73,10 @@ def effective_train_seed_offset(cfg) -> int:
     """
     trainer = cfg["trainer"]
     offset = int(trainer["train_seed_offset"])
-    if bool(trainer.get("vary_train_stream_with_seed", False)):
+    vary = trainer.get("vary_train_stream_with_seed", False)
+    if not isinstance(vary, bool):
+        raise ValueError(f"trainer.vary_train_stream_with_seed must be a YAML bool, got {vary!r}")
+    if vary:
         seed = int(cfg["seed"])
         if seed < _TRAIN_STREAM_BASE_SEED:
             raise ValueError(

@@ -1,0 +1,7 @@
+# TMLR plan E2 parent — ResNet-34 x MiniImageNet, bottleneck module, softmax head.
+# Identical recipe to the ResNet-18 Step 10 parent; only the backbone changes
+# (same stage widths, so the same block_ids and budgets apply).
+extends: ../../exp_phase5_mini_parallel_softmax.yaml
+backbone:
+  name: resnet34
+  feature_dim: 512

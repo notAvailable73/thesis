@@ -168,10 +168,27 @@ def _rel(path, root: Path) -> str:
         return str(Path(path).resolve())
 
 
+def run_env() -> dict:
+    """Software/hardware fingerprint stored in every TMLR record, so a result
+    that fails to reproduce can be traced to its environment."""
+    import torchvision
+    cuda = torch.cuda.is_available()
+    return {
+        "torch": torch.__version__,
+        "torchvision": torchvision.__version__,
+        "cuda": torch.version.cuda if cuda else None,
+        "gpu_name": torch.cuda.get_device_name(0) if cuda else None,
+        "git_sha": os.environ.get("GIT_SHA"),
+        "torch_threads": torch.get_num_threads(),
+    }
+
+
 def factorial_run_one(repo_root: Path, config_path: Path, checkpoint_path: Path,
                       out_json: Path, *, device, num_episodes: int,
                       logits_out: Path | None, committed_metrics: Path | None,
-                      meta: dict | None = None, log=print) -> dict:
+                      meta: dict | None = None, log=print,
+                      adapter_out: Path | None = None,
+                      fit_mahalanobis: bool = False) -> dict:
     """Evaluate one trained cell under every (objective, score) combination."""
     t0 = time.monotonic()
     cfg = load_config(config_path)
@@ -207,6 +224,10 @@ def factorial_run_one(repo_root: Path, config_path: Path, checkpoint_path: Path,
         f"{affine_native[1]:.4f})  refit=({affine_valfit[0]:.4f}, "
         f"{affine_valfit[1]:.4f})")
 
+    # TMLR plan A7: base-class precision for the Mahalanobis score. TRAIN
+    # classes only, private RNG; off by default so Phase A/B stay identical.
+    precision = R.fit_base_precision(model, cfg, device) if fit_mahalanobis else None
+
     pools = R.build_ood_pools(model, cfg, device,
                               use_tinyimagenet=True, use_gaussian=True)
     test_seeds = test_seeds_all[:num_episodes]
@@ -214,7 +235,12 @@ def factorial_run_one(repo_root: Path, config_path: Path, checkpoint_path: Path,
         model, cfg, test_seeds=test_seeds, ood_pools=pools, device=device,
         temperature=T, affine_valfit=affine_valfit, prior_per_class=prior_pc,
         ece_bins=int(cfg.eval.ece_bins), logits_out=logits_out,
-        log_every=200, logger_print=log)
+        log_every=200, logger_print=log, precision=precision)
+
+    if adapter_out is not None:
+        from src.utils.checkpoint_io import trainable_state_dict
+        adapter_out.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(trainable_state_dict(model), adapter_out)
 
     guard = (R.regression_guard(summary, committed_metrics, interp)
              if committed_metrics else {"status": "not_requested"})
@@ -242,11 +268,61 @@ def factorial_run_one(repo_root: Path, config_path: Path, checkpoint_path: Path,
                       "n": len(val_seeds)},
         "summary": summary,
         "regression_guard": guard,
+        "env": run_env(),
         "wall_seconds": round(time.monotonic() - t0, 1),
     }
     out_json.parent.mkdir(parents=True, exist_ok=True)
     with open(out_json, "w") as f:
         json.dump(record, f, indent=2, sort_keys=True)
+    return record
+
+
+def val_only_run_one(repo_root: Path, config_path: Path, checkpoint_path: Path,
+                     out_json: Path, *, device, log=print) -> dict:
+    """TMLR plan A8 (E5-val): VAL-only metrics for selecting an EDL recipe.
+
+    Reads only the frozen VAL episodes (seeds 10000-10099) via
+    R.load_val_logits. The TEST seeds are never loaded here: hyperparameter
+    selection must not see them.
+    """
+    t0 = time.monotonic()
+    cfg = load_config(config_path)
+    K = int(cfg.dataset.n_way)
+    prior_pc = float(cfg.loss.get("prior_per_class", 1.0))
+    set_seed(int(cfg.seed))
+    model = build_model(cfg).to(device)
+    ckpt = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(ckpt["state_dict"])
+    val_logits, val_targets, val_seeds = R.load_val_logits(model, cfg, device, repo_root)
+    lo, hi = EXPECTED_VAL_SEED_RANGE
+    if not (val_seeds[0] == lo and val_seeds[-1] == hi):
+        raise RuntimeError(f"VAL seed guard failed: {val_seeds[0]}..{val_seeds[-1]}")
+    with torch.no_grad():
+        evidence = model.head.to_evidence(val_logits.to(device))
+        probs, _ = R.evidence_to_probs_and_vacuity(evidence, K, prior_pc)
+        probs = probs.cpu()
+    tgt = val_targets.long()
+    from src.evaluators import expected_calibration_error
+    record = {
+        "config": _rel(config_path, repo_root),
+        "seed": int(cfg.seed),
+        "n_params": int(count_trainable_params(model)),
+        "best_val_epoch": int(ckpt.get("best_val_epoch", -1)),
+        "val_ece_pooled__evidential_native": float(expected_calibration_error(
+            probs, tgt, num_bins=int(cfg.eval.ece_bins))),
+        "val_accuracy__evidential_native": float((probs.argmax(-1) == tgt).float().mean()),
+        "val_nll__evidential_native": float(torch.nn.functional.nll_loss(
+            torch.log(probs.clamp_min(1e-12)), tgt)),
+        "val_seeds": {"first": int(val_seeds[0]), "last": int(val_seeds[-1]),
+                      "n": len(val_seeds)},
+        "env": run_env(),
+        "wall_seconds": round(time.monotonic() - t0, 1),
+    }
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_json, "w") as f:
+        json.dump(record, f, indent=2, sort_keys=True)
+    log(f"    VAL ece={record['val_ece_pooled__evidential_native']:.4f} "
+        f"acc={record['val_accuracy__evidential_native']:.4f}")
     return record
 
 

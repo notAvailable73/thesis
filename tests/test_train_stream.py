@@ -58,3 +58,10 @@ def test_old_configs_byte_identical_offset():
     assert len(paths) == 168
     for p in paths:
         assert effective_train_seed_offset(load_config(p)) == 20000, p
+
+
+def test_rejects_non_bool_flag():
+    cfg = _cfg(43, None)
+    cfg["trainer"]["vary_train_stream_with_seed"] = "false"
+    with pytest.raises(ValueError):
+        effective_train_seed_offset(cfg)

@@ -1,0 +1,9 @@
+# TMLR plan E2 parent — MobileNetV2 x MiniImageNet, bottleneck module, evidential head.
+# Same recipe as the MobileNetV3-Small Step 10 parent. MobileNetV2 has FIVE
+# residual width groups (features.3/6/10/13/16), so every stage gets an adapter.
+extends: ../../exp_phase5_mini_mbnet_parallel_evidential.yaml
+backbone:
+  name: mobilenetv2
+  feature_dim: 1280
+adapter:
+  block_ids: [0, 1, 2, 3, 4]

@@ -1,0 +1,7 @@
+# TMLR plan E2 parent — MobileNetV2 x MiniImageNet, LoRA module, softmax head.
+# No lora_targets is inherited, so the default applies: the projection conv of
+# the deepest inverted-residual block, features.17.conv.2 (960 -> 320).
+extends: ../../exp_phase5_mini_mbnet_lora_softmax.yaml
+backbone:
+  name: mobilenetv2
+  feature_dim: 1280

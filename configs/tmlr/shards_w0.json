@@ -1,0 +1,83 @@
+{
+ "accounts": {
+  "acct1": [
+   "W0-01"
+  ],
+  "acct2": [
+   "W0-02"
+  ],
+  "acct3": [
+   "W0-03"
+  ],
+  "acct4": [
+   "W0-04"
+  ]
+ },
+ "shards": [
+  {
+   "est_minutes": [
+    15.0,
+    13.0
+   ],
+   "lanes": [
+    [
+     "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s42",
+     "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s42"
+    ],
+    [
+     "e2_mini_5s_r34_btl_ms_H_r16_soft_s42"
+    ]
+   ],
+   "shard_id": "W0-01",
+   "wave": 0
+  },
+  {
+   "est_minutes": [
+    10.71,
+    9.0
+   ],
+   "lanes": [
+    [
+     "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s42"
+    ],
+    [
+     "e1_mini_5s_r18_btl_ms_H_r16_evid_s42"
+    ]
+   ],
+   "shard_id": "W0-02",
+   "wave": 0
+  },
+  {
+   "est_minutes": [
+    9.0,
+    9.0
+   ],
+   "lanes": [
+    [
+     "e1_mini_5s_r18_btl_ss_H_r40_soft_s42"
+    ],
+    [
+     "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s42"
+    ]
+   ],
+   "shard_id": "W0-03",
+   "wave": 0
+  },
+  {
+   "est_minutes": [
+    8.82,
+    8.0
+   ],
+   "lanes": [
+    [
+     "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p1.0_s42"
+    ],
+    [
+     "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s42"
+    ]
+   ],
+   "shard_id": "W0-04",
+   "wave": 0
+  }
+ ]
+}

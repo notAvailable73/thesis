@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the B.Sc. thesis *Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study* into a TMLR submission by running the experiments a reviewer will demand (652 runs across 4 Kaggle accounts in parallel), re-analysing everything with stronger statistics, and writing and releasing the paper.
+**Goal:** Turn the B.Sc. thesis *Reliability in Few-Shot Classification with Frozen CNN Adapters: A Controlled Study* into a TMLR submission by running the experiments a reviewer will demand (658 runs across 4 Kaggle accounts in parallel), re-analysing everything with stronger statistics, and writing and releasing the paper.
 
 **Architecture:** New adapter arms, backbones, a dataset and OOD scores are added to the existing factory-based codebase without changing any old config's behaviour. A single design module turns every experiment into a manifest of `RunSpec`s. A shard packer turns the manifest into Kaggle-session-sized shards with two GPU lanes each. One parametrised Kaggle notebook runs any shard. A collector merges shard outputs back into `results/tmlr/`. Pre-specified decision rules (committed and pushed before the first real wave) produce the verdicts.
 
@@ -43,17 +43,24 @@
 - Lead with RQ2 (objective vs. score) and RQ3 (architecture vs. budget, now decomposed into insertion sites vs. module type). The evidential calibration result plus RQ4 come third. RQ1 is a framing table.
 - Drop from the paper: adapter-beats-full-FT (one effective run, one backbone), the latency section (not new), and the SOTA table (ImageNet overlap makes it a liability).
 
-## A2. Experiments (652 runs)
+## A2. Experiments (658 runs — as implemented in `scripts/tmlr_design.py`; see the note under the table)
 
 | ID | Purpose | Dataset / shots | Backbones | Arms | Heads | Seeds | Runs |
 |---|---|---|---|---|---|---|---|
-| **E1** | Decompose "architecture" into **sites × module** at matched budget; replicate RQ3 with 5 seeds and a varied training stream | MiniImageNet 5-shot | R18, MNv3 | 4 arms × 2 levels | both | 42–46, stream varies | 160 |
+| **E1** | Decompose "architecture" into **sites × module** at matched budget; replicate RQ3 with 5 seeds and a varied training stream | MiniImageNet 5-shot | R18, MNv3 | 4 arms × 2 levels | both | 42–46, stream varies | 170 (incl. MNv3 lora_ss r16 as level U) |
 | **E2** | Same as E1 on two **new backbones**: is the calibration flip a backbone-*family* property? | MiniImageNet 5-shot | R34, MNv2 | 4 arms × 2 levels (+2 unmatched arms on MNv2) | both | 42–46, stream varies | 180 |
 | **E3a** | Replicate the core grid on a dataset with **no ImageNet class overlap** (RQ1/RQ2/RQ4) | FGVC-Aircraft 1+5-shot | R18, MNv3 | btl_ms r16, lora_ss r16 | both | 42–44, fixed stream (grid recipe) | 48 |
-| **E3b** | Matched-budget test on Aircraft | FGVC-Aircraft 5-shot | R18, MNv3 | 4 arms × 2 levels | both | 42–44, stream varies | 90 (96 minus 6 shared with E3a) |
-| **E4** | Re-run the original 120-run grid. Checkpoints are lost; this adds MaxLogit + Mahalanobis, per-episode logits and released adapters, and every run is a reproduction check | CIFAR-FS + MiniImageNet, 1+5-shot | R18, MNv3 (+ baselines) | original | both | 42–44, fixed | 120 |
+| **E3b** | Matched-budget test on Aircraft | FGVC-Aircraft 5-shot | R18, MNv3 | 4 arms × 2 levels | both | 42–44, stream varies | 94 (incl. MNv3 lora_ss r16 level U; minus seed-42 twins of E3a) |
+| **E4** | Re-run the original 120-run grid. Checkpoints are lost; this adds MaxLogit + Mahalanobis, per-episode logits and released adapters, and every run is a reproduction check | CIFAR-FS + MiniImageNet, 1+5-shot | R18, MNv3 (+ baselines) | original | both | 42–44, fixed | 112 (the 8 MiniImageNet 5-shot seed-42 cells identical to E1 runs are trained once, in E1, and keep their grid regression reference) |
 | **E5-val** | VAL-only sweep to pick an alternative EDL recipe | CIFAR-FS 5-shot | R18 | btl_ms r16 | evidential | 42 | 6 |
 | **E5** | Re-run the evidential half of the 2⁵ grid with the selected recipe: is "head explains 83% of ECE" one recipe's artefact? Skipped if the selection equals the current recipe | CIFAR-FS + Mini, 1+5-shot | R18, MNv3 | btl_ms r16, lora_ss r16 | evidential | 42–44, fixed | 48 |
+
+**Implementation note (2026-10-22, Task 7).**
+- **Duplicates trained once.** Runs that would train an identical model exist only once, matched by `tmlr_design.training_identity`:
+  - 8 E4 grid cells are E1 seed-42 runs;
+  - 6 E3b runs are E3a seed-42 runs.
+- **Unmatched default pair added for every backbone.** It is run under the same seeds and stream as the matched levels, so rule R-B never mixes training regimes. This added MNv3 `lora_ss` r16 as level U in E1 (+10 runs) and E3b (+4).
+- **Analysis matches runs by attributes, never by experiment.**
 
 ## A3. Adapter arms
 
@@ -513,7 +520,7 @@ def test_trainable_state_size(): ...              # element count == count_train
 - `@dataclass(frozen=True) RunSpec`: `run_id, experiment, dataset, k_shot, backbone, arm, level, rank_spec, head, seed, vary_stream, config, parent, expected_n_params, est_minutes, regression_ref, wave, mode` (`"test"` | `"val_only"`).
 - `run_id` format: `{exp}_{ds}_{k}s_{bb}_{arm}_{level|grid}_r{ranks joined by -}_{evid|soft}_s{seed}`, e.g. `e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s43`.
 - Arm vocabulary: `btl_ms`, `lora_ss`, `lora_ms`, `btl_ss`. E4 additionally uses `full_ft` and `linear_probe` (the original grid's baseline arms). `level` is `"L"`, `"H"`, `"U"` (the MNv2 unmatched pair) or `None` (grid-style runs).
-- `WAVE0_RUN_IDS: tuple[str, ...]`: the 8 runs listed in Task 12, which get `wave = 0`. Every other run gets `wave = 1` (E1, E2, E5-val) or `wave = 2` (E3a, E3b, E4, E5).
+- `WAVE0_RUN_IDS: tuple[str, ...]`: the 9 runs listed in Task 12, which get `wave = 0`. Every other run gets `wave = 1` (E1, E2, E5-val) or `wave = 2` (E3a, E3b, E4, E5).
 - `build_design() -> list[RunSpec]` covers E1–E5 per A2.
   - E4 specs wrap `configs/grid/<cell>.yaml` via `extends`, overriding only `output.*` and `wandb.*`. Their `regression_ref` = the committed `results/grid/*_metrics.json`.
   - E1 seed-42 runs of existing arms get `regression_ref` = `results/rq3_matched/<cell>.json`.
@@ -530,22 +537,22 @@ def test_trainable_state_size(): ...              # element count == count_train
 ```python
 def test_run_counts():
     d = Counter(s.experiment for s in build_design())
-    assert (d["e1"], d["e2"], d["e3a"], d["e3b"], d["e4"], d["e5val"], d["e5"]) == (160, 180, 48, 90, 120, 6, 48)
+    assert (d["e1"], d["e2"], d["e3a"], d["e3b"], d["e4"], d["e5val"], d["e5"]) == (170, 180, 48, 94, 112, 6, 48)
 def test_run_ids_unique(): ...
 def test_level_spread_within_tolerance(): ...          # every LEVELS row: max/min - 1 <= 0.040
 @pytest.mark.parametrize("arm_key", unique_arm_keys())
 def test_expected_params_match_instantiated(arm_key): ...   # closed form == count_trainable_params(build_model(cfg))
 def test_e4_wraps_original_grid(): ...                 # merged E4 cfg == merged grid cfg except output/wandb
-def test_regression_refs_assigned(): ...               # 120 E4 + 16 E1 seed-42 existing-arm runs, each ref file exists
+def test_regression_refs_assigned(): ...               # 114 E4 (grid) + 16 E1 seed-42 existing-arm runs (factorial), each ref file exists
 def test_seed42_vary_matches_rq3_matched(): ...        # merged recipe identical; effective offset 20000
 def test_frozen_files_untouched(): ...                 # sha256 of test/val episode files unchanged after write_configs
 def test_e5_blocked_until_selected(): ...
-def test_wave0_runs(): ...                             # 8 ids, all in the manifest, all wave 0; 3 carry a regression_ref
+def test_wave0_runs(): ...                             # 9 ids, all in the manifest, all wave 0; 3 carry a regression_ref; no Aircraft
 ```
 
 - [ ] **Step 2:** Run. Expected: FAIL.
 - [ ] **Step 3:** Implement. Reuse `rq3_matched` helpers (`_differing_keys`, `_flatten`, `_checkpoint_tag`, `_head_descriptor`) by import, not by copy.
-- [ ] **Step 4:** Run `uv run --frozen python scripts/tmlr_configs.py --write --check`. Expected: it prints 652 runs (48 blocked), the budget table matching A3 exactly, and `control_guard ok`.
+- [ ] **Step 4:** Run `uv run --frozen python scripts/tmlr_configs.py --write --check`. Expected: it prints 658 runs (48 blocked), the budget table matching A3 exactly, and `control_guard ok`.
 - [ ] **Step 5:** Run the full suite.
 - [ ] **Step 6:** 🔒 HUMAN GATE.
 
@@ -725,19 +732,20 @@ def test_sigma_uses_ddof1(): ...
 
 ### Task 12: Wave 0 — end-to-end validation (1 account, about 2 h)
 
-- [ ] Run `uv run --frozen python scripts/tmlr_shards.py --wave 0`. This builds shard `W0-01` from these 8 manifest runs, one per new code path, plus regression anchors:
+- [ ] Run `uv run --frozen python scripts/tmlr_shards.py --wave 0`. This builds the Wave 0 shards from these 9 manifest runs (`tmlr_design.WAVE0_RUN_IDS`), one per new code path, plus regression anchors. No Aircraft run is included, because Aircraft is built during Wave 1:
   1. E1 R18 btl_ms H r16 evid s42 (`regression_ref` rq3_matched)
   2. E1 MNv3 lora_ss L r10 soft s42 (`regression_ref` rq3_matched)
   3. E1 R18 lora_ms H [3,3,4,3] evid s42
   4. E1 R18 btl_ss H r40 soft s42
   5. E2 R34 btl_ms H r16 soft s42
   6. E2 MNv2 lora_ss unmatched r16 evid s42
-  7. E3a Aircraft 5-shot R18 btl_ms r16 evid s42
+  7. E2 MNv2 btl_ss H r13 evid s42
   8. E4 `cifar_1shot_r18_parallel_softmax_seed42` (`regression_ref` results/grid)
+  9. E5-val kl 0.0 / prior 1.0 (the VAL-only path)
 - [ ] The human runs W0-01 on account 1 and notes the GPU quota before and after.
 - [ ] Run `scripts/tmlr_pull.sh`, then `uv run --frozen python scripts/tmlr_collect.py --incoming incoming/`.
 - [ ] **Gate (all must hold):**
-  - 8/8 done.
+  - 9/9 done.
   - Runs 1, 2 and 8 have guard `exact` or `within_tol`.
   - n_params match.
   - `env.gpu_name` contains T4.
@@ -758,7 +766,7 @@ def test_sigma_uses_ddof1(): ...
 
 - [ ] Run `scripts/tmlr_shards.py --wave 2`. Expect about 8 shards, 2 per account, run back to back.
 - [ ] Collect and retry until coverage is complete.
-- [ ] Gate: all 120 E4 runs show `exact`/`within_tol` against `results/grid`. A failure means the August grid and today's Kaggle disagree. Stop and debug before trusting any new number.
+- [ ] Gate: all 114 E4 runs show `exact`/`within_tol` against `results/grid`, and all 16 E1 seed-42 anchors against `results/rq3_matched`. A failure means the August grid and today's Kaggle disagree. Stop and debug before trusting any new number.
 - [ ] Back up immediately: HF repo (D4) **plus** one more copy (Google Drive or Zenodo draft). Raw results must never again exist in only one place.
 
 ## Phase 3 — Analysis

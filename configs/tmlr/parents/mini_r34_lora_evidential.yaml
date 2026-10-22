@@ -1,0 +1,6 @@
+# TMLR plan E2 parent — ResNet-34 x MiniImageNet, LoRA module, evidential head.
+# lora_targets [layer4.0.downsample.0] is inherited and valid on ResNet-34.
+extends: ../../exp_phase5_mini_lora_evidential.yaml
+backbone:
+  name: resnet34
+  feature_dim: 512

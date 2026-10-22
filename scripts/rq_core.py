@@ -67,7 +67,11 @@ from scripts.evaluate import _extract_features
 
 #: The four scores of RQ1's score axis, plus the native-affine vacuity kept
 #: alongside it as the Step-10 regression anchor / sensitivity row.
-FACTORIAL_SCORES = ("msp", "energy", "ts_msp", "vacuity_valfit", "vacuity_native")
+FACTORIAL_SCORES = ("msp", "energy", "ts_msp", "vacuity_valfit", "vacuity_native",
+                    # TMLR plan A7. Appended (never reordered) so every existing
+                    # key and value is unchanged; mahalanobis is only computed
+                    # when factorial_evaluate receives a base precision.
+                    "maxlogit", "mahalanobis")
 
 # ---------------------------------------------------------------------------
 # Process-lifetime caches. A grid sweep evaluates dozens of cells that share
@@ -223,6 +227,9 @@ def all_id_scores(logits: torch.Tensor, head: PrototypeHead, *,
     scores["msp"] = probs.max(dim=-1).values
     # T1.0a: raw prototype logits in BOTH arms.
     scores["energy"] = energy_score(logits)
+    # TMLR plan A7 — MaxLogit (Hendrycks et al. 2022): the max raw logit. For
+    # the cosine prototype head this is tau x nearest-prototype cosine.
+    scores["maxlogit"] = logits.max(dim=-1).values
     if temperature is not None:
         scores["ts_msp"] = apply_temperature(logits, temperature).max(dim=-1).values
 
@@ -266,6 +273,79 @@ def all_prob_sets(logits: torch.Tensor, head: PrototypeHead, *,
     out["evidential_valfit"], _ = evidence_to_probs_and_vacuity(
         evidence_v, num_classes, prior_per_class)
     return {k: v.detach() for k, v in out.items()}
+
+
+# =====================================================================
+# TMLR plan A7 — Mahalanobis (Lee et al. 2018), adapted to episodes
+# =====================================================================
+#: Train images per base class used to estimate the tied covariance.
+BASE_COV_PER_CLASS = 50
+#: Private sampling seed for those images; the global RNGs are never touched.
+BASE_COV_SEED = 31337
+
+
+def _embed(model, backbone_feats: torch.Tensor) -> torch.Tensor:
+    """Adapted, L2-normalised embedding: the same features the cosine head sees."""
+    return F.normalize(model.adapter_features_from_features(backbone_feats), dim=-1)
+
+
+def mahalanobis_score(q_emb: torch.Tensor, protos: torch.Tensor,
+                      precision: torch.Tensor) -> torch.Tensor:
+    """-min_c (q - mu_c)^T P (q - mu_c). Higher => more in-distribution.
+
+    Deviations from Lee et al. 2018 (flagged in PAPER SUMMARIES and plan A7):
+    class means are the episode prototypes (the test classes are unseen), the
+    tied covariance comes from BASE (train) classes, embeddings are
+    L2-normalised to match the cosine head, and there is no input
+    preprocessing or layer ensemble.
+    """
+    diff = q_emb[:, None, :] - protos[None, :, :]                  # (Q, C, D)
+    d2 = torch.einsum("qcd,de,qce->qc", diff, precision, diff)
+    return -d2.min(dim=-1).values
+
+
+def episode_prototypes(model, support_feats: torch.Tensor,
+                       support_y: torch.Tensor, n_way: int) -> torch.Tensor:
+    """Mean L2-normalised adapted support embedding per class, (n_way, D)."""
+    emb = _embed(model, support_feats)
+    return torch.stack([emb[support_y == c].mean(dim=0) for c in range(n_way)])
+
+
+def fit_base_precision(model, cfg, device, *, n_per_class: int = BASE_COV_PER_CLASS,
+                       seed: int = BASE_COV_SEED) -> torch.Tensor:
+    """Tied precision matrix from adapted embeddings of TRAIN-class images.
+
+    n_per_class images per train class, drawn with a private
+    numpy RandomState (global torch/numpy RNG untouched, so nothing evaluated
+    afterwards can shift). Class-centred, Ledoit-Wolf shrinkage
+    (sklearn), inverted to a precision. VAL/TEST classes are never read.
+    """
+    from sklearn.covariance import LedoitWolf
+    from src.datasets.episode_sampler import _label_index
+
+    split = cached_id_split(cfg.dataset, "train")
+    rng = np.random.RandomState(seed)
+    idx_by_class = _label_index(split)
+    model.eval()
+    centred = []
+    with torch.no_grad():
+        for c in sorted(idx_by_class):
+            pool = idx_by_class[c]
+            take = rng.choice(len(pool), size=min(n_per_class, len(pool)), replace=False)
+            x = torch.stack([split[pool[int(i)]][0] for i in sorted(take)]).to(device)
+            emb = _embed(model, _extract_features(model.backbone, x, device).to(device))
+            centred.append((emb - emb.mean(dim=0, keepdim=True)).cpu().double())
+    X = torch.cat(centred).numpy()
+    lw = LedoitWolf(assume_centered=True).fit(X)
+    P = torch.from_numpy(lw.precision_).float()
+    return ((P + P.T) / 2).to(device)
+
+
+def signed_calibration_gap(probs: torch.Tensor, targets: torch.Tensor) -> float:
+    """mean(max prob) - accuracy over pooled predictions. > 0: overconfident,
+    < 0: underconfident (thesis problem C15, checked across every model)."""
+    conf, pred = probs.max(dim=-1)
+    return float(conf.mean().item() - (pred == targets).float().mean().item())
 
 
 # =====================================================================
@@ -331,6 +411,12 @@ def build_ood_pools(model, cfg, device, *, use_tinyimagenet=True, use_gaussian=T
     if use_tinyimagenet:
         # Step 9: TinyImageNet-200 shares 25 wnids with MiniImageNet's 100
         # classes, so an "OOD" pool could otherwise contain literal ID images.
+        if ds_name == "fgvc_aircraft":
+            # TMLR plan Task 5 must route this through tin_exclusions(ds_name) with
+            # the frozen aircraft wnid list; until then refuse rather than build a
+            # "near-OOD" pool that silently contains airliner/warplane images.
+            raise NotImplementedError(
+                "TinyImageNet exclusions for fgvc_aircraft are not implemented yet (plan Task 5)")
         exclude = (MINI_IMAGENET_ALL_WNIDS if ds_name == "mini_imagenet" else None)
         tin_x = _cached_ood_images(
             ("tin",) + base_key,
@@ -355,7 +441,8 @@ def build_ood_pools(model, cfg, device, *, use_tinyimagenet=True, use_gaussian=T
 def factorial_evaluate(model, cfg, *, test_seeds, ood_pools, device,
                        temperature, affine_valfit, prior_per_class,
                        ece_bins=15, logits_out: Path | None = None,
-                       log_every=100, logger_print=print) -> dict:
+                       log_every=100, logger_print=print,
+                       precision: torch.Tensor | None = None) -> dict:
     """Run the 600 test episodes once and score them under EVERY
     (objective, score) combination.
 
@@ -402,6 +489,9 @@ def factorial_evaluate(model, cfg, *, test_seeds, ood_pools, device,
     model.eval()
     backbone = model.backbone
     with torch.no_grad():
+        # Mahalanobis: the adapted OOD embeddings do not depend on the episode.
+        ood_emb = ({p: _embed(model, ood_pools[p]) for p in pool_names}
+                   if precision is not None else {})
         for i, (sx, sy, qx, qy) in enumerate(test_iter):
             sx, sy = sx.to(device), sy.to(device)
             qx, qy = qx.to(device), qy.to(device)
@@ -427,6 +517,10 @@ def factorial_evaluate(model, cfg, *, test_seeds, ood_pools, device,
                                       temperature=temperature,
                                       prior_per_class=prior_per_class,
                                       affine_valfit=affine_valfit)
+            if precision is not None:
+                protos = episode_prototypes(model, sf, sy, K)
+                id_scores["mahalanobis"] = mahalanobis_score(
+                    _embed(model, qf), protos, precision)
             for k in track_id:
                 track_id[k].append(id_scores[k].cpu().numpy())
             if logits_out is not None:
@@ -440,6 +534,9 @@ def factorial_evaluate(model, cfg, *, test_seeds, ood_pools, device,
                                            temperature=temperature,
                                            prior_per_class=prior_per_class,
                                            affine_valfit=affine_valfit)
+                if precision is not None:
+                    ood_scores["mahalanobis"] = mahalanobis_score(
+                        ood_emb[pname], protos, precision)
                 for k in track_ood[pname]:
                     track_ood[pname][k].append(ood_scores[k].cpu().numpy())
                 if logits_out is not None:
@@ -470,6 +567,7 @@ def factorial_evaluate(model, cfg, *, test_seeds, ood_pools, device,
         summary[f"ece_pooled__{name}"] = float(
             expected_calibration_error(pooled_p, tgt, num_bins=ece_bins))
         summary[f"brier_mean__{name}"] = float(np.mean(per_ep[f"brier__{name}"]))
+        summary[f"signed_calibration_gap__{name}"] = signed_calibration_gap(pooled_p, tgt)
 
     # `ece_ts` is the ONE key src/evaluators/episodic.py computes from the
     # CONCATENATED logits (`apply_temperature(pooled_logits_t, T)`) instead of

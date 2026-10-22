@@ -1,0 +1,6 @@
+# TMLR plan E3 parent — FGVC-Aircraft (no ImageNet class overlap), mnv3, lora module,
+# softmax head. The MiniImageNet Step 10 recipe, unchanged except for the dataset
+# (the 84 px source is resized to 224 exactly as MiniImageNet is).
+extends: ../../exp_phase5_mini_mbnet_lora_softmax.yaml
+dataset:
+  name: fgvc_aircraft
