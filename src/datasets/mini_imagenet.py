@@ -496,9 +496,16 @@ def _ensure_cache(data_root: str, split: str,
 
     images, labels, source_layout = _build_split_cache(data_root, split, wnids)
     os.makedirs(data_root, exist_ok=True)
-    np.save(npy_path, images)
+    # Atomic publish (write a temp file, then os.replace): another process that
+    # memory-maps the cache must never see a half-written .npy. TMLR Wave 0 lost
+    # a session to exactly that (two GPU lanes, SIGBUS). Same bytes as before.
+    tmp_npy = npy_path.with_name(npy_path.name + f".tmp{os.getpid()}")
+    with open(tmp_npy, "wb") as f:
+        np.save(f, images)
+    os.replace(tmp_npy, npy_path)
     sha256 = hashlib.sha256(images.tobytes()).hexdigest()
-    with open(json_path, "w") as f:
+    tmp_json = json_path.with_name(json_path.name + f".tmp{os.getpid()}")
+    with open(tmp_json, "w") as f:
         json.dump({
             "split": split,
             "wnids": sorted(wnids),
@@ -507,6 +514,7 @@ def _ensure_cache(data_root: str, split: str,
             "source_layout": source_layout,
             "sha256": sha256,
         }, f, indent=2)
+    os.replace(tmp_json, json_path)
     return np.load(npy_path, mmap_mode="r"), labels
 
 

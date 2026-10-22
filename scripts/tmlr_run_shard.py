@@ -125,6 +125,38 @@ def run_lane(specs: list[T.RunSpec], out_dir: Path, *, train_fn: Callable, eval_
     return counts
 
 
+def prepare_data(specs: list[T.RunSpec], log=print) -> dict:
+    """Download/decode every dataset and OOD source this shard needs, SERIALLY in
+    one process, before any lane starts.
+
+    Lanes share data/; if two lanes each find a source missing, both download and
+    cache it at once, and one memory-maps a file the other is still writing
+    (Wave 0, W0-01: lane exit -7 = SIGBUS). After this runs, lanes only read.
+    """
+    from src.datasets import get_id_split, get_svhn_ood, get_tinyimagenet_ood
+    from src.datasets.mini_imagenet import MINI_IMAGENET_ALL_WNIDS
+    from src.utils import load_config
+
+    done: dict = {}
+    for s in specs:
+        cfg = load_config(REPO / s.config)
+        ds = cfg.dataset
+        name = str(ds.get("name", "cifar_fs"))
+        if name in done:
+            continue
+        sizes = {split: len(get_id_split(ds, split)) for split in ("train", "val", "test")}
+        img, n_ood, seed = int(ds.image_size), int(cfg.ood.num_samples), int(cfg.ood.seed)
+        get_svhn_ood(data_root=cfg.ood.data_root, image_size=img, num_samples=n_ood, seed=seed)
+        if name == "fgvc_aircraft":
+            raise NotImplementedError("Aircraft TinyImageNet exclusions arrive with plan Task 5")
+        exclude = MINI_IMAGENET_ALL_WNIDS if name == "mini_imagenet" else None
+        get_tinyimagenet_ood(data_root=ds.data_root, image_size=img, num_samples=n_ood,
+                             seed=seed, exclude_wnids=exclude)
+        done[name] = sizes
+        log(f"[prepare] {name}: splits {sizes}, SVHN + TinyImageNet ready")
+    return done
+
+
 def shard_report(shard: dict, out_dir: Path, design: dict) -> dict:
     expected = [r for lane in shard["lanes"] for r in lane]
     done = sorted(r for r in expected

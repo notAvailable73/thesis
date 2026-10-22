@@ -151,3 +151,27 @@ def test_factorial_guard_on_committed_rq3m_record():
         summary = dict(json.load(open(ref))["summary"])
         summary["ood_auroc__svhn_far__maxlogit"] = 0.5
         assert RS.factorial_guard(summary, ref)["status"] == "exact", s.run_id
+
+
+def test_prepare_data_once_per_dataset_and_serial(monkeypatch):
+    """Every dataset is prepared once, in this process, before lanes start."""
+    import src.datasets as ds_mod
+    calls = []
+    monkeypatch.setattr(ds_mod, "get_id_split", lambda d, split: calls.append(("id", d["name"], split)) or [0] * 3)
+    monkeypatch.setattr(ds_mod, "get_svhn_ood", lambda **k: calls.append(("svhn",)) or None)
+    monkeypatch.setattr(ds_mod, "get_tinyimagenet_ood", lambda **k: calls.append(("tin", k["exclude_wnids"] is not None)) or None)
+    specs = [DESIGN[r] for r in T.WAVE0_RUN_IDS]                       # cifar + mini, many runs
+    out = RS.prepare_data(specs, log=lambda *a: None)
+    assert set(out) == {"cifar_fs", "mini_imagenet"}
+    assert sum(1 for c in calls if c[0] == "id") == 6                   # 2 datasets x 3 splits
+    assert ("tin", True) in calls and ("tin", False) in calls            # Mini excludes overlapping wnids
+
+
+def test_mini_cache_write_is_atomic(tmp_path, monkeypatch):
+    import numpy as np
+    import src.datasets.mini_imagenet as mi
+    imgs = np.zeros((2, 84, 84, 3), dtype=np.uint8)
+    monkeypatch.setattr(mi, "_build_split_cache", lambda root, split, wnids: (imgs, ["a", "b"], "test"))
+    arr, labels = mi._ensure_cache(str(tmp_path), "val", {"val": ["a", "b"]})
+    assert arr.shape == (2, 84, 84, 3) and labels == ["a", "b"]
+    assert not list(tmp_path.glob("*.tmp*"))                            # temp files renamed away
