@@ -42,8 +42,28 @@ def timing_key(s: T.RunSpec) -> str:
     return f"{s.dataset}|{s.backbone}|{kind}|{s.k_shot}|{s.mode}"
 
 
+_SCALE_KEY = "__default_scale__"
+
+
+def calibrate(timings: dict | None, specs: list[T.RunSpec]) -> dict | None:
+    """Measured minutes per run type, plus a default scale for unmeasured types:
+    the median of measured / estimated over the types that WERE measured (the
+    plan's per-run defaults proved ~2x optimistic once two lanes share a host)."""
+    if not timings:
+        return timings
+    ratios = []
+    for key, minutes in timings.items():
+        est = [s.est_minutes for s in specs if timing_key(s) == key]
+        if est:
+            ratios.append(float(minutes) / est[0])
+    out = dict(timings)
+    out[_SCALE_KEY] = float(sorted(ratios)[len(ratios) // 2]) if ratios else 1.0
+    return out
+
+
 def _est(s: T.RunSpec, timings: dict | None) -> float:
-    return float((timings or {}).get(timing_key(s), s.est_minutes))
+    t = timings or {}
+    return float(t.get(timing_key(s), s.est_minutes * t.get(_SCALE_KEY, 1.0)))
 
 
 def _order(s: T.RunSpec) -> tuple:
@@ -127,7 +147,11 @@ def main(argv=None) -> int:
     ap.add_argument("--accounts", nargs="+", default=list(ACCOUNTS))
     a = ap.parse_args(argv)
     specs = T.build_design()
-    timings = json.load(open(a.timings)) if a.timings and a.timings.exists() else None
+    timings = calibrate(json.load(open(a.timings)) if a.timings and a.timings.exists() else None,
+                        specs)
+    if timings:
+        print(f"timings: {len(timings) - 1} measured run types, default scale "
+              f"x{timings[_SCALE_KEY]:.2f} for the rest")
     if a.retry:
         cov = json.load(open(a.retry))
         flat = {"missing": [r for e in cov.values() if isinstance(e, dict) for r in e.get("missing", [])],

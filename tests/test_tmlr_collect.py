@@ -116,3 +116,14 @@ def test_timings_written(tmp_path, manifest):
     assert all(v == pytest.approx(5.0) for v in t.values())     # 300 s -> 5 min
     reg = json.load(open(tmp_path / "dest/_regression.json"))
     assert reg["exact"] == sorted([R1, R2])
+
+
+def test_timings_prefer_lane_wall(tmp_path, manifest):
+    """The runlog's end-to-end wall (train + eval) beats the record's eval-only wall."""
+    inc = tmp_path / "incoming"
+    d = _shard_dir(inc, "W0-01", {R1: "sha-" + R1})
+    (d / "_lane0_runlog.jsonl").write_text(json.dumps(
+        {"run_id": R1, "status": "ok", "wall_seconds": 1200.0}) + "\n")
+    CO.collect(inc, tmp_path / "dest", manifest)
+    t = json.load(open(tmp_path / "dest/_timings.json"))
+    assert list(t.values()) == [pytest.approx(20.0)]

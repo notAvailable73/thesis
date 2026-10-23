@@ -85,6 +85,9 @@ def collect(incoming: Path, dest: Path = REPO / "results/tmlr",
 
     found: dict[str, list[Path]] = {}
     errors: set[str] = set()
+    #: End-to-end wall time (train + evaluate) from the lane run logs. The record's
+    #: own wall_seconds covers evaluation only and would under-size every shard.
+    lane_wall: dict[str, float] = {}
     for root in roots:
         for m in sorted(root.rglob("metrics.json")):
             rid = m.parent.name
@@ -95,6 +98,8 @@ def collect(incoming: Path, dest: Path = REPO / "results/tmlr",
                 e = json.loads(line)
                 if e.get("status") == "error":
                     errors.add(e["run_id"])
+                elif e.get("status") == "ok" and e.get("wall_seconds"):
+                    lane_wall[e["run_id"]] = float(e["wall_seconds"])
 
     report = {"copied": 0, "duplicates_identical": 0, "stale_code": []}
     for rid, dirs in sorted(found.items()):
@@ -135,8 +140,9 @@ def collect(incoming: Path, dest: Path = REPO / "results/tmlr",
     for exp, c in coverage.items():
         for rid in c["done"]:
             rec = json.load(open(dest / exp / rid / "metrics.json"))
-            if rid in design and "wall_seconds" in rec:
-                minutes.setdefault(timing_key(design[rid]), []).append(rec["wall_seconds"] / 60)
+            wall = lane_wall.get(rid, rec.get("wall_seconds"))
+            if rid in design and wall:
+                minutes.setdefault(timing_key(design[rid]), []).append(wall / 60)
             st = (rec.get("regression_guard") or {}).get("status")
             if st and st != "not_requested":
                 regression.setdefault(st, []).append(rid)

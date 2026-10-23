@@ -126,34 +126,29 @@ def run_lane(specs: list[T.RunSpec], out_dir: Path, *, train_fn: Callable, eval_
 
 
 def prepare_data(specs: list[T.RunSpec], log=print) -> dict:
-    """Download/decode every dataset and OOD source this shard needs, SERIALLY in
-    one process, before any lane starts.
+    """Download/decode every dataset and build every OOD image set this shard
+    needs, SERIALLY in one process, before any lane starts.
 
-    Lanes share data/; if two lanes each find a source missing, both download and
-    cache it at once, and one memory-maps a file the other is still writing
-    (Wave 0, W0-01: lane exit -7 = SIGBUS). After this runs, lanes only read.
+    Lanes share data/: two lanes preparing the same source at once corrupt each
+    other's cache (Wave 0, W0-01: lane exit -7 = SIGBUS), and building the OOD
+    image sets (TinyImageNet scans ~120k files) cost each lane ~30 min (W0-03).
+    With TMLR_OOD_CACHE set (the Kaggle session sets it) the OOD sets built here
+    land on disk and every lane just loads them.
     """
-    from src.datasets import get_id_split, get_svhn_ood, get_tinyimagenet_ood
-    from src.datasets.mini_imagenet import MINI_IMAGENET_ALL_WNIDS
+    import rq_core as R
     from src.utils import load_config
 
     done: dict = {}
     for s in specs:
         cfg = load_config(REPO / s.config)
-        ds = cfg.dataset
-        name = str(ds.get("name", "cifar_fs"))
+        name = str(cfg.dataset.get("name", "cifar_fs"))
         if name in done:
             continue
-        sizes = {split: len(get_id_split(ds, split)) for split in ("train", "val", "test")}
-        img, n_ood, seed = int(ds.image_size), int(cfg.ood.num_samples), int(cfg.ood.seed)
-        get_svhn_ood(data_root=cfg.ood.data_root, image_size=img, num_samples=n_ood, seed=seed)
-        if name == "fgvc_aircraft":
-            raise NotImplementedError("Aircraft TinyImageNet exclusions arrive with plan Task 5")
-        exclude = MINI_IMAGENET_ALL_WNIDS if name == "mini_imagenet" else None
-        get_tinyimagenet_ood(data_root=ds.data_root, image_size=img, num_samples=n_ood,
-                             seed=seed, exclude_wnids=exclude)
-        done[name] = sizes
-        log(f"[prepare] {name}: splits {sizes}, SVHN + TinyImageNet ready")
+        sizes = {split: len(R.cached_id_split(cfg.dataset, split))
+                 for split in ("train", "val", "test")}
+        sets = R.ood_image_sets(cfg)
+        done[name] = {"splits": sizes, "ood": {k: int(v.shape[0]) for k, v in sets.items()}}
+        log(f"[prepare] {name}: splits {sizes}, OOD sets {done[name]['ood']}")
     return done
 
 

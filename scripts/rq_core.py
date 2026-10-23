@@ -40,6 +40,7 @@ T2.2   The evidence map is NEVER reimplemented here. Every softplus goes
 from __future__ import annotations
 
 import json
+import os
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -97,11 +98,34 @@ def cached_id_split(dataset_cfg, split: str):
     return _SPLIT_CACHE[key]
 
 
+#: Optional ON-DISK cache shared by processes (TMLR Kaggle sessions set it, so
+#: the OOD image sets are built once by prepare_data and every GPU lane then just
+#: loads them; building TinyImageNet's pool scans ~120k files on a slow mount).
+#: Unset (default) -> in-process cache only, exactly as before.
+OOD_DISK_CACHE_ENV = "TMLR_OOD_CACHE"
+
+
+def _disk_cached(key, builder):
+    root = os.environ.get(OOD_DISK_CACHE_ENV)
+    if not root:
+        return builder()
+    import hashlib
+    path = Path(root) / (hashlib.sha256(repr(key).encode()).hexdigest()[:24] + ".pt")
+    if path.exists():
+        return torch.load(path, weights_only=False)
+    value = builder()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + f".tmp{os.getpid()}")
+    torch.save(value, tmp)
+    os.replace(tmp, path)              # atomic: another lane never sees half a file
+    return value
+
+
 def _cached_ood_images(key, builder):
     if not CACHE_OOD_IMAGES:
-        return builder()
+        return _disk_cached(key, builder)
     if key not in _OOD_IMG_CACHE:
-        _OOD_IMG_CACHE[key] = builder()
+        _OOD_IMG_CACHE[key] = _disk_cached(key, builder)
     return _OOD_IMG_CACHE[key]
 
 
@@ -384,55 +408,55 @@ def load_val_logits(model, cfg, device, repo_root: Path):
     return torch.cat(logits_all), torch.cat(targets_all), val_seeds
 
 
-def build_ood_pools(model, cfg, device, *, use_tinyimagenet=True, use_gaussian=True):
-    """The same four pools, in the same insertion order, as the Step 10 grid
-    invocation (`--use-tinyimagenet --use-gaussian`). Order matters: the first
-    pool is the legacy `primary_ood_pool` (svhn_far)."""
+def ood_image_sets(cfg, *, use_tinyimagenet=True, use_gaussian=True) -> dict:
+    """The OOD IMAGE tensors (no model needed), in the Step 10 insertion order:
+    svhn_far, <dataset>_near, tin_near, gaussian_far. Cached in-process and, in
+    TMLR sessions, on disk (see _disk_cached). Same keys, same builders, same
+    bytes as before the split."""
     img_size = int(cfg.dataset.image_size)
     n_ood = int(cfg.ood.num_samples)
     ood_seed = int(cfg.ood.seed)
-    pools = {}
-
     ds_name = str(cfg.dataset.get("name", "cifar_fs"))
     base_key = (ds_name, img_size, n_ood, ood_seed)
-
-    svhn_x = _cached_ood_images(
+    sets = {}
+    sets["svhn_far"] = _cached_ood_images(
         ("svhn", img_size, n_ood, ood_seed),
         lambda: get_svhn_ood(data_root=cfg.ood.data_root, image_size=img_size,
                              num_samples=n_ood, seed=ood_seed))
-    pools["svhn_far"] = _extract_features(model.backbone, svhn_x, device)
-
     near_name, heldout_x = _cached_ood_images(
         ("heldout",) + base_key,
         lambda: get_heldout_near_ood(cfg.dataset, num_samples=n_ood,
                                      seed=ood_seed, heldout_split="val"))
-    pools[near_name] = _extract_features(model.backbone, heldout_x, device)
-
+    sets[near_name] = heldout_x
     if use_tinyimagenet:
-        # Step 9: TinyImageNet-200 shares 25 wnids with MiniImageNet's 100
-        # classes, so an "OOD" pool could otherwise contain literal ID images.
         if ds_name == "fgvc_aircraft":
             # TMLR plan Task 5 must route this through tin_exclusions(ds_name) with
             # the frozen aircraft wnid list; until then refuse rather than build a
             # "near-OOD" pool that silently contains airliner/warplane images.
             raise NotImplementedError(
                 "TinyImageNet exclusions for fgvc_aircraft are not implemented yet (plan Task 5)")
+        # Step 9: TinyImageNet-200 shares 25 wnids with MiniImageNet's 100
+        # classes, so an "OOD" pool could otherwise contain literal ID images.
         exclude = (MINI_IMAGENET_ALL_WNIDS if ds_name == "mini_imagenet" else None)
-        tin_x = _cached_ood_images(
+        sets["tin_near"] = _cached_ood_images(
             ("tin",) + base_key,
             lambda: get_tinyimagenet_ood(data_root=cfg.dataset.data_root,
                                          image_size=img_size, num_samples=n_ood,
                                          seed=ood_seed, exclude_wnids=exclude))
-        pools["tin_near"] = _extract_features(model.backbone, tin_x, device)
-
     if use_gaussian:
-        gauss_x = _cached_ood_images(
+        sets["gaussian_far"] = _cached_ood_images(
             ("gauss", img_size, n_ood, ood_seed),
             lambda: get_gaussian_ood(image_size=img_size, num_samples=n_ood,
                                      seed=ood_seed))
-        pools["gaussian_far"] = _extract_features(model.backbone, gauss_x, device)
+    return sets
 
-    return pools
+
+def build_ood_pools(model, cfg, device, *, use_tinyimagenet=True, use_gaussian=True):
+    """The same four pools, in the same insertion order, as the Step 10 grid
+    invocation (`--use-tinyimagenet --use-gaussian`). Order matters: the first
+    pool is the legacy `primary_ood_pool` (svhn_far)."""
+    sets = ood_image_sets(cfg, use_tinyimagenet=use_tinyimagenet, use_gaussian=use_gaussian)
+    return {name: _extract_features(model.backbone, x, device) for name, x in sets.items()}
 
 
 # =====================================================================

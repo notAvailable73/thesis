@@ -1,0 +1,7 @@
+{
+ "exact": [
+  "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s42",
+  "e1_mini_5s_r18_btl_ms_H_r16_evid_s42",
+  "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s42"
+ ]
+}

@@ -33,3 +33,9 @@ checkpoints/
 # OS
 .DS_Store
 Thumbs.db
+
+# TMLR runs: downloaded shard zips, collector staging, and per-episode logits
+# (~12 MB/run) stay out of git; they live on the HF dataset repo.
+incoming/
+results/tmlr/_staging/
+results/tmlr/**/logits.npz

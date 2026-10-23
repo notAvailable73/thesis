@@ -60,6 +60,7 @@ for i, lane in enumerate(SHARD['lanes']):
 # Download/decode every dataset + OOD source ONCE, here, before the lanes start:
 # two lanes preparing the same data at once corrupt each other's cache (W0-01 crash).
 t_prep = time.time()
+os.environ['TMLR_OOD_CACHE'] = str(REPO / 'data' / '_ood_cache')   # lanes inherit it
 PREPARED = RS.prepare_data(mine)
 print(f'data ready in {(time.time() - t_prep) / 60:.1f} min:', PREPARED)
 

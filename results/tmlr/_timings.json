@@ -1,0 +1,10 @@
+{
+ "cifar_fs|resnet18|btl|1|test": 25.41,
+ "cifar_fs|resnet18|btl|5|val_only": 6.858333333333333,
+ "mini_imagenet|mobilenetv2|btl|5|test": 12.32,
+ "mini_imagenet|mobilenetv2|lora|5|test": 10.311666666666667,
+ "mini_imagenet|mobilenetv3_small|lora|5|test": 12.06,
+ "mini_imagenet|resnet18|btl|5|test": 35.416666666666664,
+ "mini_imagenet|resnet18|lora|5|test": 43.055,
+ "mini_imagenet|resnet34|btl|5|test": 15.735000000000001
+}

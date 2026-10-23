@@ -155,16 +155,36 @@ def test_factorial_guard_on_committed_rq3m_record():
 
 def test_prepare_data_once_per_dataset_and_serial(monkeypatch):
     """Every dataset is prepared once, in this process, before lanes start."""
-    import src.datasets as ds_mod
+    import rq_core as R
     calls = []
-    monkeypatch.setattr(ds_mod, "get_id_split", lambda d, split: calls.append(("id", d["name"], split)) or [0] * 3)
-    monkeypatch.setattr(ds_mod, "get_svhn_ood", lambda **k: calls.append(("svhn",)) or None)
-    monkeypatch.setattr(ds_mod, "get_tinyimagenet_ood", lambda **k: calls.append(("tin", k["exclude_wnids"] is not None)) or None)
+    monkeypatch.setattr(R, "cached_id_split", lambda d, split: calls.append(("id", d["name"], split)) or [0] * 3)
+    import torch
+    monkeypatch.setattr(R, "ood_image_sets", lambda cfg: calls.append(("ood", cfg.dataset.name))
+                        or {"svhn_far": torch.zeros(2, 3, 4, 4)})
     specs = [DESIGN[r] for r in T.WAVE0_RUN_IDS]                       # cifar + mini, many runs
     out = RS.prepare_data(specs, log=lambda *a: None)
     assert set(out) == {"cifar_fs", "mini_imagenet"}
     assert sum(1 for c in calls if c[0] == "id") == 6                   # 2 datasets x 3 splits
-    assert ("tin", True) in calls and ("tin", False) in calls            # Mini excludes overlapping wnids
+    assert sorted(c[1] for c in calls if c[0] == "ood") == ["cifar_fs", "mini_imagenet"]
+
+
+def test_ood_disk_cache_shared_and_identical(tmp_path, monkeypatch):
+    """A second process (simulated by clearing the in-process cache) loads the
+    disk copy instead of rebuilding, and gets identical bytes."""
+    import rq_core as R
+    import torch
+    monkeypatch.setenv(R.OOD_DISK_CACHE_ENV, str(tmp_path))
+    built = []
+    def builder():
+        built.append(1)
+        return torch.arange(12, dtype=torch.float32).reshape(1, 3, 2, 2)
+    R.clear_caches()
+    a = R._cached_ood_images(("tin", "x", 1), builder)
+    R.clear_caches()                                    # "another lane"
+    b = R._cached_ood_images(("tin", "x", 1), builder)
+    assert built == [1] and torch.equal(a, b)
+    assert not list(tmp_path.glob("*.tmp*"))
+    R.clear_caches()
 
 
 def test_mini_cache_write_is_atomic(tmp_path, monkeypatch):
