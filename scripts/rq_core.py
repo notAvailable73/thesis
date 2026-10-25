@@ -51,9 +51,8 @@ import yaml
 
 from src.datasets import (
     EpisodicIterableDataset, get_id_split, get_svhn_ood, get_heldout_near_ood,
-    get_tinyimagenet_ood, get_gaussian_ood,
+    get_tinyimagenet_ood, get_gaussian_ood, tin_exclusions,
 )
-from src.datasets.mini_imagenet import MINI_IMAGENET_ALL_WNIDS
 from src.evaluators import (
     accuracy, f1_macro, expected_calibration_error, brier_score,
     ood_auroc, fpr_at_95_tpr, energy_score, fit_temperature,
@@ -429,15 +428,10 @@ def ood_image_sets(cfg, *, use_tinyimagenet=True, use_gaussian=True) -> dict:
                                      seed=ood_seed, heldout_split="val"))
     sets[near_name] = heldout_x
     if use_tinyimagenet:
-        if ds_name == "fgvc_aircraft":
-            # TMLR plan Task 5 must route this through tin_exclusions(ds_name) with
-            # the frozen aircraft wnid list; until then refuse rather than build a
-            # "near-OOD" pool that silently contains airliner/warplane images.
-            raise NotImplementedError(
-                "TinyImageNet exclusions for fgvc_aircraft are not implemented yet (plan Task 5)")
         # Step 9: TinyImageNet-200 shares 25 wnids with MiniImageNet's 100
         # classes, so an "OOD" pool could otherwise contain literal ID images.
-        exclude = (MINI_IMAGENET_ALL_WNIDS if ds_name == "mini_imagenet" else None)
+        # Aircraft: none of TinyImageNet's classes is an aircraft (fgvc_aircraft.py).
+        exclude = tin_exclusions(ds_name)
         sets["tin_near"] = _cached_ood_images(
             ("tin",) + base_key,
             lambda: get_tinyimagenet_ood(data_root=cfg.dataset.data_root,

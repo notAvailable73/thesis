@@ -1,0 +1,27 @@
+{
+  "best_val_epoch": 2,
+  "config": "configs/tmlr/e5val/e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p0.5_s42.yaml",
+  "env": {
+    "cuda": "12.8",
+    "git_sha": "6adeaa984d1ae77aa9724e604b0d8095e236d13b",
+    "gpu_name": "Tesla T4",
+    "torch": "2.11.0+cu128",
+    "torch_threads": 2,
+    "torchvision": "0.26.0+cu128"
+  },
+  "meta": {
+    "merged_config_sha256": "d766c603b92345c4404a888b96caccaa6abd1ee1c2672f87ba8249e512028b6d",
+    "run_id": "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p0.5_s42"
+  },
+  "n_params": 31746,
+  "seed": 42,
+  "val_accuracy__evidential_native": 0.8533333539962769,
+  "val_ece_pooled__evidential_native": 0.2541615903953711,
+  "val_nll__evidential_native": 0.6512708067893982,
+  "val_seeds": {
+    "first": 10000,
+    "last": 10099,
+    "n": 100
+  },
+  "wall_seconds": 29.4
+}

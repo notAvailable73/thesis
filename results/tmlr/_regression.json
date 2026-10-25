@@ -1,7 +1,23 @@
 {
  "exact": [
+  "e1_mini_5s_mnv3_btl_ms_H_r22_evid_s42",
+  "e1_mini_5s_mnv3_btl_ms_H_r22_soft_s42",
+  "e1_mini_5s_mnv3_btl_ms_L_r16_evid_s42",
+  "e1_mini_5s_mnv3_btl_ms_L_r16_soft_s42",
+  "e1_mini_5s_mnv3_lora_ss_H_r14_evid_s42",
+  "e1_mini_5s_mnv3_lora_ss_H_r14_soft_s42",
+  "e1_mini_5s_mnv3_lora_ss_L_r10_evid_s42",
   "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s42",
+  "e1_mini_5s_mnv3_lora_ss_U_r16_evid_s42",
+  "e1_mini_5s_mnv3_lora_ss_U_r16_soft_s42",
   "e1_mini_5s_r18_btl_ms_H_r16_evid_s42",
+  "e1_mini_5s_r18_btl_ms_H_r16_soft_s42",
+  "e1_mini_5s_r18_btl_ms_L_r6_evid_s42",
+  "e1_mini_5s_r18_btl_ms_L_r6_soft_s42",
+  "e1_mini_5s_r18_lora_ss_H_r41_evid_s42",
+  "e1_mini_5s_r18_lora_ss_H_r41_soft_s42",
+  "e1_mini_5s_r18_lora_ss_L_r16_evid_s42",
+  "e1_mini_5s_r18_lora_ss_L_r16_soft_s42",
   "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s42"
  ]
 }

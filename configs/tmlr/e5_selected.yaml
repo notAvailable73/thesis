@@ -1,0 +1,35 @@
+kl_weight_max: 0.05
+prior_per_class: 0.5
+skipped: false
+rule: lowest VAL ECE; ties within 0.002 -> higher VAL accuracy
+candidates:
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p1.0_s42
+  kl_weight_max: 0.0
+  prior_per_class: 1.0
+  val_ece: 0.34207937052647275
+  val_acc: 0.8477333188056946
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p0.5_s42
+  kl_weight_max: 0.0
+  prior_per_class: 0.5
+  val_ece: 0.2541615903953711
+  val_acc: 0.8533333539962769
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.05_p1.0_s42
+  kl_weight_max: 0.05
+  prior_per_class: 1.0
+  val_ece: 0.3437095555067063
+  val_acc: 0.8493333458900452
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.05_p0.5_s42
+  kl_weight_max: 0.05
+  prior_per_class: 0.5
+  val_ece: 0.22439004966815312
+  val_acc: 0.8574666380882263
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.1_p1.0_s42
+  kl_weight_max: 0.1
+  prior_per_class: 1.0
+  val_ece: 0.2830442796945572
+  val_acc: 0.8601333498954773
+- run_id: e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.1_p0.5_s42
+  kl_weight_max: 0.1
+  prior_per_class: 0.5
+  val_ece: 0.27121626864473025
+  val_acc: 0.8519999980926514

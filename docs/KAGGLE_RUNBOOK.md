@@ -37,6 +37,7 @@ Every finished shard uploads its zip here automatically, from any of the 4 accou
    - *Session options → Accelerator*: **GPU T4 x2**.
    - *Session options → Internet*: **On**.
    - *Add Input → Datasets*: your data dataset from step 3.
+   - *Add Input → Datasets* (from Wave 2): **`seryouxblaster764/fgvc-aircraft`** (FGVC Aircraft), the dataset itself, not a notebook. The session builds `data/aircraft_84.npz` from it in about 1–3 minutes and checks its fingerprint against `AIRCRAFT_CACHE_SHA256`; on a mismatch it stops before training.
    - *Add-ons → Secrets → Add a new secret*: label **`HF_TOKEN`**, value = your `hf_…` token. Make sure it is **attached to this notebook** (toggle it on).
 6. In the control cell, set `HF_REPO = '<your-hf-username>/bpeft-tmlr-runs'` once.
 
@@ -99,5 +100,7 @@ Send the AI the printed report, or just say "collected". It checks coverage and 
 The AI fills this table after Wave 0, from the measured timings.
 
 ### Wave 2 — E3a + E3b + E5 + E4 (≈253 runs; Aircraft code is built during Wave 1)
+
+Every Wave 2 notebook needs the FGVC Aircraft dataset attached (Part 1.2, step 5).
 
 The AI fills this table after Wave 1.

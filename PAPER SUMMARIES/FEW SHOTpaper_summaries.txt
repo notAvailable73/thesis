@@ -245,6 +245,141 @@ Paraphrased from the PDFs; numbers/equations are taken directly from each paper.
    natural quantity to convert into Dirichlet evidence for calibrated,
    uncertainty-aware classification.
 
+==== PAPER: Fine-Grained Visual Classification of Aircraft (FGVC-Aircraft) ====
+[Added 2026-10-23 for the TMLR follow-up (Aircraft dataset, plan Task 0.2 / Task 5).
+ Source: arXiv:1306.5151v1 PDF, pages 1-6 read directly.]
+
+1. TITLE / AUTHORS / VENUE
+   Title: "Fine-Grained Visual Classification of Aircraft"
+   Authors: Subhransu Maji, Esa Rahtu, Juho Kannala, Matthew Blaschko,
+            Andrea Vedaldi.
+   Venue as printed: arXiv:1306.5151v1 [cs.CV], 21 Jun 2013 (technical report;
+   the dataset was part of the ImageNet 2013 FGVC challenge, Sec. 5).
+
+2. CORE IDEA
+   A fine-grained dataset of 10,000 airplane images over 100 model variants,
+   built from aircraft-spotter photos. Aircraft are rigid, so the difficulty
+   comes from subtle structural, historical-style and livery differences, not
+   from pose deformation.
+
+3. METHOD / ARCHITECTURE (dataset construction)
+   - Four-level label hierarchy: model (not used, often visually
+     indistinguishable), variant (100), family (70), manufacturer (30 in
+     Sec. 2 and Fig. 2; the Kaggle mirror's description says 41).
+   - 100 images per variant, about 1-2 Mpixel, the dominant aircraft generally
+     well centred. Images were greedily selected per variant to maximise
+     diversity (photographer, time, airline, airport), then randomly assigned to
+     train / val / test (33 or 34 per variant each).
+   - Bounding boxes from Amazon Mechanical Turk (3 annotations, kept if two
+     agree with overlap > 0.85, averaged).
+   - Every image carries a 20-pixel authorship banner at the bottom: "Do not
+     forget to remove this banner before using the images in experiments."
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Baseline only: non-linear SVM on a chi-squared kernel over bag-of-visual-words
+   (600 k-means words, dense multi-scale SIFT, 1x1 and 2x2 spatial pyramid),
+   trained on the whole image without using the bounding box.
+
+5. DATASETS & METRICS
+   Class-normalised average accuracy (mean of the confusion-matrix diagonal).
+   Baseline: variant 48.69%, family 58.48%, manufacturer 71.30%. Hardest
+   confusions are within the Boeing 737 / 747, Airbus, MD and Embraer families.
+
+6. IMPLEMENTATION NOTES
+   - The paper states that bounding boxes "can be used for training ... but
+     should not be used for testing". This is about the original 100-way
+     classification benchmark. Our follow-up instead follows the Meta-Dataset
+     convention (next entry): crop EVERY image (train and test classes) to its
+     box. FLAGGED DEVIATION from this paper; the crop also removes the
+     copyright banner, which the paper requires anyway.
+   - The official image-level train/val/test subsets are irrelevant for
+     few-shot use: few-shot splits partition the 100 variant CLASSES, so we
+     merge all 10,000 images and split by class.
+   - Images are for non-commercial research use only (Sec. 2, 5.1); we
+     redistribute nothing but the class-split constant and code.
+
+7. OFFICIAL CODE REPO
+   None. Data at http://www.robots.ox.ac.uk/~vgg/data/fgvc-aircraft/
+   (archive fgvc-aircraft-2013b). We use the unmodified Kaggle mirror
+   seryouxblaster764/fgvc-aircraft, which contains that archive's directory.
+
+8. RELEVANCE TO THESIS (TMLR follow-up)
+   PROS: a fine-grained domain whose classes are NOT ImageNet-1k test classes,
+   answering the reviewer objection that MiniImageNet's test classes are ImageNet
+   classes the frozen backbone saw. It is also a standard Meta-Dataset source,
+   so results are comparable in kind.
+   CONS / LIMITS: ImageNet-1k contains the classes "airliner" and "warplane",
+   so the domain is not unseen by the backbone at the coarse level, only at the
+   variant level; TinyImageNet's near-OOD pool must drop its aircraft classes
+   when Aircraft is in-distribution. 100 images per class (vs 600 in
+   MiniImageNet) means fewer distinct query sets per class.
+   FIT: good, as a replication domain (E3a/E3b), not as a headline.
+
+==== PAPER: Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few Examples ====
+[Added 2026-10-23 for the TMLR follow-up (Aircraft preprocessing, plan Task 0.2).
+ Source: arXiv:1903.03096 PDF (ICLR 2020 version); main text and the Appendix's
+ dataset descriptions read via pdftotext.]
+
+1. TITLE / AUTHORS / VENUE
+   Title: "Meta-Dataset: A Dataset of Datasets for Learning to Learn from Few
+   Examples". Authors: Eleni Triantafillou, Tyler Zhu, Vincent Dumoulin,
+   Pascal Lamblin, Utku Evci, Kelvin Xu, Ross Goroshin, Carles Gelada,
+   Kevin Swersky, Pierre-Antoine Manzagol, Hugo Larochelle. ICLR 2020.
+
+2. CORE IDEA
+   A few-shot benchmark built from 10 datasets (ImageNet, Omniglot, Aircraft,
+   Birds, Textures, Quick Draw, Fungi, VGG Flower, Traffic Signs, MSCOCO) with
+   variable-way, variable-shot, class-imbalanced episodes drawn from a single
+   dataset each, to test generalisation across domains.
+
+3. METHOD / ARCHITECTURE (benchmark protocol)
+   - Class splits roughly 70% / 15% / 15% train / val / test per source;
+     Traffic Signs and MSCOCO are test-only. The exact splits are in the
+     source code (github.com/google-research/meta-dataset, dataset_conversion/
+     splits).
+   - Aircraft (Appendix): "images are cropped according to the providing
+     bounding boxes, in order not to include other aircrafts, or the copyright
+     text at the bottom of images." 100 images per class. The Appendix says "102
+     model variants", as does the archive's own README; its variants.txt
+     (and the label files) list 100, as do Maji et al. We
+     treat 100 as correct and flag the discrepancy.
+   - Birds, by contrast, uses full images without box crops.
+
+4. KEY HYPERPARAMETERS / TRAINING DETAILS
+   Baselines (k-NN, Finetune, MatchingNet, ProtoNet, fo-MAML, RelationNet,
+   fo-Proto-MAML) were tuned on validation episodes, at "the commonly-used
+   84x84 and 126x126" resolutions; ADAM for all models.
+
+5. DATASETS & METRICS
+   Mean accuracy over test episodes with 95% CIs, and average rank. Aircraft,
+   trained on ImageNet only: ProtoNet 53.10%, Finetune 68.69%; trained on all
+   datasets: ProtoNet 71.14%, fo-Proto-MAML 75.23%. Variable-way episodes, so
+   not directly comparable to our 5-way numbers.
+
+6. IMPLEMENTATION NOTES
+   - What we adopt: the bounding-box crop for Aircraft and the 84x84 cached
+     resolution (identical to our MiniImageNet cache, then resized to 224 by the
+     same transform).
+   - What we do NOT adopt: variable-way/variable-shot episodes (we keep 5-way
+     {1,5}-shot, as in the whole thesis), and the 70/15/15 Aircraft split. We
+     use a seeded 64/16/20 class split, so Aircraft matches CIFAR-FS and
+     MiniImageNet in split shape. FLAGGED DEVIATION.
+   - The PDF does not state the resize interpolation; we use PIL bilinear,
+     recorded in the cache metadata.
+
+7. OFFICIAL CODE REPO
+   github.com/google-research/meta-dataset (stated in the paper).
+
+8. RELEVANCE TO THESIS (TMLR follow-up)
+   PROS: provides the accepted preprocessing for Aircraft in few-shot work,
+   so our crop is a convention, not an ad-hoc choice; its ImageNet-only
+   results show Aircraft is hard for ImageNet-trained metric learners, which
+   makes it a meaningful stress test for frozen backbones.
+   CONS: its protocol differs from ours (variable-way episodes, different
+   splits), so we cite it for preprocessing only, not for comparable numbers.
+   FIT: preprocessing reference only.
+
 ================================================================================
 END — 4 papers summarized, 4 PDFs present in the folder (none skipped).
++ 2 entries added 2026-10-23 from arXiv PDFs (FGVC-Aircraft, Meta-Dataset) for the TMLR follow-up.
 ================================================================================

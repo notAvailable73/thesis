@@ -1,13 +1,6 @@
 {
  "e1": {
   "done": [
-   "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s42",
-   "e1_mini_5s_r18_btl_ms_H_r16_evid_s42",
-   "e1_mini_5s_r18_btl_ss_H_r40_soft_s42",
-   "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s42"
-  ],
-  "error": [],
-  "missing": [
    "e1_mini_5s_mnv3_btl_ms_H_r22_evid_s42",
    "e1_mini_5s_mnv3_btl_ms_H_r22_evid_s43",
    "e1_mini_5s_mnv3_btl_ms_H_r22_evid_s44",
@@ -83,6 +76,7 @@
    "e1_mini_5s_mnv3_lora_ss_L_r10_evid_s44",
    "e1_mini_5s_mnv3_lora_ss_L_r10_evid_s45",
    "e1_mini_5s_mnv3_lora_ss_L_r10_evid_s46",
+   "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s42",
    "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s43",
    "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s44",
    "e1_mini_5s_mnv3_lora_ss_L_r10_soft_s45",
@@ -97,6 +91,7 @@
    "e1_mini_5s_mnv3_lora_ss_U_r16_soft_s44",
    "e1_mini_5s_mnv3_lora_ss_U_r16_soft_s45",
    "e1_mini_5s_mnv3_lora_ss_U_r16_soft_s46",
+   "e1_mini_5s_r18_btl_ms_H_r16_evid_s42",
    "e1_mini_5s_r18_btl_ms_H_r16_evid_s43",
    "e1_mini_5s_r18_btl_ms_H_r16_evid_s44",
    "e1_mini_5s_r18_btl_ms_H_r16_evid_s45",
@@ -121,6 +116,7 @@
    "e1_mini_5s_r18_btl_ss_H_r40_evid_s44",
    "e1_mini_5s_r18_btl_ss_H_r40_evid_s45",
    "e1_mini_5s_r18_btl_ss_H_r40_evid_s46",
+   "e1_mini_5s_r18_btl_ss_H_r40_soft_s42",
    "e1_mini_5s_r18_btl_ss_H_r40_soft_s43",
    "e1_mini_5s_r18_btl_ss_H_r40_soft_s44",
    "e1_mini_5s_r18_btl_ss_H_r40_soft_s45",
@@ -135,6 +131,7 @@
    "e1_mini_5s_r18_btl_ss_L_r15_soft_s44",
    "e1_mini_5s_r18_btl_ss_L_r15_soft_s45",
    "e1_mini_5s_r18_btl_ss_L_r15_soft_s46",
+   "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s42",
    "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s43",
    "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s44",
    "e1_mini_5s_r18_lora_ms_H_r3-3-4-3_evid_s45",
@@ -175,16 +172,12 @@
    "e1_mini_5s_r18_lora_ss_L_r16_soft_s45",
    "e1_mini_5s_r18_lora_ss_L_r16_soft_s46"
   ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  },
  "e2": {
   "done": [
-   "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s42",
-   "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s42",
-   "e2_mini_5s_r34_btl_ms_H_r16_soft_s42"
-  ],
-  "error": [],
-  "missing": [
    "e2_mini_5s_mnv2_btl_ms_H_r22_evid_s42",
    "e2_mini_5s_mnv2_btl_ms_H_r22_evid_s43",
    "e2_mini_5s_mnv2_btl_ms_H_r22_evid_s44",
@@ -215,6 +208,7 @@
    "e2_mini_5s_mnv2_btl_ms_U_r16_soft_s44",
    "e2_mini_5s_mnv2_btl_ms_U_r16_soft_s45",
    "e2_mini_5s_mnv2_btl_ms_U_r16_soft_s46",
+   "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s42",
    "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s43",
    "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s44",
    "e2_mini_5s_mnv2_btl_ss_H_r13_evid_s45",
@@ -274,6 +268,7 @@
    "e2_mini_5s_mnv2_lora_ss_L_r9_soft_s44",
    "e2_mini_5s_mnv2_lora_ss_L_r9_soft_s45",
    "e2_mini_5s_mnv2_lora_ss_L_r9_soft_s46",
+   "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s42",
    "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s43",
    "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s44",
    "e2_mini_5s_mnv2_lora_ss_U_r16_evid_s45",
@@ -288,6 +283,7 @@
    "e2_mini_5s_r34_btl_ms_H_r16_evid_s44",
    "e2_mini_5s_r34_btl_ms_H_r16_evid_s45",
    "e2_mini_5s_r34_btl_ms_H_r16_evid_s46",
+   "e2_mini_5s_r34_btl_ms_H_r16_soft_s42",
    "e2_mini_5s_r34_btl_ms_H_r16_soft_s43",
    "e2_mini_5s_r34_btl_ms_H_r16_soft_s44",
    "e2_mini_5s_r34_btl_ms_H_r16_soft_s45",
@@ -363,6 +359,8 @@
    "e2_mini_5s_r34_lora_ss_L_r16_soft_s45",
    "e2_mini_5s_r34_lora_ss_L_r16_soft_s46"
   ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  },
  "e3a": {
@@ -643,16 +641,15 @@
  },
  "e5val": {
   "done": [
-   "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p1.0_s42"
-  ],
-  "error": [],
-  "missing": [
    "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.05_p0.5_s42",
    "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.05_p1.0_s42",
    "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p0.5_s42",
+   "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.0_p1.0_s42",
    "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.1_p0.5_s42",
    "e5val_cifar_5s_r18_btl_ms_grid_r16_evid_kl0.1_p1.0_s42"
   ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  }
 }

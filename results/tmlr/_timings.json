@@ -1,10 +1,12 @@
 {
  "cifar_fs|resnet18|btl|1|test": 25.41,
- "cifar_fs|resnet18|btl|5|val_only": 6.858333333333333,
- "mini_imagenet|mobilenetv2|btl|5|test": 12.32,
- "mini_imagenet|mobilenetv2|lora|5|test": 10.311666666666667,
- "mini_imagenet|mobilenetv3_small|lora|5|test": 12.06,
- "mini_imagenet|resnet18|btl|5|test": 35.416666666666664,
- "mini_imagenet|resnet18|lora|5|test": 43.055,
- "mini_imagenet|resnet34|btl|5|test": 15.735000000000001
+ "cifar_fs|resnet18|btl|5|val_only": 7.8566666666666665,
+ "mini_imagenet|mobilenetv2|btl|5|test": 11.599166666666665,
+ "mini_imagenet|mobilenetv2|lora|5|test": 10.983333333333334,
+ "mini_imagenet|mobilenetv3_small|btl|5|test": 11.628333333333334,
+ "mini_imagenet|mobilenetv3_small|lora|5|test": 10.7575,
+ "mini_imagenet|resnet18|btl|5|test": 12.995000000000001,
+ "mini_imagenet|resnet18|lora|5|test": 11.719166666666666,
+ "mini_imagenet|resnet34|btl|5|test": 15.3275,
+ "mini_imagenet|resnet34|lora|5|test": 13.782499999999999
 }

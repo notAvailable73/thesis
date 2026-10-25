@@ -42,9 +42,8 @@ from src.utils import (
 from src.datasets import (
     build_dataset, sample_episode, get_svhn_ood, get_id_split,
     get_heldout_near_ood, get_tinyimagenet_ood, get_gaussian_ood,
-    EpisodicIterableDataset,
+    EpisodicIterableDataset, tin_exclusions,
 )
-from src.datasets.mini_imagenet import MINI_IMAGENET_ALL_WNIDS
 from src.models import build_model
 from src.losses import build_loss
 from src.trainers import train_one_episode
@@ -380,9 +379,7 @@ def _evaluate_episodic(cfg, args, logger, device, wb, seeds, repo_root) -> dict:
         # so the "OOD" pool cannot contain literal in-distribution images.
         # exclude_wnids=None for cifar_fs leaves this call byte-identical to
         # every pre-Step-9 run.
-        exclude_wnids = (MINI_IMAGENET_ALL_WNIDS
-                         if str(cfg.dataset.get("name", "cifar_fs")) == "mini_imagenet"
-                         else None)
+        exclude_wnids = tin_exclusions(str(cfg.dataset.get("name", "cifar_fs")))
         tin_x = get_tinyimagenet_ood(data_root=cfg.dataset.data_root,
                                      image_size=img_size, num_samples=n_ood,
                                      seed=ood_seed, exclude_wnids=exclude_wnids)

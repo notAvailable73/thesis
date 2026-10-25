@@ -160,4 +160,11 @@ The recipe is selected on VAL only (plan A8): lowest VAL pooled ECE, with ties w
 
 ## Changelog
 
-*(empty — any post-push change is appended here with date, reason and the commit)*
+*(any post-push change is appended here with date, reason and the commit)*
+
+- **2026-10-23 — Aircraft data definition fixed (before any Aircraft run; implementation detail, no rule changed).**
+  - Source: the unmodified `fgvc-aircraft-2013b` directory from the Kaggle mirror `seryouxblaster764/fgvc-aircraft`. All 10,000 images, 100 per variant; the official image subsets are merged.
+  - Preprocessing: crop to `images_box.txt` (Meta-Dataset convention, which also removes the copyright banner), PIL bilinear to 84×84. Content hash `df52796f…a27c8` is the same with Pillow 10.4, 11.3 and 12.0.
+  - Class split: seeded 64/16/20 (`RandomState(2026)`), frozen in `src/datasets/fgvc_aircraft.py`, split hash `6da5d5ea…7472`. The `aircraft_near` pool draws from the 16 val variants.
+  - TinyImageNet exclusions for Aircraft: **none**. No TinyImageNet-200 class is an aircraft; the nearest, n04008634 "projectile, missile", is kept. So `tin_near` for Aircraft is the same draw as for CIFAR-FS. The plan had anticipated excluding aircraft classes; there were none to exclude.
+  - Deviation, flagged in `PAPER SUMMARIES/FEW SHOTpaper_summaries.txt`: Maji et al. say boxes should not be used at test time on the original benchmark; we follow Meta-Dataset's crop for every image.

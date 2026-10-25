@@ -11,6 +11,12 @@ from .mini_imagenet import (
     MINI_IMAGENET_SPLIT,
     MINI_IMAGENET_ALL_WNIDS,
 )
+from .fgvc_aircraft import (
+    get_fgvc_aircraft,
+    get_aircraft_heldout_ood,
+    AIRCRAFT_SPLIT,
+    AIRCRAFT_TIN_EXCLUDE_WNIDS,
+)
 from .svhn_ood import get_svhn_ood
 from .tinyimagenet_ood import get_tinyimagenet_ood
 from .gaussian_noise_ood import get_gaussian_ood
@@ -45,6 +51,12 @@ def build_dataset(spec: dict):
             image_size=spec.get("image_size", 224),
             split=spec.get("split", "test"),
         )
+    if name == "fgvc_aircraft":
+        return get_fgvc_aircraft(
+            data_root=spec.get("data_root", "data"),
+            image_size=spec.get("image_size", 224),
+            split=spec.get("split", "test"),
+        )
     raise ValueError(f"Unknown dataset: {name}")
 
 
@@ -71,6 +83,9 @@ def get_id_split(dataset_cfg, split: str):
     if name == "mini_imagenet":
         return get_mini_imagenet(data_root=data_root, image_size=image_size,
                                  split=split)
+    if name == "fgvc_aircraft":
+        return get_fgvc_aircraft(data_root=data_root, image_size=image_size,
+                                 split=split)
     raise ValueError(f"Unknown dataset: {name!r}")
 
 
@@ -96,13 +111,34 @@ def get_heldout_near_ood(dataset_cfg, num_samples: int, seed: int,
             data_root=data_root, image_size=image_size,
             num_samples=num_samples, seed=seed, heldout_split=heldout_split)
         return "mini_near", x
+    if name == "fgvc_aircraft":
+        x = get_aircraft_heldout_ood(
+            data_root=data_root, image_size=image_size,
+            num_samples=num_samples, seed=seed, heldout_split=heldout_split)
+        return "aircraft_near", x
     raise ValueError(f"Unknown dataset: {name!r}")
+
+
+def tin_exclusions(dataset_name: str):
+    """TinyImageNet wnids to drop from the near-OOD pool for this
+    in-distribution dataset, so the "OOD" pool holds no in-distribution
+    classes. None for CIFAR-FS (pre-Step-9 behaviour, byte-identical)."""
+    if dataset_name == "mini_imagenet":
+        return MINI_IMAGENET_ALL_WNIDS
+    if dataset_name == "fgvc_aircraft":
+        return AIRCRAFT_TIN_EXCLUDE_WNIDS
+    return None
 
 
 __all__ = [
     "build_dataset",
     "get_id_split",
     "get_heldout_near_ood",
+    "tin_exclusions",
+    "get_fgvc_aircraft",
+    "get_aircraft_heldout_ood",
+    "AIRCRAFT_SPLIT",
+    "AIRCRAFT_TIN_EXCLUDE_WNIDS",
     "get_cifar_fs",
     "get_cifar_fs_heldout_ood",
     "load_cifar_fs_split",
