@@ -2213,6 +2213,73 @@ NOTES / DECISIONS LOG
             refitted evidential head is still worse than plain softmax in
             48/48 cells.
 
+2026-11-08  TMLR PHASE — runs complete, analysis done (plan
+            docs/superpowers/plans/2026-10-22-tmlr-publication.md,
+            Tasks 12-15). NUMBERING: this entry uses the NEW four-RQ
+            framing (RQ1 variance shares, RQ2 objective vs score, RQ3
+            architecture vs budget, RQ4 refit) and the pre-specified
+            rules R-A..R-F of docs/TMLR_PRESPEC.md -- NOT the Orig-RQ
+            numbering used elsewhere in this file.
+            WHAT RAN: 658/658 runs on 4 Kaggle accounts (T4 x2, torch
+            2.11, GIT_SHA b42be3d for Wave 2), 0 errors, 0 missing:
+            E1 170, E2 180, E3a 48, E3b 94, E4 112, E5 48, E5-val 6.
+            Waves W0 (9), W1 (356), W2 (8 shards). Results under
+            results/tmlr/<exp>/<run>/ (metrics.json, logits.npz,
+            adapter.pt); collected by scripts/tmlr_collect.py from the
+            HF dataset HamimSaad/bpeft-tmlr-runs.
+            REPRODUCTION GATE: 129 anchors exact, 1 MISMATCH
+            (e4_cifar_5s_mnv3_lora_ss_grid_r16_evid_s42). Cause: its
+            regression_ref is the 20-episode smoke file (problem B5);
+            the run equals the 600-ep re-score of the original thesis
+            checkpoint (results/rq_factorial) bit for bit on 87 keys.
+            Gate passes as an explained reference defect, checked in
+            code (tmlr_analysis.reproduction_gate); tolerance unchanged;
+            logged in the TMLR_PRESPEC changelog. E4 reproduces the
+            thesis RQ1/RQ2/RQ4 numbers to <= 2e-15.
+            VERDICTS (results/tmlr/verdicts.json; full report
+            results/tmlr/ANALYSIS_REPORT.md), all on complete designs:
+              R-A (sites vs module) Mini acc / Mini near / Air acc /
+                  Air near: inconclusive x4. Descriptive: on MobileNets
+                  the bottleneck's accuracy edge is a SITE effect (module
+                  never fires); on ResNets site AND module fire (8/8).
+              R-B (thesis RQ3 replication, R18+MNv3, 5 seeds, varied
+                  stream): inconclusive (backbone_intrinsic 2/4, thesis
+                  3/4). All 4 backbones: inconclusive (4/8). Aircraft:
+                  inconclusive.
+              R-C: inconclusive. R-D: not_family_consistent (2/4: the
+                  ResNet checks pass; no MobileNet cell is significant).
+              R-E (Aircraft replication of RQ1/RQ2/RQ4): replicated.
+              R-F (alternative VAL-selected EDL recipe): head dominance
+                  robust (head eta^2 68.5% vs 83.0%; evid worse 16/16).
+            HEADLINE CHANGE vs THESIS: the thesis's 3rd backbone_
+            intrinsic cell (MNv3 evidential) had sigma 0.0008 under the
+            fixed training stream; with the stream varied sigma grows
+            37x, delta flips sign, the cell is not significant (same with
+            seeds 42-44 only -> it is the stream, not the seed count).
+            Defensible RQ3 calibration wording is now ResNet-only: LoRA
+            at matched budget is worse calibrated on ResNet-18/34 in
+            20/20 paired comparisons each (p = 1.9e-6 per backbone); no
+            matched-budget calibration gap is detectable on MobileNets.
+            On Aircraft the ResNet evidential sign reverses.
+            CODE: scripts/tmlr_analysis.py (eta^2/omega^2 + seed-bootstrap
+            CIs, paired episode bootstrap, per-backbone sign tests, gate,
+            run_all); scripts/rq_aggregate.py eta_squared B1 fix (an
+            absent configuration now makes `balanced` False);
+            tests/test_tmlr_analysis.py (11 tests) +
+            tests/fixtures/tmlr_e4_grid_outcomes.json. Suite 396 passed,
+            1 skipped (vgpu excluded). run_all is byte-deterministic.
+            DECISIONS: (1) B5 handled as an explained reference defect,
+            not by editing results/grid/ or widening the tolerance. (2)
+            Non-2^5 designs use rq_aggregate.eta_squared in a vectorised
+            seed bootstrap, since rq_completion's OLS path is hard-wired
+            to the 2^5 grid; pinned to the thesis by test. (3) Matched-
+            budget RQ2 decomposition keys designs by (backbone, arm,
+            rank) so the crossing is balanced. (4) Per-backbone tables,
+            sign tests and episode CIs are EXPLORATORY (not pre-
+            specified) and must be labelled so in the paper.
+            NEXT: Task 16 (paper assets), Task 17 (manuscript). Settle
+            authorship (D3) with the supervisor before Task 17.
+
 ================================================================================
 END OF PROGRESS.TXT
 ================================================================================

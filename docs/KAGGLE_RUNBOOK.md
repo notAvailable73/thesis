@@ -37,7 +37,7 @@ Every finished shard uploads its zip here automatically, from any of the 4 accou
    - *Session options → Accelerator*: **GPU T4 x2**.
    - *Session options → Internet*: **On**.
    - *Add Input → Datasets*: your data dataset from step 3.
-   - *Add Input → Datasets* (from Wave 2): **`seryouxblaster764/fgvc-aircraft`** (FGVC Aircraft), the dataset itself, not a notebook. The session builds `data/aircraft_84.npz` from it in about 1–3 minutes and checks its fingerprint against `AIRCRAFT_CACHE_SHA256`; on a mismatch it stops before training.
+   - *Add Input → Datasets* (from Wave 2): **`hamimsaadalraji/bpeft-aircraft84`** (private; share it with your other accounts). It holds `aircraft_84.npz`, built once on the Mac; the session verifies its fingerprint against `AIRCRAFT_CACHE_SHA256`. Do not rely on building it from the raw `seryouxblaster764/fgvc-aircraft` dataset on Kaggle: Kaggle's JPEG decoding gives different pixels (hash `fe6288a6…`), and the session refuses to train on them.
    - *Add-ons → Secrets → Add a new secret*: label **`HF_TOKEN`**, value = your `hf_…` token. Make sure it is **attached to this notebook** (toggle it on).
 6. In the control cell, set `HF_REPO = '<your-hf-username>/bpeft-tmlr-runs'` once.
 

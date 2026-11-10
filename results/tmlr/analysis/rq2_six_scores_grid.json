@@ -1,0 +1,224 @@
+{
+ "far": {
+  "balanced": true,
+  "boot_sd": {
+   "design": 0.006536959115563169,
+   "design:objective": 0.0035718238713064792,
+   "design:score": 0.00706142252884088,
+   "objective": 0.0008824869344004531,
+   "objective:score": 0.0012212542853732248,
+   "residual": 0.010224625052292031,
+   "score": 0.005708880726792802
+  },
+  "boot_seed": 20261108,
+  "ci95": {
+   "design": [
+    0.18409274255340158,
+    0.21025091089066383
+   ],
+   "design:objective": [
+    0.022284858727236016,
+    0.036409072533675785
+   ],
+   "design:score": [
+    0.10728996599059623,
+    0.13493011430371712
+   ],
+   "objective": [
+    0.0025908703705537894,
+    0.005981710990429832
+   ],
+   "objective:score": [
+    0.0018043913299965275,
+    0.0064638658798164125
+   ],
+   "residual": [
+    0.35771187667388193,
+    0.3970703406974841
+   ],
+   "score": [
+    0.25659351821323273,
+    0.27901978451412973
+   ]
+  },
+  "df": {
+   "design": 19,
+   "design:objective": 19,
+   "design:score": 95,
+   "objective": 1,
+   "objective:score": 5,
+   "residual": 1295,
+   "score": 5
+  },
+  "dominant": "score",
+  "factors": [
+   "design",
+   "objective",
+   "score"
+  ],
+  "mean_auroc_by_score": {
+   "energy": {
+    "evidential": 0.9184914611111111,
+    "softmax": 0.934195555925926
+   },
+   "mahalanobis": {
+    "evidential": 0.7812950388888888,
+    "softmax": 0.8252443616666667
+   },
+   "maxlogit": {
+    "evidential": 0.9127005875925925,
+    "softmax": 0.9308375429629631
+   },
+   "msp": {
+    "evidential": 0.799270430925926,
+    "softmax": 0.8014091475925925
+   },
+   "ts_msp": {
+    "evidential": 0.7868167798148148,
+    "softmax": 0.7849546583333333
+   },
+   "vacuity_valfit": {
+    "evidential": 0.9134288700000001,
+    "softmax": 0.9306852253703704
+   }
+  },
+  "method": "classical SS (exact: balanced design)",
+  "n": 1440,
+  "n_boot": 2000,
+  "omega_squared": {
+   "design": 0.18987965513906888,
+   "design:objective": 0.02226215987953917,
+   "design:score": 0.08842583628863623,
+   "objective": 0.003863847253206066,
+   "objective:score": 0.0020831554662541748,
+   "score": 0.26598614917704105
+  },
+  "score_over_objective": 64.28464602240112,
+  "shares": {
+   "design": 0.19557833174939007,
+   "design:objective": 0.027911060362188735,
+   "design:score": 0.11666354272367371,
+   "objective": 0.0041619572741695915,
+   "objective:score": 0.003568587099657042,
+   "residual": 0.38456657066057115,
+   "score": 0.26754995013034966
+  },
+  "ss_total": 21.83236253531527,
+  "two_way": true
+ },
+ "near": {
+  "balanced": true,
+  "boot_sd": {
+   "design": 0.002716824734366489,
+   "design:objective": 0.00046488023997518033,
+   "design:score": 0.0011092272604330245,
+   "objective": 0.00023480849755808317,
+   "objective:score": 0.00017165708659063188,
+   "residual": 0.0027608720439039154,
+   "score": 0.003227540611072227
+  },
+  "boot_seed": 20261108,
+  "ci95": {
+   "design": [
+    0.3297342743784429,
+    0.3403521858494314
+   ],
+   "design:objective": [
+    0.005836870120019524,
+    0.007623958501141193
+   ],
+   "design:score": [
+    0.037850885192214447,
+    0.04223629173762671
+   ],
+   "objective": [
+    0.0015380658940078687,
+    0.0024402468759742303
+   ],
+   "objective:score": [
+    0.0006739260660908446,
+    0.001345162099675603
+   ],
+   "residual": [
+    0.2804111730740522,
+    0.2912622906005915
+   ],
+   "score": [
+    0.32328187529763536,
+    0.33590580202520526
+   ]
+  },
+  "df": {
+   "design": 19,
+   "design:objective": 19,
+   "design:score": 95,
+   "objective": 1,
+   "objective:score": 5,
+   "residual": 1295,
+   "score": 5
+  },
+  "dominant": "score",
+  "factors": [
+   "design",
+   "objective",
+   "score"
+  ],
+  "mean_auroc_by_score": {
+   "energy": {
+    "evidential": 0.8414162546296297,
+    "softmax": 0.8371334094444445
+   },
+   "mahalanobis": {
+    "evidential": 0.6842118014814814,
+    "softmax": 0.6820321735185185
+   },
+   "maxlogit": {
+    "evidential": 0.8475456537037036,
+    "softmax": 0.8449202972222222
+   },
+   "msp": {
+    "evidential": 0.7915845222222221,
+    "softmax": 0.7770059096296296
+   },
+   "ts_msp": {
+    "evidential": 0.7805424550000001,
+    "softmax": 0.7634235931481482
+   },
+   "vacuity_valfit": {
+    "evidential": 0.8347059335185186,
+    "softmax": 0.8232502790740741
+   }
+  },
+  "method": "classical SS (exact: balanced design)",
+  "n": 1440,
+  "n_boot": 2000,
+  "omega_squared": {
+   "design": 0.33054232424890345,
+   "design:objective": 0.002411552999762583,
+   "design:score": 0.018278841505918554,
+   "objective": 0.001766381456036561,
+   "objective:score": -0.00018024245683195204,
+   "score": 0.32851544662612975
+  },
+  "score_over_objective": 165.83273429321702,
+  "shares": {
+   "design": 0.3348210354954072,
+   "design:objective": 0.006617634270463673,
+   "design:score": 0.03931062486114325,
+   "objective": 0.0019881170395922043,
+   "objective:score": 0.0009264406702243633,
+   "residual": 0.28664126289265807,
+   "score": 0.32969488477051123
+  },
+  "ss_total": 13.727148314635176,
+  "two_way": true
+ },
+ "scores": [
+  "msp",
+  "ts_msp",
+  "energy",
+  "vacuity_valfit",
+  "maxlogit",
+  "mahalanobis"
+ ]
+}

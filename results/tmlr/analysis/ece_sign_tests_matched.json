@@ -1,0 +1,54 @@
+{
+ "fgvc_aircraft": {
+  "mobilenetv3_small": {
+   "median_delta": -0.01793957628392512,
+   "n": 12,
+   "n_neg": 10,
+   "n_pos": 2,
+   "n_zero": 0,
+   "p_two_sided": 0.03857421875
+  },
+  "resnet18": {
+   "median_delta": -0.019591658824847813,
+   "n": 12,
+   "n_neg": 8,
+   "n_pos": 4,
+   "n_zero": 0,
+   "p_two_sided": 0.3876953125
+  }
+ },
+ "mini_imagenet": {
+  "mobilenetv2": {
+   "median_delta": 0.005918914103176839,
+   "n": 20,
+   "n_neg": 9,
+   "n_pos": 11,
+   "n_zero": 0,
+   "p_two_sided": 0.8238029479980469
+  },
+  "mobilenetv3_small": {
+   "median_delta": -0.0031377454969618093,
+   "n": 20,
+   "n_neg": 13,
+   "n_pos": 7,
+   "n_zero": 0,
+   "p_two_sided": 0.26317596435546875
+  },
+  "resnet18": {
+   "median_delta": 0.098547249273128,
+   "n": 20,
+   "n_neg": 0,
+   "n_pos": 20,
+   "n_zero": 0,
+   "p_two_sided": 1.9073486328125e-06
+  },
+  "resnet34": {
+   "median_delta": 0.13648223450995156,
+   "n": 20,
+   "n_neg": 0,
+   "n_pos": 20,
+   "n_zero": 0,
+   "p_two_sided": 1.9073486328125e-06
+  }
+ }
+}

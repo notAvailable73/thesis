@@ -102,7 +102,14 @@ def eta_squared(rows: list[dict], factors: list[str], value: str = "auroc",
     for i in range(len(y)):
         key = tuple(levels[f][i] for f in factors)
         cell_counts[key] = cell_counts.get(key, 0) + 1
-    balanced = len(set(cell_counts.values())) == 1
+    # Balanced = every configuration of the full factor crossing is present AND
+    # holds the same number of observations. Equal counts alone are not enough
+    # (problem B1, docs/guide/05_problems_and_open_work.md): a configuration
+    # that is absent entirely leaves the surviving counts equal and was read
+    # as balanced.
+    n_crossing = int(np.prod([len(set(levels[f])) for f in factors]))
+    balanced = (len(set(cell_counts.values())) == 1
+                and len(cell_counts) == n_crossing)
 
     def group_means(keys):
         idx: dict[tuple, list[int]] = {}

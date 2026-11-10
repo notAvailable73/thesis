@@ -1,0 +1,18 @@
+{
+ "adjudicate": true,
+ "explained": {
+  "e4_cifar_5s_mnv3_lora_ss_grid_r16_evid_s42": {
+   "defective_reference_num_episodes": 20,
+   "explained": true,
+   "max_abs_diff": 0.0,
+   "problem": "B5",
+   "reference_600": "/Users/admin/Desktop/Projects/Thesis/thesis/results/rq_factorial/cifar_fs_5shot_mobilenetv3_small_lora_evidential_seed42.json",
+   "shared_keys": 87
+  }
+ },
+ "failing": [
+  "e4_cifar_5s_mnv3_lora_ss_grid_r16_evid_s42"
+ ],
+ "n_ok": 129,
+ "status": "pass_with_explained_reference_defect"
+}

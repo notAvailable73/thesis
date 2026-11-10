@@ -364,9 +364,7 @@
   "stale_code": []
  },
  "e3a": {
-  "done": [],
-  "error": [],
-  "missing": [
+  "done": [
    "e3a_air_1s_mnv3_btl_ms_grid_r16_evid_s42",
    "e3a_air_1s_mnv3_btl_ms_grid_r16_evid_s43",
    "e3a_air_1s_mnv3_btl_ms_grid_r16_evid_s44",
@@ -416,12 +414,12 @@
    "e3a_air_5s_r18_lora_ss_grid_r16_soft_s43",
    "e3a_air_5s_r18_lora_ss_grid_r16_soft_s44"
   ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  },
  "e3b": {
-  "done": [],
-  "error": [],
-  "missing": [
+  "done": [
    "e3b_air_5s_mnv3_btl_ms_H_r22_evid_s42",
    "e3b_air_5s_mnv3_btl_ms_H_r22_evid_s43",
    "e3b_air_5s_mnv3_btl_ms_H_r22_evid_s44",
@@ -517,14 +515,12 @@
    "e3b_air_5s_r18_lora_ss_L_r16_soft_s43",
    "e3b_air_5s_r18_lora_ss_L_r16_soft_s44"
   ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  },
  "e4": {
   "done": [
-   "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s42"
-  ],
-  "error": [],
-  "missing": [
    "e4_cifar_1s_mnv3_btl_ms_grid_r16_evid_s42",
    "e4_cifar_1s_mnv3_btl_ms_grid_r16_evid_s43",
    "e4_cifar_1s_mnv3_btl_ms_grid_r16_evid_s44",
@@ -540,6 +536,7 @@
    "e4_cifar_1s_r18_btl_ms_grid_r16_evid_s42",
    "e4_cifar_1s_r18_btl_ms_grid_r16_evid_s43",
    "e4_cifar_1s_r18_btl_ms_grid_r16_evid_s44",
+   "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s42",
    "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s43",
    "e4_cifar_1s_r18_btl_ms_grid_r16_soft_s44",
    "e4_cifar_1s_r18_full_ft_grid_r0_evid_s42",
@@ -637,6 +634,63 @@
    "e4_mini_5s_r18_lora_ss_grid_r16_soft_s43",
    "e4_mini_5s_r18_lora_ss_grid_r16_soft_s44"
   ],
+  "error": [],
+  "missing": [],
+  "stale_code": []
+ },
+ "e5": {
+  "done": [
+   "e5_cifar_1s_mnv3_btl_ms_grid_r16_evid_s42",
+   "e5_cifar_1s_mnv3_btl_ms_grid_r16_evid_s43",
+   "e5_cifar_1s_mnv3_btl_ms_grid_r16_evid_s44",
+   "e5_cifar_1s_mnv3_lora_ss_grid_r16_evid_s42",
+   "e5_cifar_1s_mnv3_lora_ss_grid_r16_evid_s43",
+   "e5_cifar_1s_mnv3_lora_ss_grid_r16_evid_s44",
+   "e5_cifar_1s_r18_btl_ms_grid_r16_evid_s42",
+   "e5_cifar_1s_r18_btl_ms_grid_r16_evid_s43",
+   "e5_cifar_1s_r18_btl_ms_grid_r16_evid_s44",
+   "e5_cifar_1s_r18_lora_ss_grid_r16_evid_s42",
+   "e5_cifar_1s_r18_lora_ss_grid_r16_evid_s43",
+   "e5_cifar_1s_r18_lora_ss_grid_r16_evid_s44",
+   "e5_cifar_5s_mnv3_btl_ms_grid_r16_evid_s42",
+   "e5_cifar_5s_mnv3_btl_ms_grid_r16_evid_s43",
+   "e5_cifar_5s_mnv3_btl_ms_grid_r16_evid_s44",
+   "e5_cifar_5s_mnv3_lora_ss_grid_r16_evid_s42",
+   "e5_cifar_5s_mnv3_lora_ss_grid_r16_evid_s43",
+   "e5_cifar_5s_mnv3_lora_ss_grid_r16_evid_s44",
+   "e5_cifar_5s_r18_btl_ms_grid_r16_evid_s42",
+   "e5_cifar_5s_r18_btl_ms_grid_r16_evid_s43",
+   "e5_cifar_5s_r18_btl_ms_grid_r16_evid_s44",
+   "e5_cifar_5s_r18_lora_ss_grid_r16_evid_s42",
+   "e5_cifar_5s_r18_lora_ss_grid_r16_evid_s43",
+   "e5_cifar_5s_r18_lora_ss_grid_r16_evid_s44",
+   "e5_mini_1s_mnv3_btl_ms_grid_r16_evid_s42",
+   "e5_mini_1s_mnv3_btl_ms_grid_r16_evid_s43",
+   "e5_mini_1s_mnv3_btl_ms_grid_r16_evid_s44",
+   "e5_mini_1s_mnv3_lora_ss_grid_r16_evid_s42",
+   "e5_mini_1s_mnv3_lora_ss_grid_r16_evid_s43",
+   "e5_mini_1s_mnv3_lora_ss_grid_r16_evid_s44",
+   "e5_mini_1s_r18_btl_ms_grid_r16_evid_s42",
+   "e5_mini_1s_r18_btl_ms_grid_r16_evid_s43",
+   "e5_mini_1s_r18_btl_ms_grid_r16_evid_s44",
+   "e5_mini_1s_r18_lora_ss_grid_r16_evid_s42",
+   "e5_mini_1s_r18_lora_ss_grid_r16_evid_s43",
+   "e5_mini_1s_r18_lora_ss_grid_r16_evid_s44",
+   "e5_mini_5s_mnv3_btl_ms_grid_r16_evid_s42",
+   "e5_mini_5s_mnv3_btl_ms_grid_r16_evid_s43",
+   "e5_mini_5s_mnv3_btl_ms_grid_r16_evid_s44",
+   "e5_mini_5s_mnv3_lora_ss_grid_r16_evid_s42",
+   "e5_mini_5s_mnv3_lora_ss_grid_r16_evid_s43",
+   "e5_mini_5s_mnv3_lora_ss_grid_r16_evid_s44",
+   "e5_mini_5s_r18_btl_ms_grid_r16_evid_s42",
+   "e5_mini_5s_r18_btl_ms_grid_r16_evid_s43",
+   "e5_mini_5s_r18_btl_ms_grid_r16_evid_s44",
+   "e5_mini_5s_r18_lora_ss_grid_r16_evid_s42",
+   "e5_mini_5s_r18_lora_ss_grid_r16_evid_s43",
+   "e5_mini_5s_r18_lora_ss_grid_r16_evid_s44"
+  ],
+  "error": [],
+  "missing": [],
   "stale_code": []
  },
  "e5val": {

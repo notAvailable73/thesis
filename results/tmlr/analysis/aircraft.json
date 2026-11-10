@@ -1,0 +1,893 @@
+{
+ "eta": {
+  "accuracy": {
+   "balanced": true,
+   "boot_sd": {
+    "adapter": 0.01092133385635871,
+    "adapter:head": 0.0007373558103858336,
+    "backbone": 0.0036275242139895783,
+    "backbone:adapter": 0.0032686742406143714,
+    "backbone:head": 0.00041061385950025633,
+    "head": 0.00450293282921073,
+    "residual": 0.0037321327958748543,
+    "shots": 0.014261392138514623,
+    "shots:adapter": 0.00305500887801724,
+    "shots:backbone": 0.001161788169546062,
+    "shots:head": 0.0027794500164312168
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "adapter": [
+     0.09943425126353578,
+     0.14231333212637107
+    ],
+    "adapter:head": [
+     8.62759726285495e-07,
+     0.0025618597851190085
+    ],
+    "backbone": [
+     0.0061910727699215655,
+     0.020313302279431917
+    ],
+    "backbone:adapter": [
+     0.0047757244902513155,
+     0.017608086330175323
+    ],
+    "backbone:head": [
+     3.1913566446247414e-07,
+     0.0014808501162234325
+    ],
+    "head": [
+     0.009050944785199827,
+     0.026596676977109542
+    ],
+    "residual": [
+     0.009428610506934408,
+     0.023883315346068662
+    ],
+    "shots": [
+     0.7764160444286309,
+     0.8323258733980686
+    ],
+    "shots:adapter": [
+     0.0037353896178074137,
+     0.015818359032091944
+    ],
+    "shots:backbone": [
+     8.138080326123986e-06,
+     0.004349540112171225
+    ],
+    "shots:head": [
+     0.002657656596680377,
+     0.013223658012858358
+    ]
+   },
+   "df": {
+    "adapter": 1,
+    "adapter:head": 1,
+    "backbone": 1,
+    "backbone:adapter": 1,
+    "backbone:head": 1,
+    "head": 1,
+    "residual": 37,
+    "shots": 1,
+    "shots:adapter": 1,
+    "shots:backbone": 1,
+    "shots:head": 1
+   },
+   "factors": [
+    "shots",
+    "backbone",
+    "adapter",
+    "head"
+   ],
+   "method": "classical SS (exact: balanced design)",
+   "n": 48,
+   "n_boot": 2000,
+   "omega_squared": {
+    "adapter": 0.11883989483507726,
+    "adapter:head": -0.0001408429314212961,
+    "backbone": 0.011788974509459768,
+    "backbone:adapter": 0.009623750745931697,
+    "backbone:head": -0.0005184442268470115,
+    "head": 0.01576447220890781,
+    "shots": 0.8040226904541147,
+    "shots:adapter": 0.008281111512608833,
+    "shots:backbone": 0.0004207397789694904,
+    "shots:head": 0.006179309299129996
+   },
+   "shares": {
+    "adapter": 0.11944015599370675,
+    "adapter:head": 0.00039558468334241286,
+    "backbone": 0.012331802509187133,
+    "backbone:adapter": 0.01016541709622987,
+    "backbone:head": 1.7780803621871887e-05,
+    "head": 0.01630943307578215,
+    "residual": 0.019850617565424597,
+    "shots": 0.8049905543597241,
+    "shots:adapter": 0.008822057532691954,
+    "shots:backbone": 0.0009574686846416471,
+    "shots:head": 0.006719127695647415
+   },
+   "ss_total": 0.2770732477158659,
+   "two_way": true
+  },
+  "auroc_far": {
+   "balanced": true,
+   "boot_sd": {
+    "adapter": 0.020856614901661442,
+    "adapter:head": 0.004122430592808501,
+    "backbone": 0.007314790862635467,
+    "backbone:adapter": 0.012514996317927863,
+    "backbone:head": 0.004068353884452472,
+    "head": 0.06024781747630399,
+    "residual": 0.04559862043621884,
+    "shots": 0.022661467447692867,
+    "shots:adapter": 0.01273588597099242,
+    "shots:backbone": 0.01649363717572866,
+    "shots:head": 0.030877224179743857
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "adapter": [
+     0.006733833265742697,
+     0.08517312286610902
+    ],
+    "adapter:head": [
+     2.4704053974149975e-06,
+     0.014405946034296162
+    ],
+    "backbone": [
+     1.845348906484647e-05,
+     0.026321085195124785
+    ],
+    "backbone:adapter": [
+     0.00035791248126899145,
+     0.047994347364383814
+    ],
+    "backbone:head": [
+     1.8105459070493442e-06,
+     0.014938711047047595
+    ],
+    "head": [
+     0.4789344647578875,
+     0.7111310905539281
+    ],
+    "residual": [
+     0.058129291708329325,
+     0.216924189820224
+    ],
+    "shots": [
+     0.021041606033838152,
+     0.10753429527025549
+    ],
+    "shots:adapter": [
+     0.000159524902056681,
+     0.04744491849390223
+    ],
+    "shots:backbone": [
+     0.0027585812795314704,
+     0.0659298348466642
+    ],
+    "shots:head": [
+     0.04540790062377282,
+     0.16607390077041595
+    ]
+   },
+   "df": {
+    "adapter": 1,
+    "adapter:head": 1,
+    "backbone": 1,
+    "backbone:adapter": 1,
+    "backbone:head": 1,
+    "head": 1,
+    "residual": 37,
+    "shots": 1,
+    "shots:adapter": 1,
+    "shots:backbone": 1,
+    "shots:head": 1
+   },
+   "factors": [
+    "shots",
+    "backbone",
+    "adapter",
+    "head"
+   ],
+   "method": "classical SS (exact: balanced design)",
+   "n": 48,
+   "n_boot": 2000,
+   "omega_squared": {
+    "adapter": 0.028570937354201527,
+    "adapter:head": -0.004424724304600846,
+    "backbone": -0.0009471902684204079,
+    "backbone:adapter": 0.009799779503996664,
+    "backbone:head": -0.004287188719682432,
+    "head": 0.5831452124096113,
+    "shots": 0.053253454945763196,
+    "shots:adapter": 0.0071048429056001314,
+    "shots:backbone": 0.019622425245268856,
+    "shots:head": 0.09081636406200584
+   },
+   "shares": {
+    "adapter": 0.03324953617595611,
+    "adapter:head": 0.0001037891334883408,
+    "backbone": 0.0035971412197938687,
+    "backbone:adapter": 0.014392995087890256,
+    "backbone:head": 0.00024195031825814437,
+    "head": 0.5903463699150905,
+    "residual": 0.1682996768800473,
+    "shots": 0.0580443256522533,
+    "shots:adapter": 0.011685800193312433,
+    "shots:backbone": 0.024260320507658462,
+    "shots:head": 0.09577809491625132
+   },
+   "ss_total": 0.4228490488634192,
+   "two_way": true
+  },
+  "auroc_near": {
+   "balanced": true,
+   "boot_sd": {
+    "adapter": 0.005098137326909782,
+    "adapter:head": 0.0013910274300010753,
+    "backbone": 0.002639584840843857,
+    "backbone:adapter": 0.00136728292180503,
+    "backbone:head": 0.003952613576003424,
+    "head": 0.015963710284398892,
+    "residual": 0.004408056813901288,
+    "shots": 0.014884466369571338,
+    "shots:adapter": 0.0010418646474598028,
+    "shots:backbone": 0.002919315600996649,
+    "shots:head": 0.008825200336637461
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "adapter": [
+     0.008084546287459745,
+     0.0278286361193886
+    ],
+    "adapter:head": [
+     3.3408256923093185e-06,
+     0.004888471196520435
+    ],
+    "backbone": [
+     0.0003294748449786882,
+     0.010289420692950874
+    ],
+    "backbone:adapter": [
+     2.223490667136777e-06,
+     0.004978095620810881
+    ],
+    "backbone:head": [
+     0.002906077992665581,
+     0.018536685581012072
+    ],
+    "head": [
+     0.6666808260595892,
+     0.7289861122908711
+    ],
+    "residual": [
+     0.008729812385451357,
+     0.025624284386550795
+    ],
+    "shots": [
+     0.17172593551783408,
+     0.22833088172262303
+    ],
+    "shots:adapter": [
+     1.1462113631903564e-06,
+     0.0038484952298925004
+    ],
+    "shots:backbone": [
+     0.0008000711660936623,
+     0.01179788477275461
+    ],
+    "shots:head": [
+     0.03079435761749532,
+     0.06496552383901609
+    ]
+   },
+   "df": {
+    "adapter": 1,
+    "adapter:head": 1,
+    "backbone": 1,
+    "backbone:adapter": 1,
+    "backbone:head": 1,
+    "head": 1,
+    "residual": 37,
+    "shots": 1,
+    "shots:adapter": 1,
+    "shots:backbone": 1,
+    "shots:head": 1
+   },
+   "factors": [
+    "shots",
+    "backbone",
+    "adapter",
+    "head"
+   ],
+   "method": "classical SS (exact: balanced design)",
+   "n": 48,
+   "n_boot": 2000,
+   "omega_squared": {
+    "adapter": 0.015862738196064163,
+    "adapter:head": 0.00028922034346459615,
+    "backbone": 0.0027662690130912547,
+    "backbone:adapter": 0.0002781277056541144,
+    "backbone:head": 0.008356825296981707,
+    "head": 0.6953053033722512,
+    "shots": 0.20030991125153877,
+    "shots:adapter": -0.0002073594450148987,
+    "shots:backbone": 0.003964211093488197,
+    "shots:head": 0.04502003741848813
+   },
+   "shares": {
+    "adapter": 0.016456830017780158,
+    "adapter:head": 0.0008742045375021163,
+    "backbone": 0.0033527018224794583,
+    "backbone:adapter": 0.0008631054125501443,
+    "backbone:head": 0.00894652754784281,
+    "head": 0.6962967434341558,
+    "residual": 0.02163815698419524,
+    "shots": 0.20101187055665679,
+    "shots:adapter": 0.00037733434168700947,
+    "shots:backbone": 0.0045513444774384,
+    "shots:head": 0.04563118086771209
+   },
+   "ss_total": 0.43961422556768315,
+   "two_way": true
+  },
+  "ece": {
+   "balanced": true,
+   "boot_sd": {
+    "adapter": 0.0015054079613232105,
+    "adapter:head": 0.0011898463995400456,
+    "backbone": 0.0012699754449988047,
+    "backbone:adapter": 0.0006258438306620664,
+    "backbone:head": 0.0012098708568455293,
+    "head": 0.006261140816134695,
+    "residual": 0.0015569069937502694,
+    "shots": 0.003605855873595637,
+    "shots:adapter": 0.00021384298369626044,
+    "shots:backbone": 0.00046066798908356635,
+    "shots:head": 0.0031520553007724334
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "adapter": [
+     0.0015657381292711182,
+     0.00719910119688054
+    ],
+    "adapter:head": [
+     0.0007958474018505657,
+     0.005377472247796493
+    ],
+    "backbone": [
+     0.0011498088817453586,
+     0.006038862972718628
+    ],
+    "backbone:adapter": [
+     9.359616603930039e-06,
+     0.002301591545923229
+    ],
+    "backbone:head": [
+     0.0008706841054387259,
+     0.0056722153118053415
+    ],
+    "head": [
+     0.9236926912683117,
+     0.9480046229504607
+    ],
+    "residual": [
+     0.00520498592462528,
+     0.011315413731753043
+    ],
+    "shots": [
+     0.017236210770426884,
+     0.03144665252886191
+    ],
+    "shots:adapter": [
+     1.958771077017568e-07,
+     0.0007504856755187161
+    ],
+    "shots:backbone": [
+     1.0648519635962372e-06,
+     0.0016270765559461152
+    ],
+    "shots:head": [
+     0.01197632855365244,
+     0.024325499040362453
+    ]
+   },
+   "df": {
+    "adapter": 1,
+    "adapter:head": 1,
+    "backbone": 1,
+    "backbone:adapter": 1,
+    "backbone:head": 1,
+    "head": 1,
+    "residual": 37,
+    "shots": 1,
+    "shots:adapter": 1,
+    "shots:backbone": 1,
+    "shots:head": 1
+   },
+   "factors": [
+    "shots",
+    "backbone",
+    "adapter",
+    "head"
+   ],
+   "method": "classical SS (exact: balanced design)",
+   "n": 48,
+   "n_boot": 2000,
+   "omega_squared": {
+    "adapter": 0.003620347267046996,
+    "adapter:head": 0.0023830495379460596,
+    "backbone": 0.0027762452311276206,
+    "backbone:adapter": 0.00033381648484469214,
+    "backbone:head": 0.002511535884567478,
+    "head": 0.9354655867121786,
+    "shots": 0.023302670242086567,
+    "shots:adapter": -0.00024045704212029956,
+    "shots:backbone": 3.086537751663403e-05,
+    "shots:head": 0.017242192124581987
+   },
+   "shares": {
+    "adapter": 0.003883325969055149,
+    "adapter:head": 0.002645704030753291,
+    "backbone": 0.0030390027530267927,
+    "backbone:adapter": 0.0005959340169875841,
+    "backbone:head": 0.0027742240446601155,
+    "head": 0.9359727368802289,
+    "residual": 0.009695112300978515,
+    "shots": 0.02357080630440787,
+    "shots:adapter": 2.1510013094608482e-05,
+    "shots:backbone": 0.00029290352736202613,
+    "shots:head": 0.017508740159445202
+   },
+   "ss_total": 0.5517894209741905,
+   "two_way": true
+  }
+ },
+ "n": 48,
+ "rq2_six_scores": {
+  "far": {
+   "balanced": true,
+   "boot_sd": {
+    "design": 0.00948968054975184,
+    "design:objective": 0.006470333660663123,
+    "design:score": 0.021789747905235347,
+    "objective": 0.0029119456898111266,
+    "objective:score": 0.00580341977232168,
+    "residual": 0.0213357228687424,
+    "score": 0.029355410088804778
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "design": [
+     0.03045267757106431,
+     0.0674285251963222
+    ],
+    "design:objective": [
+     0.010113324374081724,
+     0.03501160009780314
+    ],
+    "design:score": [
+     0.10172901787879117,
+     0.18583252325071276
+    ],
+    "objective": [
+     0.0016530968231431103,
+     0.012952232966055516
+    ],
+    "objective:score": [
+     0.002868113872027691,
+     0.025361551289000712
+    ],
+    "residual": [
+     0.32406831087591026,
+     0.4066126693575634
+    ],
+    "score": [
+     0.35319079216725163,
+     0.46819275614313505
+    ]
+   },
+   "df": {
+    "design": 7,
+    "design:objective": 7,
+    "design:score": 35,
+    "objective": 1,
+    "objective:score": 5,
+    "residual": 515,
+    "score": 5
+   },
+   "dominant": "score",
+   "factors": [
+    "design",
+    "objective",
+    "score"
+   ],
+   "mean_auroc_by_score": {
+    "energy": {
+     "evidential": 0.9521481444444445,
+     "softmax": 0.9665692879629629
+    },
+    "mahalanobis": {
+     "evidential": 0.8844848259259258,
+     "softmax": 0.9471848537037038
+    },
+    "maxlogit": {
+     "evidential": 0.9468937976851852,
+     "softmax": 0.9651467837962961
+    },
+    "msp": {
+     "evidential": 0.8045117981481482,
+     "softmax": 0.8046009972222222
+    },
+    "ts_msp": {
+     "evidential": 0.8001990194444444,
+     "softmax": 0.7934125583333334
+    },
+    "vacuity_valfit": {
+     "evidential": 0.9473279782407408,
+     "softmax": 0.9611448976851852
+    }
+   },
+   "method": "classical SS (exact: balanced design)",
+   "n": 576,
+   "n_boot": 2000,
+   "omega_squared": {
+    "design": 0.039577811863792035,
+    "design:objective": 0.013611273035260319,
+    "design:score": 0.10288023480623687,
+    "objective": 0.005182908104512683,
+    "objective:score": 0.006258666422845372,
+    "score": 0.3975593570122459
+   },
+   "score_over_objective": 67.58759891484,
+   "shares": {
+    "design": 0.04489731780205113,
+    "design:objective": 0.018911157177839602,
+    "design:score": 0.12940597041844218,
+    "objective": 0.005942481560705814,
+    "objective:score": 0.010041680605828914,
+    "residual": 0.3891633321513154,
+    "score": 0.401638060283817
+   },
+   "ss_total": 7.071107898596941,
+   "two_way": true
+  },
+  "near": {
+   "balanced": true,
+   "boot_sd": {
+    "design": 0.002901044051854085,
+    "design:objective": 0.0009063209178246527,
+    "design:score": 0.0030574998002722217,
+    "objective": 0.0003051930733531107,
+    "objective:score": 0.001694684316170288,
+    "residual": 0.006608882025913357,
+    "score": 0.004874343244278502
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "design": [
+     0.06232256480689584,
+     0.07390506484649492
+    ],
+    "design:objective": [
+     0.004856142809742134,
+     0.008346759239005618
+    ],
+    "design:score": [
+     0.027232844666156903,
+     0.03923807688248988
+    ],
+    "objective": [
+     0.00018093992833148308,
+     0.0013355414426572758
+    ],
+    "objective:score": [
+     0.01592984000814981,
+     0.022648236072769723
+    ],
+    "residual": [
+     0.5411320036811137,
+     0.5668204995562831
+    ],
+    "score": [
+     0.3094447870094665,
+     0.32830225867662916
+    ]
+   },
+   "df": {
+    "design": 7,
+    "design:objective": 7,
+    "design:score": 35,
+    "objective": 1,
+    "objective:score": 5,
+    "residual": 515,
+    "score": 5
+   },
+   "dominant": "score",
+   "factors": [
+    "design",
+    "objective",
+    "score"
+   ],
+   "mean_auroc_by_score": {
+    "energy": {
+     "evidential": 0.8277680296296296,
+     "softmax": 0.8525651805555556
+    },
+    "mahalanobis": {
+     "evidential": 0.7132389574074073,
+     "softmax": 0.7632668638888888
+    },
+    "maxlogit": {
+     "evidential": 0.8226574814814814,
+     "softmax": 0.8482840972222222
+    },
+    "msp": {
+     "evidential": 0.7041677680555555,
+     "softmax": 0.6659390689814815
+    },
+    "ts_msp": {
+     "evidential": 0.6996950347222222,
+     "softmax": 0.6574416115740741
+    },
+    "vacuity_valfit": {
+     "evidential": 0.8225135856481481,
+     "softmax": 0.8397038458333332
+    }
+   },
+   "method": "classical SS (exact: balanced design)",
+   "n": 576,
+   "n_boot": 2000,
+   "omega_squared": {
+    "design": 0.06039326787548774,
+    "design:objective": -0.0013080968319614855,
+    "design:score": -0.006126471967905081,
+    "objective": -0.00045827221869031214,
+    "objective:score": 0.013703266815254203,
+    "score": 0.3126332865010441
+   },
+   "score_over_objective": 512.8317469479102,
+   "shares": {
+    "design": 0.06801547245022667,
+    "design:objective": 0.006247496662275507,
+    "design:score": 0.03165194245934913,
+    "objective": 0.0006208052832388883,
+    "objective:score": 0.019115921681178084,
+    "residual": 0.5559797035458404,
+    "score": 0.3183686579178913
+   },
+   "ss_total": 8.897163726501983,
+   "two_way": true
+  },
+  "scores": [
+   "msp",
+   "ts_msp",
+   "energy",
+   "vacuity_valfit",
+   "maxlogit",
+   "mahalanobis"
+  ]
+ },
+ "rq2_thesis_scores": {
+  "far": {
+   "balanced": true,
+   "boot_sd": {
+    "design": 0.007911570672358549,
+    "design:objective": 0.008000723083150583,
+    "design:score": 0.008935251057136879,
+    "objective": 0.0012554391505770323,
+    "objective:score": 0.0022228922850576105,
+    "residual": 0.019185186719769508,
+    "score": 0.02293059673891459
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "design": [
+     0.05441675386587283,
+     0.08588499585855662
+    ],
+    "design:objective": [
+     0.018434866250592694,
+     0.049541354149381114
+    ],
+    "design:score": [
+     0.03386272471885232,
+     0.06881340357635275
+    ],
+    "objective": [
+     1.470739456694297e-06,
+     0.004473920561152077
+    ],
+    "objective:score": [
+     0.0002474473745685606,
+     0.008738206353019251
+    ],
+    "residual": [
+     0.2729518020005389,
+     0.348453663299565
+    ],
+    "score": [
+     0.48863023119004045,
+     0.5764185164511351
+    ]
+   },
+   "df": {
+    "design": 7,
+    "design:objective": 7,
+    "design:score": 21,
+    "objective": 1,
+    "objective:score": 3,
+    "residual": 341,
+    "score": 3
+   },
+   "dominant": "score",
+   "factors": [
+    "design",
+    "objective",
+    "score"
+   ],
+   "mean_auroc_by_score": {
+    "energy": {
+     "evidential": 0.9521481444444445,
+     "softmax": 0.9665692879629629
+    },
+    "msp": {
+     "evidential": 0.8045117981481482,
+     "softmax": 0.8046009972222222
+    },
+    "ts_msp": {
+     "evidential": 0.8001990194444444,
+     "softmax": 0.7934125583333334
+    },
+    "vacuity_valfit": {
+     "evidential": 0.9473279782407408,
+     "softmax": 0.9611448976851852
+    }
+   },
+   "method": "classical SS (exact: balanced design)",
+   "n": 384,
+   "n_boot": 2000,
+   "omega_squared": {
+    "design": 0.05922430153023906,
+    "design:objective": 0.022419664591269484,
+    "design:score": 0.019375948828681943,
+    "objective": -0.0003381288041263534,
+    "objective:score": -0.0011180887936873868,
+    "score": 0.5283042288959754
+   },
+   "score_over_objective": 841.9031080868732,
+   "shares": {
+    "design": 0.06607198908903648,
+    "design:objective": 0.029231650401020683,
+    "design:score": 0.039765458076500525,
+    "objective": 0.0006315771955694307,
+    "objective:score": 0.001790928610564559,
+    "residual": 0.33078159268061363,
+    "score": 0.5317268039466947
+   },
+   "ss_total": 4.408070219622559,
+   "two_way": true
+  },
+  "near": {
+   "balanced": true,
+   "boot_sd": {
+    "design": 0.0046338307940964035,
+    "design:objective": 0.001060925687953852,
+    "design:score": 0.0015671720132011228,
+    "objective": 0.000571245056782481,
+    "objective:score": 0.0018497715652897374,
+    "residual": 0.006320408308023435,
+    "score": 0.005908887361179313
+   },
+   "boot_seed": 20261108,
+   "ci95": {
+    "design": [
+     0.11016427515907293,
+     0.1282334030587763
+    ],
+    "design:objective": [
+     0.006156482108920593,
+     0.010313982338623028
+    ],
+    "design:score": [
+     0.011070563548336465,
+     0.01721970399659823
+    ],
+    "objective": [
+     0.0008434903758145219,
+     0.003032186317179113
+    ],
+    "objective:score": [
+     0.015064150243700237,
+     0.022502396769230267
+    ],
+    "residual": [
+     0.36174459839210643,
+     0.3869489142195545
+    ],
+    "score": [
+     0.4524456617543188,
+     0.4757297631384786
+    ]
+   },
+   "df": {
+    "design": 7,
+    "design:objective": 7,
+    "design:score": 21,
+    "objective": 1,
+    "objective:score": 3,
+    "residual": 341,
+    "score": 3
+   },
+   "dominant": "score",
+   "factors": [
+    "design",
+    "objective",
+    "score"
+   ],
+   "mean_auroc_by_score": {
+    "energy": {
+     "evidential": 0.8277680296296296,
+     "softmax": 0.8525651805555556
+    },
+    "msp": {
+     "evidential": 0.7041677680555555,
+     "softmax": 0.6659390689814815
+    },
+    "ts_msp": {
+     "evidential": 0.6996950347222222,
+     "softmax": 0.6574416115740741
+    },
+    "vacuity_valfit": {
+     "evidential": 0.8225135856481481,
+     "softmax": 0.8397038458333332
+    }
+   },
+   "method": "classical SS (exact: balanced design)",
+   "n": 384,
+   "n_boot": 2000,
+   "omega_squared": {
+    "design": 0.11064653737154029,
+    "design:objective": 7.652012777560958e-05,
+    "design:score": -0.010237782663063343,
+    "objective": 0.0007072655904206933,
+    "objective:score": 0.015190948268432324,
+    "score": 0.46027695871255886
+   },
+   "score_over_objective": 256.164633581646,
+   "shares": {
+    "design": 0.11849429828656019,
+    "design:objective": 0.007802248952586002,
+    "design:score": 0.012927851387096272,
+    "objective": 0.0018117096553875171,
+    "objective:score": 0.018518704408577988,
+    "residual": 0.3763492472811185,
+    "score": 0.4640959400286735
+   },
+   "ss_total": 4.90755054195787,
+   "two_way": true
+  },
+  "scores": [
+   "msp",
+   "energy",
+   "ts_msp",
+   "vacuity_valfit"
+  ]
+ },
+ "rq4": {
+  "auroc_comparisons": 96,
+  "auroc_mean_delta": -0.0023211319444444295,
+  "auroc_preserved_in": 79,
+  "ece_improved_in": 24,
+  "ece_mean_delta": -0.12834303928065907,
+  "min_spearman_rho": 0.3876403171677207,
+  "n_cells": 24,
+  "reordering_ever_observed": true
+ }
+}

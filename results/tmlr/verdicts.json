@@ -1,0 +1,1289 @@
+{
+ "RA_air_accuracy": {
+  "cells": {
+   "mobilenetv3_small/H/evidential": {
+    "interaction": 0.008148148581385517,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8043037219014432,
+     "btl_ss": 0.7353037198053466,
+     "lora_ms": 0.7945481662948927,
+     "lora_ss": 0.7418444613615671
+    },
+    "module": 0.0016074070251649863,
+    "module_fires": false,
+    "sigma": 0.009578428950508725,
+    "site": 0.06085185351471106,
+    "site_fires": true
+   },
+   "mobilenetv3_small/H/softmax": {
+    "interaction": 0.00374444478087943,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8233111309508482,
+     "btl_ss": 0.7771555738151074,
+     "lora_ms": 0.8104444636404514,
+     "lora_ss": 0.7717777960664695
+    },
+    "module": 0.009122222529517332,
+    "module_fires": false,
+    "sigma": 0.007470543690248392,
+    "site": 0.04241111235486139,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/evidential": {
+    "interaction": 0.013022222990791033,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8013629817300373,
+     "btl_ss": 0.7240222389996052,
+     "lora_ms": 0.784851869046688,
+     "lora_ss": 0.733555572297838
+    },
+    "module": 0.003488889692558228,
+    "module_fires": false,
+    "sigma": 0.018381424436968084,
+    "site": 0.06431851973964109,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/softmax": {
+    "interaction": 0.009096296578645857,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.816437057124244,
+     "btl_ss": 0.7703852039906712,
+     "lora_ms": 0.8023037225504716,
+     "lora_ss": 0.7744444625741905
+    },
+    "module": 0.005037037995126559,
+    "module_fires": false,
+    "sigma": 0.006817072099358549,
+    "site": 0.03695555655492688,
+    "site_fires": true
+   },
+   "resnet18/H/evidential": {
+    "interaction": 0.04920000137554281,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.807407426453299,
+     "btl_ss": 0.7374592758052879,
+     "lora_ms": 0.7208370537228054,
+     "lora_ss": 0.7492889058258799
+    },
+    "module": 0.037370371354950804,
+    "module_fires": false,
+    "sigma": 0.02352944670662584,
+    "site": 0.020748149272468264,
+    "site_fires": false
+   },
+   "resnet18/H/softmax": {
+    "interaction": 0.03918518700533452,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.8555259472131729,
+     "btl_ss": 0.786903721458382,
+     "lora_ms": 0.7849407587945461,
+     "lora_ss": 0.7946889070504243
+    },
+    "module": 0.0314000014132923,
+    "module_fires": true,
+    "sigma": 0.006279429710182162,
+    "site": 0.0294370387494563,
+    "site_fires": true
+   },
+   "resnet18/L/evidential": {
+    "interaction": 0.05514074294931354,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.80610372301605,
+     "btl_ss": 0.7015407558447785,
+     "lora_ms": 0.7106222380035453,
+     "lora_ss": 0.7163407567309008
+    },
+    "module": 0.040340742063191215,
+    "module_fires": false,
+    "sigma": 0.03190625588754286,
+    "site": 0.04942222422195802,
+    "site_fires": false
+   },
+   "resnet18/L/softmax": {
+    "interaction": 0.04759629790981601,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.8264370564288562,
+     "btl_ss": 0.763600017875433,
+     "lora_ms": 0.7459629789822632,
+     "lora_ss": 0.7783185362484719
+    },
+    "module": 0.03287777953677706,
+    "module_fires": true,
+    "sigma": 0.01501584840952465,
+    "site": 0.015240740643607253,
+    "site_fires": false
+   }
+  },
+  "complete": true,
+  "counts": {
+   "interaction_any": 3,
+   "module_any": 2,
+   "module_pos": 2,
+   "n_cells": 8,
+   "site_any": 5,
+   "site_pos": 5
+  },
+  "dataset": "fgvc_aircraft",
+  "outcome": "accuracy",
+  "rule": "R-A",
+  "verdict": "inconclusive"
+ },
+ "RA_air_near_ood": {
+  "cells": {
+   "mobilenetv3_small/H/evidential": {
+    "interaction": -0.01201259444444458,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8733157703703703,
+     "btl_ss": 0.8455976555555557,
+     "lora_ms": 0.8653138555555556,
+     "lora_ss": 0.8135705518518518
+    },
+    "module": 0.020014509259259294,
+    "module_fires": false,
+    "sigma": 0.01804590591447278,
+    "site": 0.039730709259259256,
+    "site_fires": true
+   },
+   "mobilenetv3_small/H/softmax": {
+    "interaction": 0.016306929629629652,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.7429386407407407,
+     "btl_ss": 0.7025625444444444,
+     "lora_ms": 0.7236225,
+     "lora_ss": 0.715860262962963
+    },
+    "module": 0.0030092111111110764,
+    "module_fires": false,
+    "sigma": 0.011636713137643223,
+    "site": 0.024069166666666586,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/evidential": {
+    "interaction": -0.012911864814814933,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8364961555555555,
+     "btl_ss": 0.8425779185185185,
+     "lora_ms": 0.8588221148148149,
+     "lora_ss": 0.839080148148148
+    },
+    "module": -0.009414094444444465,
+    "module_fires": false,
+    "sigma": 0.01787521524026669,
+    "site": 0.0068301018518519,
+    "site_fires": false
+   },
+   "mobilenetv3_small/L/softmax": {
+    "interaction": 0.018380757407407244,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.7423555481481481,
+     "btl_ss": 0.6989503740740742,
+     "lora_ms": 0.7174386407407408,
+     "lora_ss": 0.7107949814814815
+    },
+    "module": 0.006536150000000018,
+    "module_fires": false,
+    "sigma": 0.011352303148448335,
+    "site": 0.025024416666666605,
+    "site_fires": true
+   },
+   "resnet18/H/evidential": {
+    "interaction": 0.015622572222222242,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.869351411111111,
+     "btl_ss": 0.855832111111111,
+     "lora_ms": 0.8300765740740741,
+     "lora_ss": 0.8478024185185186
+    },
+    "module": 0.023652264814814694,
+    "module_fires": false,
+    "sigma": 0.013466807084350723,
+    "site": -0.00210327222222223,
+    "site_fires": false
+   },
+   "resnet18/H/softmax": {
+    "interaction": 0.06537058703703719,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.7415881666666667,
+     "btl_ss": 0.7176822629629629,
+     "lora_ms": 0.6338832296296296,
+     "lora_ss": 0.7407185000000002
+    },
+    "module": 0.04233434999999991,
+    "module_fires": true,
+    "sigma": 0.01570668200332296,
+    "site": -0.04146468333333336,
+    "site_fires": true
+   },
+   "resnet18/L/evidential": {
+    "interaction": 0.026277164814814846,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8818694740740741,
+     "btl_ss": 0.8372037777777778,
+     "lora_ms": 0.8206258814814816,
+     "lora_ss": 0.828514514814815
+    },
+    "module": 0.03496642777777764,
+    "module_fires": true,
+    "sigma": 0.016613645329274167,
+    "site": 0.018388531481481507,
+    "site_fires": false
+   },
+   "resnet18/L/softmax": {
+    "interaction": 0.06294753888888893,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.7281234037037038,
+     "btl_ss": 0.6985795666666667,
+     "lora_ms": 0.6176318,
+     "lora_ss": 0.7139830407407407
+    },
+    "module": 0.04754406481481488,
+    "module_fires": true,
+    "sigma": 0.018999344977961574,
+    "site": -0.03340370185185182,
+    "site_fires": false
+   }
+  },
+  "complete": true,
+  "counts": {
+   "interaction_any": 2,
+   "module_any": 3,
+   "module_pos": 3,
+   "n_cells": 8,
+   "site_any": 4,
+   "site_pos": 3
+  },
+  "dataset": "fgvc_aircraft",
+  "outcome": "auroc_near",
+  "rule": "R-A",
+  "verdict": "inconclusive"
+ },
+ "RA_mini_accuracy": {
+  "cells": {
+   "mobilenetv2/H/evidential": {
+    "interaction": -0.02273777955770495,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.895062244574229,
+     "btl_ss": 0.9173689134518306,
+     "lora_ms": 0.8997600226799648,
+     "lora_ss": 0.8765911324421565
+    },
+    "module": 0.018040001451969156,
+    "module_fires": false,
+    "sigma": 0.018492009919221095,
+    "site": 0.00043111068010337483,
+    "site_fires": false
+   },
+   "mobilenetv2/H/softmax": {
+    "interaction": -0.010308889587720138,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9220533578991891,
+     "btl_ss": 0.9114622461795806,
+     "lora_ms": 0.9237022470235825,
+     "lora_ss": 0.8924933561285338
+    },
+    "module": 0.008660000463326711,
+    "module_fires": false,
+    "sigma": 0.010398306008825171,
+    "site": 0.02090000130732861,
+    "site_fires": true
+   },
+   "mobilenetv2/L/evidential": {
+    "interaction": -0.010713334242502925,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9000266896684964,
+     "btl_ss": 0.9185866911609969,
+     "lora_ms": 0.903248911778132,
+     "lora_ss": 0.9003822447856267
+    },
+    "module": 0.007491112132867295,
+    "module_fires": false,
+    "sigma": 0.012342666859579689,
+    "site": -0.007846667249997552,
+    "site_fires": false
+   },
+   "mobilenetv2/L/softmax": {
+    "interaction": -0.005737778534491755,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9192978019316993,
+     "btl_ss": 0.9089778015812238,
+     "lora_ms": 0.9227778022885322,
+     "lora_ss": 0.9009822448690732
+    },
+    "module": 0.00225777817765882,
+    "module_fires": false,
+    "sigma": 0.011744531813090264,
+    "site": 0.01605777888496729,
+    "site_fires": false
+   },
+   "mobilenetv3_small/H/evidential": {
+    "interaction": -0.0012666665812333666,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.904884468237559,
+     "btl_ss": 0.89299113402764,
+     "lora_ms": 0.8995289117892584,
+     "lora_ss": 0.8851022444168727
+    },
+    "module": 0.0066222230295339135,
+    "module_fires": false,
+    "sigma": 0.003719783875473163,
+    "site": 0.013160000791152371,
+    "site_fires": true
+   },
+   "mobilenetv3_small/H/softmax": {
+    "interaction": -0.002917778174082508,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9047733567555746,
+     "btl_ss": 0.8918000224630038,
+     "lora_ms": 0.9040933570861818,
+     "lora_ss": 0.885284466445446
+    },
+    "module": 0.003597777843475314,
+    "module_fires": false,
+    "sigma": 0.00411184845795705,
+    "site": 0.015891112466653257,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/evidential": {
+    "interaction": -0.000320000688234956,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9042622447212537,
+     "btl_ss": 0.8923778005838393,
+     "lora_ms": 0.9011022456089656,
+     "lora_ss": 0.8885778000950812
+    },
+    "module": 0.0034799998005231036,
+    "module_fires": false,
+    "sigma": 0.0031104267442620816,
+    "site": 0.012204444825649363,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/softmax": {
+    "interaction": -0.0015355553229650099,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.903751134912173,
+     "btl_ss": 0.8917911340792974,
+     "lora_ms": 0.9034889121055603,
+     "lora_ss": 0.8884578006267547
+    },
+    "module": 0.0017977781295777095,
+    "module_fires": false,
+    "sigma": 0.005247954685426434,
+    "site": 0.013495556155840527,
+    "site_fires": true
+   },
+   "resnet18/H/evidential": {
+    "interaction": 0.015202221910158797,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9583866908550263,
+     "btl_ss": 0.8862266888419787,
+     "lora_ms": 0.9053600233395894,
+     "lora_ss": 0.8636044651468595
+    },
+    "module": 0.037824445605278034,
+    "module_fires": true,
+    "sigma": 0.013949906055972959,
+    "site": 0.05695778010288871,
+    "site_fires": true
+   },
+   "resnet18/H/softmax": {
+    "interaction": 0.01063555501898128,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9568444689710935,
+     "btl_ss": 0.9156489133238793,
+     "lora_ms": 0.9264755805532138,
+     "lora_ss": 0.9065511349439621
+    },
+    "module": 0.01973333339889849,
+    "module_fires": true,
+    "sigma": 0.00812994952664186,
+    "site": 0.03056000062823294,
+    "site_fires": true
+   },
+   "resnet18/L/evidential": {
+    "interaction": 0.0146555549701054,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.9580844690402348,
+     "btl_ss": 0.8880489112536113,
+     "lora_ms": 0.9188844693501791,
+     "lora_ss": 0.8781600215037664
+    },
+    "module": 0.02454444471995032,
+    "module_fires": true,
+    "sigma": 0.00712705971164433,
+    "site": 0.055380002816518115,
+    "site_fires": true
+   },
+   "resnet18/L/softmax": {
+    "interaction": 0.00942444440722462,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9563155804475147,
+     "btl_ss": 0.9191066906054814,
+     "lora_ms": 0.9333555806477865,
+     "lora_ss": 0.9149955796202024
+    },
+    "module": 0.013535555392503673,
+    "module_fires": true,
+    "sigma": 0.005453021960905476,
+    "site": 0.02778444543480868,
+    "site_fires": true
+   },
+   "resnet34/H/evidential": {
+    "interaction": 0.018588886310656916,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.9748266869386036,
+     "btl_ss": 0.9168889129360517,
+     "lora_ms": 0.9352089141408602,
+     "lora_ss": 0.914448912759622
+    },
+    "module": 0.021028886487086562,
+    "module_fires": true,
+    "sigma": 0.007864361524529738,
+    "site": 0.03934888769189504,
+    "site_fires": true
+   },
+   "resnet34/H/softmax": {
+    "interaction": 0.012762220521767897,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.9718844657540322,
+     "btl_ss": 0.936160025080045,
+     "lora_ms": 0.9481066926519077,
+     "lora_ss": 0.9379066930214564
+    },
+    "module": 0.01101555258035658,
+    "module_fires": true,
+    "sigma": 0.005227235561861413,
+    "site": 0.02296222015221927,
+    "site_fires": true
+   },
+   "resnet34/L/evidential": {
+    "interaction": 0.015208886752526019,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.9728889098763466,
+     "btl_ss": 0.9228755800326665,
+     "lora_ms": 0.9441911372542382,
+     "lora_ss": 0.9245955809156101
+    },
+    "module": 0.013488885869582357,
+    "module_fires": true,
+    "sigma": 0.004450167673127328,
+    "site": 0.0348044430911541,
+    "site_fires": true
+   },
+   "resnet34/L/softmax": {
+    "interaction": 0.008719998170932108,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.971115577618281,
+     "btl_ss": 0.9409111371239026,
+     "lora_ms": 0.953911136964957,
+     "lora_ss": 0.9411466928124428
+    },
+    "module": 0.00848444248239194,
+    "module_fires": true,
+    "sigma": 0.004212357063152378,
+    "site": 0.021484442323446318,
+    "site_fires": true
+   }
+  },
+  "complete": true,
+  "counts": {
+   "interaction_any": 5,
+   "module_any": 8,
+   "module_pos": 8,
+   "n_cells": 16,
+   "site_any": 13,
+   "site_pos": 13
+  },
+  "dataset": "mini_imagenet",
+  "outcome": "accuracy",
+  "rule": "R-A",
+  "verdict": "inconclusive"
+ },
+ "RA_mini_near_ood": {
+  "cells": {
+   "mobilenetv2/H/evidential": {
+    "interaction": -0.023243692222222223,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8573314866666667,
+     "btl_ss": 0.8604322866666667,
+     "lora_ms": 0.8377247488888889,
+     "lora_ss": 0.7943381644444445
+    },
+    "module": 0.042850429999999995,
+    "module_fires": false,
+    "sigma": 0.02327909766349437,
+    "site": 0.02014289222222221,
+    "site_fires": false
+   },
+   "mobilenetv2/H/softmax": {
+    "interaction": -0.020541182222222176,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.83617334,
+     "btl_ss": 0.8360950244444444,
+     "lora_ms": 0.8357620822222221,
+     "lora_ss": 0.7946014022222222
+    },
+    "module": 0.020952440000000017,
+    "module_fires": false,
+    "sigma": 0.0171856381646044,
+    "site": 0.020619497777777773,
+    "site_fires": false
+   },
+   "mobilenetv2/L/evidential": {
+    "interaction": -0.016427294444444407,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8606194444444444,
+     "btl_ss": 0.8650241555555555,
+     "lora_ms": 0.8553127422222222,
+     "lora_ss": 0.8268628644444445
+    },
+    "module": 0.02173399666666659,
+    "module_fires": false,
+    "sigma": 0.016569100524997757,
+    "site": 0.012022583333333337,
+    "site_fires": false
+   },
+   "mobilenetv2/L/softmax": {
+    "interaction": -0.010212165555555652,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8341343488888888,
+     "btl_ss": 0.8230843511111111,
+     "lora_ms": 0.835992368888889,
+     "lora_ss": 0.8045180399999999
+    },
+    "module": 0.008354145555555526,
+    "module_fires": false,
+    "sigma": 0.017069884408916883,
+    "site": 0.02126216333333336,
+    "site_fires": false
+   },
+   "mobilenetv3_small/H/evidential": {
+    "interaction": -0.001154592222222195,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.88868884,
+     "btl_ss": 0.8731374866666666,
+     "lora_ms": 0.8765510355555556,
+     "lora_ss": 0.8586904977777777
+    },
+    "module": 0.01329239666666665,
+    "module_fires": false,
+    "sigma": 0.013310964932223914,
+    "site": 0.016705945555555657,
+    "site_fires": false
+   },
+   "mobilenetv3_small/H/softmax": {
+    "interaction": -0.00044225333333330896,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8289483066666665,
+     "btl_ss": 0.8035501622222222,
+     "lora_ms": 0.8212224777777777,
+     "lora_ss": 0.7949398266666667
+    },
+    "module": 0.00816808222222215,
+    "module_fires": false,
+    "sigma": 0.008516795881222236,
+    "site": 0.025840397777777635,
+    "site_fires": true
+   },
+   "mobilenetv3_small/L/evidential": {
+    "interaction": 4.555555556118307e-07,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8967057066666666,
+     "btl_ss": 0.8777531111111111,
+     "lora_ms": 0.8883069422222221,
+     "lora_ss": 0.8693552577777778
+    },
+    "module": 0.008398308888888928,
+    "module_fires": false,
+    "sigma": 0.012592306275957608,
+    "site": 0.018952139999999895,
+    "site_fires": false
+   },
+   "mobilenetv3_small/L/softmax": {
+    "interaction": 0.0011471955555555358,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.8310180466666667,
+     "btl_ss": 0.8036726133333334,
+     "lora_ms": 0.8246963777777777,
+     "lora_ss": 0.7996453355555555
+    },
+    "module": 0.005174473333333429,
+    "module_fires": false,
+    "sigma": 0.010747561641677355,
+    "site": 0.026198237777777744,
+    "site_fires": true
+   },
+   "resnet18/H/evidential": {
+    "interaction": 0.03373316999999998,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9487896133333334,
+     "btl_ss": 0.8410049555555557,
+     "lora_ms": 0.86419002,
+     "lora_ss": 0.8238717022222222
+    },
+    "module": 0.050866423333333466,
+    "module_fires": true,
+    "sigma": 0.017388092777684758,
+    "site": 0.07405148777777781,
+    "site_fires": true
+   },
+   "resnet18/H/softmax": {
+    "interaction": 0.0192845422222222,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9120976133333333,
+     "btl_ss": 0.8262034933333332,
+     "lora_ms": 0.8641341511111111,
+     "lora_ss": 0.8168091155555555
+    },
+    "module": 0.02867891999999994,
+    "module_fires": false,
+    "sigma": 0.016920772680550235,
+    "site": 0.06660957777777787,
+    "site_fires": true
+   },
+   "resnet18/L/evidential": {
+    "interaction": 0.023989968888888824,
+    "interaction_fires": true,
+    "means": {
+     "btl_ms": 0.9489241844444445,
+     "btl_ss": 0.8493379377777778,
+     "lora_ms": 0.8979401266666669,
+     "lora_ss": 0.8463338177777778
+    },
+    "module": 0.026994088888888768,
+    "module_fires": true,
+    "sigma": 0.009638762349036064,
+    "site": 0.07559627777777789,
+    "site_fires": true
+   },
+   "resnet18/L/softmax": {
+    "interaction": 0.01164992999999992,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9116655466666665,
+     "btl_ss": 0.8338411000000001,
+     "lora_ms": 0.8845155777777778,
+     "lora_ss": 0.8299909911111112
+    },
+    "module": 0.015500038888888845,
+    "module_fires": false,
+    "sigma": 0.012898819640429264,
+    "site": 0.06617451666666652,
+    "site_fires": true
+   },
+   "resnet34/H/evidential": {
+    "interaction": 0.022854690000000066,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9680943955555555,
+     "btl_ss": 0.8434942244444444,
+     "lora_ms": 0.9097010088888888,
+     "lora_ss": 0.8308102177777779
+    },
+    "module": 0.03553869666666665,
+    "module_fires": true,
+    "sigma": 0.012290734571190598,
+    "site": 0.10174548111111104,
+    "site_fires": true
+   },
+   "resnet34/H/softmax": {
+    "interaction": 0.01912257777777787,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9428049666666667,
+     "btl_ss": 0.8593199422222222,
+     "lora_ms": 0.9115004599999998,
+     "lora_ss": 0.8662605911111111
+    },
+    "module": 0.012181928888888971,
+    "module_fires": false,
+    "sigma": 0.016697423229849555,
+    "site": 0.06436244666666663,
+    "site_fires": true
+   },
+   "resnet34/L/evidential": {
+    "interaction": 0.01696114999999998,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.9606582244444446,
+     "btl_ss": 0.8511633466666666,
+     "lora_ms": 0.9204273644444445,
+     "lora_ss": 0.8448547866666665
+    },
+    "module": 0.02326971000000011,
+    "module_fires": false,
+    "sigma": 0.013646504553259733,
+    "site": 0.09253372777777802,
+    "site_fires": true
+   },
+   "resnet34/L/softmax": {
+    "interaction": 0.008379617777777681,
+    "interaction_fires": false,
+    "means": {
+     "btl_ms": 0.940894691111111,
+     "btl_ss": 0.8721759333333334,
+     "lora_ms": 0.9215223488888888,
+     "lora_ss": 0.8695628266666666
+    },
+    "module": 0.01099272444444449,
+    "module_fires": false,
+    "sigma": 0.014961584014417469,
+    "site": 0.0603391399999999,
+    "site_fires": true
+   }
+  },
+  "complete": true,
+  "counts": {
+   "interaction_any": 1,
+   "module_any": 3,
+   "module_pos": 3,
+   "n_cells": 16,
+   "site_any": 10,
+   "site_pos": 10
+  },
+  "dataset": "mini_imagenet",
+  "outcome": "auroc_near",
+  "rule": "R-A",
+  "verdict": "inconclusive"
+ },
+ "RB_air": {
+  "backbones": [
+   "resnet18",
+   "mobilenetv3_small"
+  ],
+  "cells": {
+   "mobilenetv3_small/evidential": {
+    "abs_delta_matched": 0.029728309384153967,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.9551747635009961,
+    "delta_matched": -0.029728309384153967,
+    "delta_unmatched": -0.031123424236200486,
+    "fires_architecture": true,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.013608310968950543,
+    "sign": -1,
+    "significant": true,
+    "unmatched_sign": -1,
+    "within_2sigma": false
+   },
+   "mobilenetv3_small/softmax": {
+    "abs_delta_matched": 0.007694989409214922,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.6272655451890357,
+    "delta_matched": -0.007694989409214922,
+    "delta_unmatched": -0.012267514879835979,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.012109167255581931,
+    "sign": -1,
+    "significant": false,
+    "unmatched_sign": -1,
+    "within_2sigma": true
+   },
+   "resnet18/evidential": {
+    "abs_delta_matched": 0.029185079161933178,
+    "backbone": "resnet18",
+    "collapse_ratio": 1.07568747727317,
+    "delta_matched": -0.029185079161933178,
+    "delta_unmatched": -0.02713155984293536,
+    "fires_architecture": true,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.010381532643780977,
+    "sign": -1,
+    "significant": true,
+    "unmatched_sign": -1,
+    "within_2sigma": false
+   },
+   "resnet18/softmax": {
+    "abs_delta_matched": 0.010024045072716693,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.8867307077352393,
+    "delta_matched": 0.00015963408786941538,
+    "delta_unmatched": 0.011304497504455072,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.013720798041314146,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   }
+  },
+  "complete": true,
+  "counts": {
+   "architecture": 2,
+   "backbone_intrinsic": 2,
+   "budget": 0,
+   "min_cells": 3,
+   "n_cells": 4
+  },
+  "dataset": "fgvc_aircraft",
+  "rule": "R-B",
+  "verdict": "inconclusive"
+ },
+ "RB_mini_all4": {
+  "backbones": [
+   "resnet18",
+   "resnet34",
+   "mobilenetv3_small",
+   "mobilenetv2"
+  ],
+  "cells": {
+   "mobilenetv2/evidential": {
+    "abs_delta_matched": 0.015456817427310698,
+    "backbone": "mobilenetv2",
+    "collapse_ratio": 1.371380456205327,
+    "delta_matched": 0.015456817427310698,
+    "delta_unmatched": 0.011270991472403236,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.04217492332560739,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv2/softmax": {
+    "abs_delta_matched": 0.007881602151956837,
+    "backbone": "mobilenetv2",
+    "collapse_ratio": 0.47721110787564824,
+    "delta_matched": 0.006402548129922789,
+    "delta_unmatched": 0.016515965412126632,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": true,
+    "head": "softmax",
+    "sigma": 0.017659018502862275,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv3_small/evidential": {
+    "abs_delta_matched": 0.011645873267319473,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.4904605643549548,
+    "delta_matched": 0.011645873267319473,
+    "delta_unmatched": 0.02374476994421748,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": true,
+    "head": "evidential",
+    "sigma": 0.02919637330299185,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv3_small/softmax": {
+    "abs_delta_matched": 0.006419880661898178,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 1.7225816860440264,
+    "delta_matched": -0.006419880661898178,
+    "delta_unmatched": -0.0037268947614563785,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.007500525962097454,
+    "sign": -1,
+    "significant": false,
+    "unmatched_sign": -1,
+    "within_2sigma": true
+   },
+   "resnet18/evidential": {
+    "abs_delta_matched": 0.08682692071818643,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.8589029665823762,
+    "delta_matched": 0.08682692071818643,
+    "delta_unmatched": 0.10109048879371751,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.03512415813915877,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet18/softmax": {
+    "abs_delta_matched": 0.10349712869273292,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.9566488929954726,
+    "delta_matched": 0.10349712869273292,
+    "delta_unmatched": 0.10818716192589868,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.011398149693786394,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet34/evidential": {
+    "abs_delta_matched": 0.2026762997884883,
+    "backbone": "resnet34",
+    "collapse_ratio": 0.9488158895209766,
+    "delta_matched": 0.2026762997884883,
+    "delta_unmatched": 0.2136097234741846,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.024413046362781913,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet34/softmax": {
+    "abs_delta_matched": 0.12870325785150127,
+    "backbone": "resnet34",
+    "collapse_ratio": 0.9931739482056007,
+    "delta_matched": 0.12870325785150127,
+    "delta_unmatched": 0.12958783109850353,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.004274959785527894,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   }
+  },
+  "complete": true,
+  "counts": {
+   "architecture": 0,
+   "backbone_intrinsic": 4,
+   "budget": 2,
+   "min_cells": 6,
+   "n_cells": 8
+  },
+  "dataset": "mini_imagenet",
+  "rule": "R-B",
+  "verdict": "inconclusive"
+ },
+ "RB_mini_r18_mnv3": {
+  "backbones": [
+   "resnet18",
+   "mobilenetv3_small"
+  ],
+  "cells": {
+   "mobilenetv3_small/evidential": {
+    "abs_delta_matched": 0.011645873267319473,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.4904605643549548,
+    "delta_matched": 0.011645873267319473,
+    "delta_unmatched": 0.02374476994421748,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": true,
+    "head": "evidential",
+    "sigma": 0.02919637330299185,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv3_small/softmax": {
+    "abs_delta_matched": 0.006419880661898178,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 1.7225816860440264,
+    "delta_matched": -0.006419880661898178,
+    "delta_unmatched": -0.0037268947614563785,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": false,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.007500525962097454,
+    "sign": -1,
+    "significant": false,
+    "unmatched_sign": -1,
+    "within_2sigma": true
+   },
+   "resnet18/evidential": {
+    "abs_delta_matched": 0.08682692071818643,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.8589029665823762,
+    "delta_matched": 0.08682692071818643,
+    "delta_unmatched": 0.10109048879371751,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "evidential",
+    "sigma": 0.03512415813915877,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet18/softmax": {
+    "abs_delta_matched": 0.10349712869273292,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.9566488929954726,
+    "delta_matched": 0.10349712869273292,
+    "delta_unmatched": 0.10818716192589868,
+    "fires_architecture": false,
+    "fires_backbone_intrinsic": true,
+    "fires_budget": false,
+    "head": "softmax",
+    "sigma": 0.011398149693786394,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   }
+  },
+  "complete": true,
+  "counts": {
+   "architecture": 0,
+   "backbone_intrinsic": 2,
+   "budget": 1,
+   "min_cells": 3,
+   "n_cells": 4
+  },
+  "dataset": "mini_imagenet",
+  "rule": "R-B",
+  "verdict": "inconclusive"
+ },
+ "RC_mini": {
+  "cells": {
+   "mobilenetv2/evidential": {
+    "abs_delta_matched": 0.02140524333082966,
+    "backbone": "mobilenetv2",
+    "collapse_ratio": 1.8991446655992872,
+    "delta_matched": 0.02140524333082966,
+    "head": "evidential",
+    "sigma": 0.025257897686645027,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv2/softmax": {
+    "abs_delta_matched": 0.019161817706856446,
+    "backbone": "mobilenetv2",
+    "collapse_ratio": 1.1601996752056123,
+    "delta_matched": 0.019161817706856446,
+    "head": "softmax",
+    "sigma": 0.013144258122367582,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv3_small/evidential": {
+    "abs_delta_matched": 0.01872308650659188,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.7885141254506649,
+    "delta_matched": 0.01872308650659188,
+    "head": "evidential",
+    "sigma": 0.024058656193676545,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "mobilenetv3_small/softmax": {
+    "abs_delta_matched": 0.0016359400518404094,
+    "backbone": "mobilenetv3_small",
+    "collapse_ratio": 0.4389552580768673,
+    "delta_matched": 0.0016359400518404094,
+    "head": "softmax",
+    "sigma": 0.009513245518930704,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": -1,
+    "within_2sigma": true
+   },
+   "resnet18/evidential": {
+    "abs_delta_matched": 0.0375212883219454,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.37116536649170145,
+    "delta_matched": 0.0375212883219454,
+    "head": "evidential",
+    "sigma": 0.030503907224588848,
+    "sign": 1,
+    "significant": false,
+    "unmatched_sign": 1,
+    "within_2sigma": true
+   },
+   "resnet18/softmax": {
+    "abs_delta_matched": 0.060336088382336804,
+    "backbone": "resnet18",
+    "collapse_ratio": 0.5577009998992596,
+    "delta_matched": 0.060336088382336804,
+    "head": "softmax",
+    "sigma": 0.008886594417946078,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet34/evidential": {
+    "abs_delta_matched": 0.07569928922090263,
+    "backbone": "resnet34",
+    "collapse_ratio": 0.35438128934262264,
+    "delta_matched": 0.07569928922090263,
+    "head": "evidential",
+    "sigma": 0.025979061316008654,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   },
+   "resnet34/softmax": {
+    "abs_delta_matched": 0.03387915315598249,
+    "backbone": "resnet34",
+    "collapse_ratio": 0.2614377667161506,
+    "delta_matched": 0.03387915315598249,
+    "head": "softmax",
+    "sigma": 0.0034425041318622137,
+    "sign": 1,
+    "significant": true,
+    "unmatched_sign": 1,
+    "within_2sigma": false
+   }
+  },
+  "complete": true,
+  "counts": {
+   "family_pattern_cells": 3,
+   "one_sign": false,
+   "significant": 3,
+   "within_2sigma_cells": 5
+  },
+  "dataset": "mini_imagenet",
+  "rule": "R-C",
+  "verdict": "inconclusive"
+ },
+ "RD_mini": {
+  "checks": [
+   {
+    "head": "evidential",
+    "new": "resnet34",
+    "pass": true,
+    "ref": "resnet18"
+   },
+   {
+    "head": "softmax",
+    "new": "resnet34",
+    "pass": true,
+    "ref": "resnet18"
+   },
+   {
+    "head": "evidential",
+    "new": "mobilenetv2",
+    "pass": false,
+    "ref": "mobilenetv3_small"
+   },
+   {
+    "head": "softmax",
+    "new": "mobilenetv2",
+    "pass": false,
+    "ref": "mobilenetv3_small"
+   }
+  ],
+  "complete": true,
+  "passed": 2,
+  "rule": "R-D",
+  "verdict": "not_family_consistent"
+ },
+ "RE_aircraft": {
+  "accuracy_wins": "8/8",
+  "checks": {
+   "btl_beats_lora_75pct": 1.0,
+   "head_largest_ece_factor": true,
+   "refit_improves_90pct": true,
+   "score_dominates_objective": true
+  },
+  "complete": true,
+  "eta_ece": {
+   "adapter": 0.003883325969055149,
+   "backbone": 0.0030390027530267927,
+   "head": 0.9359727368802289,
+   "shots": 0.02357080630440787
+  },
+  "refit_improved": "24/24",
+  "rq2_eta": {
+   "far": {
+    "objective": 0.0006315771955694307,
+    "score": 0.5317268039466947
+   },
+   "near": {
+    "objective": 0.001811709655387601,
+    "score": 0.4640959400286736
+   }
+  },
+  "rule": "R-E",
+  "verdict": "replicated"
+ },
+ "RF_edl_recipe": {
+  "complete": true,
+  "eta_ece": {
+   "adapter": 0.020997811613946527,
+   "backbone": 0.08676356613799786,
+   "dataset": 0.03806597153671723,
+   "head": 0.6849181750493948,
+   "shots": 0.024801353451018224
+  },
+  "evidential_worse_pairs": "16/16",
+  "rule": "R-F",
+  "verdict": "head_dominance_robust"
+ }
+}
